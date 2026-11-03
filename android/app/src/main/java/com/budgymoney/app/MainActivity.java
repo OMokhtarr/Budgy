@@ -1,4 +1,4 @@
-package com.budgy.app;
+package com.budgymoney.app;
 
 import com.getcapacitor.BridgeActivity;
 
