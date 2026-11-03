@@ -1,5 +1,5 @@
 import '@/test/setup-db';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { BudgyDB, SEED_TIME, alive, exportBackup, importBackup, db, seedIfEmpty, softDelete, type SyncedTable } from '@/core/db/db';
 import { syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
 
@@ -71,6 +71,14 @@ describe('sync between two phones', () => {
   const B = phone(bDb, remote, { data: { currency: 'EGP', rates: {} }, updatedAt: '2026-11-03T09:00:00.000Z', dirty: true });
   let txId = '';
 
+  // The edits below carry fixed stamps, so "now" must stay earlier than them. Only Date is faked: IndexedDB needs real timers.
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.parse('2026-11-03T12:00:00Z') });
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
   it('A uploads everything, then has nothing left to upload', async () => {
     await seedIfEmpty(db);
     expect((await db.accounts.get(CASH))?.updatedAt).toBe(SEED_TIME);
@@ -131,11 +139,13 @@ describe('sync between two phones', () => {
   });
 
   it('restoring a backup on A makes the account (and B) match it', async () => {
+    vi.setSystemTime('2026-11-03T15:00:00Z');
     const backup = await exportBackup({ currency: 'USD', rates: {}, balanceView: 'sum', weekStart: 6, profileName: '', profileColor: '#10b981' });
     const extra = await db.transactions.add({ type: 'expense', amount: 99, currency: 'USD', accountId: CASH, categoryId: GROCERIES, date: 'x', createdAt: 'x' });
     await db.accounts.update(CASH, { name: 'Renamed later' });
     await A.sync();
     await B.sync();
+    vi.setSystemTime('2026-11-03T16:00:00Z');
     await importBackup(backup);
     A.replaceCloud();
     await A.sync();
