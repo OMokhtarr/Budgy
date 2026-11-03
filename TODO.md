@@ -20,10 +20,9 @@
   - The PWA icon entries are fixed.
 - **Tooling:**
   - Capacitor 8 (8.5.3).
-  - A git repository: `git init` done, nothing committed yet, and the native folders are no longer
-    ignored.
+  - A git repository, and the native folders are no longer ignored.
   - README rewritten.
-  - `npm test` runs 40 tests: database migration, sync between two phones, the Supabase schema on
+  - `npm test` runs 78 tests, including: database migration, sync between two phones, the Supabase schema on
     PGlite, and the SMS parser.
 - **Sign-in & sync, all the code** (see the plan below): UUID data model, Supabase schema, the
   delete-account function, sign-in, the sync engine, the Profile UI, and a draft privacy policy in
@@ -31,6 +30,9 @@
 
 ## Still open (code)
 
+- [ ] **Restore / erase on a phone with a slow clock:** `syncOnce` and `deleteMissingInCloud` in
+  `src/core/cloud/sync.ts` stamp with the phone's clock, so if it's behind the cloud's copy, the server can
+  ignore the restore. Found by reading the code; not reproduced. Normal edits already handle this.
 - [ ] **In a later release:** delete the old `budgy` IndexedDB database once everyone has upgraded
   (the data now lives in `budgy2`).
 - [ ] Capacitor core is pinned to `~8.5.3` (8.6.0 was only 6 days old). Move to 8.6.x after a few weeks.
@@ -132,11 +134,22 @@ settings (`.env`) shows no sign-in at all.
 
 Roughly in this order:
 
-1. [ ] **Commit to git.** The repository exists but has no commits. Make the first commit once you've
-   looked over the changes. (A separate session is also working here on SMS import; let it finish its
-   current step first.)
+0. [x] **App id: `com.budgymoney.app`.** The old `com.budgy.app` is taken on Google Play by "Budgy – Budget
+   & Money Tracker" (JOBITEX). The new id had no public listing on either store on 2026-11-04, but a store
+   only confirms an id is free when you register it there. The Google and Apple client IDs depend on the
+   app id, so register it soon.
+   - [ ] **Decide about the store name.** Google Play has that other Budgy, and several other finance apps
+     are called Budgy on the App Store.
+1. [x] **Commit to git.** Done: `916e2a0`. It included 57 build files from `plugins/sms-inbox/android/build/`.
+   Their removal and the `.gitignore` rule are staged but not committed yet.
 2. [ ] **Test the data migration on a real phone** with your real data, by installing over the current
-   version. Make a backup file first (Menu → Data → Back up).
+   version. Make a backup file first (Menu → Data → Back up), and copy it off the phone.
+   - Use `android/budgy-migration-test-com.budgy.app.apk` (git-ignored). It's a debug build that still has
+     the old id, so it can install over the old copy and test the migration on your real data.
+   - If the install fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, the phone's copy was signed with a
+     different key. **Don't uninstall it: that deletes the data.**
+   - Builds with the new id install as a separate, empty app. To move your data, make a backup in the old
+     app and restore it in the new one. Then the old app can go.
 3. [ ] **Supabase project:**
    - Create it at supabase.com, in the region closest to your users. Check the free tier's limits
      (inactive projects may be paused).
@@ -155,7 +168,7 @@ Roughly in this order:
    - **OAuth consent screen:** app name, support email, privacy policy link. In Testing mode, add test
      users.
    - **Credentials:** a **Web** client (put it in `VITE_GOOGLE_WEB_CLIENT_ID`), an **iOS** client (bundle
-     id `com.budgy.app`, put it in `VITE_GOOGLE_IOS_CLIENT_ID`), and an **Android** client for each
+     id `com.budgymoney.app`, put it in `VITE_GOOGLE_IOS_CLIENT_ID`), and an **Android** client for each
      signing key's SHA-1 (debug, upload, and Play app signing).
    - **Supabase → Authentication → Providers → Google:** turn it on and enter the client IDs separated by
      commas, **web client first**. For web sign-in, also add the web client's secret, and add your web
@@ -166,16 +179,23 @@ Roughly in this order:
    - While you set this up, the app says "Sign-in with Google isn't set up yet" whenever Supabase rejects
      the provider or the client IDs don't match. That message means you should check these steps.
 5. [ ] **Sign in with Apple** (needs a paid Apple Developer account, and only for iOS):
-   - Turn on the "Sign in with Apple" capability for `com.budgy.app` in the developer portal and in Xcode.
-   - **Supabase → Providers → Apple:** turn it on and add `com.budgy.app` to Client IDs.
+   - Turn on the "Sign in with Apple" capability for `com.budgymoney.app` in the developer portal and in Xcode.
+   - **Supabase → Providers → Apple:** turn it on and add `com.budgymoney.app` to Client IDs.
    - Only if you also want it on the web: a Services ID, a `.p8` key, and `VITE_APPLE_SIGN_IN_WEB=true`.
      The secret must be renewed every 6 months.
 6. [ ] **Android project:** `android/` now exists (created by the SMS session).
-   - Set up release signing.
-   - **Back up the keystore and its passwords somewhere safe outside the project.** If they're lost, you
-     can't publish updates.
-   - Generate icons and the splash screen: copy `public/icon.png` to `assets/icon.png`, then run
-     `npx @capacitor/assets generate`.
+   - [x] Release signing is set up: `android/app/build.gradle` reads `android/keystore.properties`, and the
+     upload key is `android/budgy-upload.jks`. Both are git-ignored.
+   - [ ] **Back up `android/budgy-upload.jks` and `android/keystore.properties` (it holds the password)
+     somewhere safe outside the project.** They exist only on this computer. If they're lost, you can't
+     publish updates until Google resets the upload key, and only if you use Play App Signing.
+   - SHA-1s for the Android OAuth clients (step 4): debug `E4:BC:45:A6:EE:9A:77:78:F0:07:9B:D8:95:31:1A:5E:2B:D1:11:DA`,
+     upload `1E:0E:0A:E1:C3:15:DD:CF:74:BE:E9:44:61:C8:4B:10:D1:61:42:F4`. The Play app signing SHA-1 appears
+     in Play Console.
+   - [x] Icons and splash screens are generated. To change them, edit `scripts/generate-icons.mjs`, run it,
+     run `npx @capacitor/assets@3.0.5 generate --android`, then undo the tool's reformatting of
+     `AndroidManifest.xml`. The script also rewrites `public/`.
+   - [ ] Check the icon and splash on a real phone.
    - Check on a real phone that the header and tab bar clear the status and navigation bars (Android
      draws edge-to-edge), and that the status bar icons follow the app theme.
 7. [ ] **iOS project** (on a Mac with Xcode 26+): `npx cap add ios`, then the same checks.
@@ -186,8 +206,10 @@ Roughly in this order:
    - restore a backup while signed in.
 9. [ ] **Privacy & store:**
    - Finish the [bracketed] parts of `docs/privacy-policy.md` and publish it at a public link.
+   - Decide about `android:allowBackup="true"` in `AndroidManifest.xml`. Android's Auto Backup probably
+     copies the app's data to the user's Google account (not tested), but the policy says that without an
+     account everything stays on the device. Turn it off or mention it in the policy.
    - Fill in Google Play's **Data safety** form and the App Store **privacy labels** to match it.
 10. [ ] **Before publishing:**
     - Replace the placeholder support email in `src/core/config/links.ts`.
-    - Check that the app id `com.budgy.app` is free on Google Play and the App Store. If you change it,
-      change `capacitor.config.ts`, the Google/Apple client IDs and Supabase's Apple Client IDs to match.
+    - Register `com.budgymoney.app` in Play Console and the Apple developer portal.
