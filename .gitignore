@@ -10,11 +10,13 @@ dev-dist/
 android/app/build/
 android/build/
 android/.gradle/
+android/.kotlin/
 android/local.properties
 android/app/release/
 ios/App/build/
 ios/App/Pods/
 ios/DerivedData/
+plugins/*/android/build/
 
 # Release signing — never commit (keep a backup somewhere safe instead)
 *.keystore
