@@ -45,9 +45,39 @@
 
 - [ ] Passcode / biometric lock
 - [ ] Recurring transactions and reminders (`@capacitor/local-notifications`)
-- [ ] **SMS import:** being built in a separate session. See `docs/superpowers/specs/2026-11-03-sms-import-design.md`
-  and `docs/superpowers/plans/2026-11-03-sms-import.md`. Stage 2 (pending items stored in the database)
-  must use the new UUID data model and its write hooks.
+- [ ] **SMS import:** see `docs/superpowers/specs/2026-11-03-sms-import-design.md` and
+  `docs/superpowers/plans/2026-11-03-sms-import.md`. Android only, and not in the first Play release.
+  - [x] **Stage 1 code:** Android project, `plugins/sms-inbox`, parser, and the Settings section (switch,
+    disclosure, permission, sender keywords). Nothing in the app calls the parser or `list()` yet, so users
+    can't import anything.
+  - [x] **Stage 1 device checks (2026-11-04, emulator, `com.budgy.app` debug build):** section, turning on,
+    denying, allowing later, sender keywords and the `list({ since })` cutoff all passed.
+  - [ ] **Stage 1 checks still open:**
+    - Re-run from "turning on" onward after the `com.budgymoney.app` rename.
+    - Check that a keyword chip shows after a restart. So far only the saved value was confirmed.
+    - Test `list({ since })` with texts older than the cutoff. The emulator refused backdated texts.
+    - Install a release build and check that the section is hidden. So far only the manifests were read.
+  - [ ] **Stage 1 fixes (deferred from review, not rechecked since):**
+    - Merchant names can pick up extra words ("UBER using card **4821", "UBER is pending").
+    - "from **9999 to **1234" takes the first masked number.
+    - Templates have no currency fallback from the amount.
+    - `SmsSettingsSection`: permission request and check failures aren't handled, so the switch could look
+      on while off, and the resume listener re-registers on every keyword change.
+    - The disclosure says "never the full message", but stage 2 keeps the text while an item is pending.
+  - [ ] **Stage 2, the import itself:** must use the new UUID data model and its write hooks.
+    - Tables for pending items, seen texts, account links and merchant rules.
+    - Scan inbox button with a period picker.
+    - "Bank texts" review screen and menu item with a pending count: Confirm, Dismiss, Fill in.
+    - Editor pre-fill (amount, currency, date, note), with the original message shown above it.
+    - Learning (masked digits → account, merchant → category), and Linked numbers in Settings.
+    - "Looks like you already added this" warning, and `smsFingerprint` on transactions, agreed with sync.
+    - Delete the full text once an item is confirmed or dismissed.
+  - [ ] **Stage 3, before the SMS release:**
+    - Recheck Play's live SMS policy.
+    - Add `READ_SMS` to the main manifest.
+    - Play Permissions Declaration Form and Data safety form.
+    - SMS wording in the privacy policy.
+    - Short demo video.
 
 ## Plan: sign-in (Google & Apple) + cloud sync, on Supabase — status
 
@@ -140,8 +170,8 @@ Roughly in this order:
    app id, so register it soon.
    - [ ] **Decide about the store name.** Google Play has that other Budgy, and several other finance apps
      are called Budgy on the App Store.
-1. [x] **Commit to git.** Done: `916e2a0`. It included 57 build files from `plugins/sms-inbox/android/build/`.
-   Their removal and the `.gitignore` rule are staged but not committed yet.
+1. [x] **Commit to git.** Done. The 57 build files from `plugins/sms-inbox/android/build/` it first included
+   have since been removed from git and are ignored.
 2. [ ] **Test the data migration on a real phone** with your real data, by installing over the current
    version. Make a backup file first (Menu → Data → Back up), and copy it off the phone.
    - Use `android/budgy-migration-test-com.budgy.app.apk` (git-ignored). It's a debug build that still has
@@ -151,13 +181,18 @@ Roughly in this order:
    - Builds with the new id install as a separate, empty app. To move your data, make a backup in the old
      app and restore it in the new one. Then the old app can go.
 3. [ ] **Supabase project:**
-   - Create it at supabase.com, in the region closest to your users. Check the free tier's limits
-     (inactive projects may be paused).
-   - Put the project URL and the **publishable** key in `.env` (copy `.env.example`). Never use the
-     secret key.
-   - Apply the schema: `npx supabase@2.121.0 link --project-ref <ref>`, then `npx supabase@2.121.0 db push`.
-   - Run **Database → Advisors** in the dashboard and fix anything it flags.
-   - Deploy the function: `npx supabase@2.121.0 functions deploy delete-account`.
+   - [x] Project created (ref `zceojylbdjzhzlrqgtbt`). Check the free tier's limits (inactive projects may
+     be paused).
+   - [x] URL and **publishable** key are in `.env`, which is the file Vite reads for `npm run dev` and for
+     builds. It doesn't read `.env.dev` unless you pass `--mode dev`. Never use the secret key.
+   - [ ] **Turn off email sign-up:** Authentication → Providers → Email. The app doesn't use it, and it's
+     on in the live project. `supabase/config.toml` already has it off for `config push`.
+   - [x] Schema applied with `npx supabase@2.121.0 db push`. To change it, add a migration and push again.
+   - [x] Advisors (`npx supabase@2.121.0 db advisors --linked`): no security warnings. The "unused index"
+     notes are expected until the app has real traffic.
+   - [x] `delete-account` is deployed (`npx supabase@2.121.0 functions deploy delete-account --use-api`;
+     `--use-api` doesn't need Docker). It rejects callers who aren't signed in. **The real deletion hasn't
+     run yet:** it needs a signed-in user, so step 8's "delete account" is its first real test.
    - **Sign-in providers:** the Google and Apple settings are in `supabase/config.toml`, with their IDs and
      secrets in `supabase/.env` (copy `supabase/.env.example`). Either push them with
      `npx supabase@2.121.0 config diff`, then `config push`, after setting your real web address in
@@ -179,6 +214,9 @@ Roughly in this order:
    - While you set this up, the app says "Sign-in with Google isn't set up yet" whenever Supabase rejects
      the provider or the client IDs don't match. That message means you should check these steps.
 5. [ ] **Sign in with Apple** (needs a paid Apple Developer account, and only for iOS):
+   - [ ] **Code needed first:** `delete-account` doesn't revoke the user's Apple token. App Store review expects
+     that when an account is deleted, so add it before submitting. `delete-account.html` tells users to
+     remove the link themselves in the meantime; update it when this is done.
    - Turn on the "Sign in with Apple" capability for `com.budgymoney.app` in the developer portal and in Xcode.
    - **Supabase → Providers → Apple:** turn it on and add `com.budgymoney.app` to Client IDs.
    - Only if you also want it on the web: a Services ID, a `.p8` key, and `VITE_APPLE_SIGN_IN_WEB=true`.
@@ -205,11 +243,16 @@ Roughly in this order:
    - sign out (keep / remove), a new phone, delete account;
    - restore a backup while signed in.
 9. [ ] **Privacy & store:**
-   - Finish the [bracketed] parts of `docs/privacy-policy.md` and publish it at a public link.
-   - Decide about `android:allowBackup="true"` in `AndroidManifest.xml`. Android's Auto Backup probably
-     copies the app's data to the user's Google account (not tested), but the policy says that without an
-     account everything stays on the device. Turn it off or mention it in the policy.
+   - [x] The [bracketed] parts of `docs/privacy-policy.md` are filled in. The minimum age is 13, so choose
+     13+ age groups in Play Console's target audience form too.
+   - [x] Pushed to the `gh-pages` branch: `privacy.html`, `delete-account.html` and their `-ar` versions. The
+     Arabic pages still need checking by a fluent speaker.
+   - [ ] Turn on Pages in the repo: Settings → Pages → Deploy from a branch → `gh-pages`, `/ (root)`. Then the
+     links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
+     https://omokhtarr.github.io/Budgy/delete-account.html (Play's account deletion link).
+   - [ ] Changes to `docs/privacy-policy.md` must also go in those pages.
+   - [x] Android Auto Backup is off (`android:allowBackup="false"`), so cloud backups match the policy. Direct
+     phone-to-phone transfers on Android 12+ can still copy data between a user's own phones.
    - Fill in Google Play's **Data safety** form and the App Store **privacy labels** to match it.
 10. [ ] **Before publishing:**
-    - Replace the placeholder support email in `src/core/config/links.ts`.
     - Register `com.budgymoney.app` in Play Console and the Apple developer portal.

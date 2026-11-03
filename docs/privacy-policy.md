@@ -1,14 +1,14 @@
 # Budgy Privacy Policy
 
-> **DRAFT. Fill in the [bracketed] parts and have it reviewed before publishing.** Host it at a
-> public URL. Google Play and the App Store both ask for that link. Keep it in line with what the app
-> actually does: this draft matches the code as of 2026-11-03 (optional Google/Apple sign-in, cloud
-> sync on Supabase, no ads, no analytics).
+> **Published at https://omokhtarr.github.io/Budgy/privacy.html from the `gh-pages` branch.** When this
+> changes, update `privacy.html` and `privacy-ar.html` there too. Keep it in line with what the app actually
+> does: it matches the code as of 2026-11-04 (optional Google/Apple sign-in, cloud sync on Supabase, no ads,
+> no analytics).
 
-_Last updated: [date]_
+_Last updated: November 4, 2026_
 
-Budgy ("the app") is a personal budget and spending tracker made by [developer or company name]
-("we"). This policy explains what data the app handles and why.
+Budgy ("the app") is a personal budget and spending tracker made by Omar Mokhtar ("we"). This policy
+explains what data the app handles and why.
 
 ## The short version
 
@@ -34,7 +34,7 @@ nothing else. With Apple's "Hide My Email", we only see a relay address.
 ## Where the data is stored and who processes it
 
 - **Supabase** ([supabase.com](https://supabase.com)) hosts our database and sign-in service, in the
-  [region, e.g. Frankfurt, EU] region. Supabase processes the data only to provide this service.
+  EU (Ireland) region. Supabase processes the data only to provide this service.
 - **Google and Apple** handle the sign-in itself when you choose "Continue with Google" or
   "Continue with Apple", under their own privacy policies.
 - The data is encrypted in transit (HTTPS). In the database, access rules limit each account's
@@ -42,17 +42,17 @@ nothing else. With Apple's "Hide My Email", we only see a relay address.
 
 ## Keeping and deleting your data
 
-- **Not signed in:** data stays until you delete it in the app (Menu → Data → Erase all) or
+- **Not signed in:** data stays until you delete it in the app (Menu → Data → Erase all data) or
   uninstall the app.
 - **Signed in:** cloud data is kept while your account exists.
 - **Profile → Account & sync → Delete account** permanently deletes your account and all its cloud
   data. You can choose whether to keep a copy on the device.
 - **Signing out** leaves your data in your account. You choose whether to keep a copy on the device.
+- **Can't open the app?** See [Delete your Budgy account](https://omokhtarr.github.io/Budgy/delete-account.html).
 
 ## Children
 
-Budgy is not directed at children under [13 / the age required in your country], and we don't
-knowingly collect their data.
+Budgy is not directed at children under 13, and we don't knowingly collect their data.
 
 ## Changes
 
@@ -61,4 +61,4 @@ will also be announced in the app.
 
 ## Contact
 
-Questions or requests about your data: [support email].
+Questions or requests about your data: or.mokhtar@gmail.com.
