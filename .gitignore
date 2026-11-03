@@ -1,0 +1,29 @@
+node_modules/
+dist/
+dev-dist/
+.env
+.env.*
+!.env.example
+*.local
+
+# Native projects (android/, ios/) are committed, as Capacitor recommends; only their build output is ignored.
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+ios/App/build/
+ios/App/Pods/
+ios/DerivedData/
+
+# Release signing — never commit (keep a backup somewhere safe instead)
+*.keystore
+*.jks
+keystore.properties
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# Local tool state (contains a session token)
+.superpowers/

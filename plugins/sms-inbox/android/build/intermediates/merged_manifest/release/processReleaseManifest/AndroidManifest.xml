@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No permissions here on purpose: READ_SMS is added by the app (debug builds only for now). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.budgy.smsinbox" >
+
+    <uses-sdk android:minSdkVersion="24" />
+
+</manifest>

@@ -1,0 +1,11 @@
+{
+  "name": "@budgy/sms-inbox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Budgy's local Capacitor plugin that reads the SMS inbox (Android only). It declares no permissions; the app's debug manifest adds READ_SMS until Play approval.",
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  }
+}

@@ -1,0 +1,1249 @@
+/* Ionic core CSS */
+@import '@ionic/react/css/core.css';
+@import '@ionic/react/css/normalize.css';
+@import '@ionic/react/css/structure.css';
+@import '@ionic/react/css/typography.css';
+@import '@ionic/react/css/padding.css';
+@import '@ionic/react/css/flex-utils.css';
+@import '@ionic/react/css/display.css';
+/* Dark palette, switched on by adding .ion-palette-dark to <html> (see SettingsContext) */
+@import '@ionic/react/css/palettes/dark.class.css';
+
+/* ─── Budgy tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --ion-color-primary: #10b981;
+  --ion-color-primary-rgb: 16, 185, 129;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0ea371;
+  --ion-color-primary-tint: #28c18e;
+
+  --ion-color-danger: #ef4444;
+  --ion-color-success: #10b981;
+
+  --ion-font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+
+  --b-bg: #f4f6f8;
+  --b-surface: #ffffff;
+  --b-surface-2: #eef1f4;
+  --b-text: #0f172a;
+  --b-muted: #64748b;
+  --b-faint: #94a3b8;
+  --b-border: #e2e8f0;
+  --b-expense: #ef4444;
+  --b-income: #10b981;
+  --b-transfer: #3b82f6;
+  --b-track: #e5e9ee;
+  --b-backdrop: #dfe4ea;
+  --b-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 8px rgba(15, 23, 42, 0.04);
+
+  --ion-background-color: var(--b-bg);
+  --ion-toolbar-background: var(--b-surface);
+  --ion-tab-bar-background: var(--b-surface);
+  --ion-item-background: var(--b-surface);
+}
+
+:root.ion-palette-dark {
+  --ion-color-primary: #34d399;
+  --ion-color-primary-rgb: 52, 211, 153;
+  --ion-color-primary-contrast: #052e22;
+  --ion-color-primary-shade: #2eba87;
+  --ion-color-primary-tint: #48d7a3;
+
+  --b-bg: #0b1220;
+  --b-surface: #131c2e;
+  --b-surface-2: #1c2740;
+  --b-text: #e7ecf3;
+  --b-muted: #94a3b8;
+  --b-faint: #64748b;
+  --b-border: #24314a;
+  --b-expense: #f87171;
+  --b-income: #34d399;
+  --b-transfer: #60a5fa;
+  --b-track: #24314a;
+  --b-backdrop: #04070d;
+  --b-shadow: none;
+
+  --ion-background-color: var(--b-bg);
+  --ion-toolbar-background: var(--b-surface);
+  --ion-tab-bar-background: var(--b-surface);
+  --ion-item-background: var(--b-surface);
+  --ion-text-color: var(--b-text);
+}
+
+[dir='rtl'] {
+  --ion-font-family: 'Noto Kufi Arabic Variable', 'Noto Kufi Arabic', system-ui, sans-serif;
+}
+
+body {
+  color: var(--b-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Phone-width layout: on tablets and desktops the app keeps a phone-sized column, like the mobile app.
+   Overlays (sheets, popups, menus) open inside ion-app, so they stay in the column too. */
+html,
+body { background: var(--b-backdrop); }
+
+ion-app {
+  max-width: 480px;
+  margin-inline: auto;
+  background: var(--b-bg);
+}
+
+@media (min-width: 481px) {
+  ion-app { box-shadow: 0 0 0 1px var(--b-border), 0 12px 40px rgba(0, 0, 0, 0.25); }
+}
+
+/* Ionic turns full-page modals into a 600px card on wide screens; keep them filling the column. */
+@media (min-width: 768px) and (min-height: 600px) {
+  ion-modal:not(.modal-sheet):not(.b-date-modal) {
+    --width: 100%;
+    --height: 100%;
+    --border-radius: 0;
+  }
+}
+
+/* Hide scrollbars everywhere; scrolling by touch, wheel, trackpad and keyboard still works. */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+/* Ionic pages scroll inside ion-content's shadow DOM, which the rules above can't reach. */
+ion-content::part(scroll) { scrollbar-width: none; }
+
+ion-content {
+  --background: var(--b-bg);
+}
+
+ion-tab-bar {
+  --border: 1px solid var(--b-border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+ion-tab-button {
+  --color: var(--b-faint);
+  --color-selected: var(--ion-color-primary);
+  font-weight: 600;
+}
+
+ion-toolbar.b-toolbar {
+  --border-width: 0;
+  --color: var(--b-text);
+}
+
+.b-title {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Generic layout ───────────────────────────────────────────────────────── */
+.b-page {
+  padding: 12px 16px calc(96px + env(safe-area-inset-bottom));
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.b-card {
+  background: var(--b-surface);
+  border-radius: 18px;
+  box-shadow: var(--b-shadow);
+  border: 1px solid var(--b-border);
+}
+
+.b-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--b-muted);
+  margin: 20px 4px 8px;
+}
+
+.b-muted { color: var(--b-muted); }
+.b-expense { color: var(--b-expense); }
+.b-income { color: var(--b-income); }
+.b-transfer { color: var(--b-transfer); }
+.b-num { font-variant-numeric: tabular-nums; }
+
+.b-empty {
+  text-align: center;
+  color: var(--b-faint);
+  padding: 40px 16px;
+  font-size: 14px;
+}
+
+.b-empty ion-icon {
+  font-size: 44px;
+  display: block;
+  margin: 0 auto 8px;
+  opacity: 0.6;
+}
+
+/* ─── Period bar ───────────────────────────────────────────────────────────── */
+/* ‹ November 2026 › — the arrows sit right beside the period, centred as a group */
+.b-period {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px 10px;
+}
+
+.b-period__label {
+  /* fixed minimum width so the arrows don't shift as the label length changes */
+  min-width: 150px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--b-text);
+  border: none;
+  background: transparent;
+  padding: 6px;
+  border-radius: 10px;
+}
+
+.b-period__label small {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--b-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.b-iconbtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: none;
+  background: var(--b-surface-2);
+  color: var(--b-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.b-iconbtn:disabled { opacity: 0.35; }
+[dir='rtl'] .b-flip { transform: scaleX(-1); }
+
+/* ─── Category grid (1Money-style ring layout) ─────────────────────────────── */
+.b-catgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 6px;
+  padding: 8px 0 0;
+}
+
+.b-catgrid__center {
+  grid-column: 2 / span 2;
+  grid-row: 2 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.b-catgrid__center:active { transform: scale(0.98); }
+
+.b-catgrid__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--b-muted);
+}
+
+/* Amount with its currency code, e.g. "EGP 1,050" */
+.b-money { white-space: nowrap; }
+.b-money__cur { font-size: 0.78em; font-weight: 500; color: var(--b-muted); }
+
+.b-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.b-bubble__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--b-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.b-bubble__ring {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  padding: 3px;
+  display: flex;
+  transition: transform 0.12s ease;
+}
+
+.b-bubble:active .b-bubble__ring { transform: scale(0.92); }
+
+.b-bubble__icon {
+  flex: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 24px;
+  border: 3px solid var(--b-bg);
+}
+
+.b-bubble__amount {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* One line per currency when a category was used with two */
+.b-bubble__line { display: block; line-height: 1.3; }
+
+.b-bubble--muted .b-bubble__icon { opacity: 0.45; }
+.b-bubble--muted .b-bubble__amount { color: var(--b-faint); }
+
+.b-bubble--add .b-bubble__icon {
+  background: var(--b-surface-2);
+  color: var(--b-muted);
+  border-style: dashed;
+  border-color: var(--b-border);
+}
+
+/* ─── Category / account icon chip ─────────────────────────────────────────── */
+.b-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.b-avatar--sm { width: 30px; height: 30px; font-size: 15px; }
+.b-avatar--square { border-radius: 12px; }
+
+/* ─── Rows ─────────────────────────────────────────────────────────────────── */
+.b-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.b-row + .b-row { border-top: 1px solid var(--b-border); }
+.b-row:active { background: var(--b-surface-2); }
+
+.b-row__main { flex: 1; min-width: 0; }
+
+.b-row__title {
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.b-row__sub {
+  font-size: 12.5px;
+  color: var(--b-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.b-row__amount {
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  text-align: end;
+}
+
+/* Second-currency line under an account's main balance */
+.b-row__amount small {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--b-muted);
+  margin-top: 2px;
+}
+
+.b-dayhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 16px 6px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--b-muted);
+}
+
+/* ─── Summary tiles ────────────────────────────────────────────────────────── */
+.b-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.b-tile {
+  padding: 14px;
+}
+
+.b-tile__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--b-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.b-tile__value {
+  font-size: 20px;
+  font-weight: 800;
+  margin-top: 4px;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Progress bars ────────────────────────────────────────────────────────── */
+.b-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--b-track);
+  overflow: hidden;
+}
+
+.b-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+/* ─── Segmented pills ──────────────────────────────────────────────────────── */
+.b-pills {
+  display: flex;
+  background: var(--b-surface-2);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.b-pills button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--b-muted);
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 6px;
+  border-radius: 9px;
+}
+
+.b-pills button.is-active {
+  background: var(--b-surface);
+  color: var(--b-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* ─── Transaction editor (bottom sheet) ────────────────────────────────────── */
+ion-modal.b-editor-modal {
+  --height: auto;
+  --width: min(600px, 100%);
+  --background: transparent;
+  --box-shadow: none;
+  --backdrop-opacity: 0.45;
+}
+
+/* Lets the sheet size itself to its content (Ionic's auto-height recipe). */
+ion-modal.b-editor-modal .ion-page,
+ion-modal.b-sheet-modal .ion-page,
+ion-modal.b-date-modal .ion-page {
+  position: relative;
+  display: block;
+  contain: content;
+}
+
+.b-editor {
+  --accent: var(--ion-color-primary);
+  max-height: calc(100vh - env(safe-area-inset-top) - 16px);
+  overflow-y: auto;
+  /* transparent room above the sheet for the icon badges that sit on its top edge */
+  padding-top: 24px;
+}
+
+.b-editor__sheet {
+  background: var(--b-bg);
+  border-radius: 18px 18px 0 0;
+}
+
+/* From / To halves */
+.b-fromto {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.b-ft {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 86px;
+  padding: 14px 14px 16px;
+  border: none;
+  background: #64748b;
+  color: #fff;
+  font: inherit;
+  text-align: start;
+}
+
+.b-ft--from { border-start-start-radius: 18px; }
+.b-ft--to { border-start-end-radius: 18px; }
+.b-ft.is-picking { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.8); }
+
+.b-ft small {
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.b-ft strong {
+  font-size: 21px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.b-ft__badge {
+  position: absolute;
+  top: -22px;
+  inset-inline-end: 18px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.b-ft__badge.is-round { border-radius: 50%; }
+
+/* Type label + amount */
+.b-amount {
+  text-align: center;
+  padding: 10px 16px 4px;
+}
+
+.b-typeline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 30px;
+}
+
+.b-typeline__label {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.b-typeline__del {
+  justify-self: end;
+  border: none;
+  background: transparent;
+  color: var(--b-muted);
+  font-size: 20px;
+  padding: 4px;
+}
+
+.b-typeswitch {
+  display: inline-flex;
+  background: var(--b-surface-2);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.b-typeswitch button {
+  border: none;
+  background: transparent;
+  color: var(--b-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 8px;
+}
+
+.b-typeswitch button.is-active { background: var(--accent); color: #fff; }
+
+.b-amt {
+  color: var(--accent);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.b-amt__cur { font-size: 0.6em; font-weight: 500; opacity: 0.85; }
+.b-amt.is-sm { font-size: 32px; }
+.b-amt.is-xs { font-size: 25px; }
+
+/* Cross-currency transfer: sent and received side by side; tap one to type into it */
+.b-amount__pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+  color: var(--b-muted);
+}
+
+.b-amount__side {
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--b-muted);
+  font: inherit;
+}
+
+.b-amount__side.is-active { border-color: var(--accent); }
+.b-amount__side small { display: block; font-size: 11.5px; font-weight: 600; }
+.b-amount__side .b-amt { font-size: 26px; }
+.b-amount__side .b-amt.is-sm { font-size: 21px; }
+.b-amount__side .b-amt.is-xs { font-size: 17px; }
+
+.b-tocur {
+  margin-top: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--b-border);
+  border-radius: 999px;
+  background: var(--b-surface);
+  color: var(--b-text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.b-note {
+  display: block;
+  width: calc(100% - 24px);
+  height: 46px;
+  margin: 8px 12px 0;
+  padding: 0 12px;
+  border: 1px solid var(--b-border);
+  border-radius: 12px;
+  background: var(--b-surface);
+  color: var(--b-text);
+  font: inherit;
+  text-align: center;
+}
+
+.b-note:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+/* Keypad: operators on the left, ⌫ / calendar / tall ✓ on the right */
+.b-keypad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 10px 12px 4px;
+}
+
+.b-key {
+  /* shrinks on short screens so the whole keypad stays visible */
+  height: clamp(46px, 7.5vh, 64px);
+  border-radius: 14px;
+  border: 1px solid var(--b-border);
+  background: var(--b-surface);
+  color: var(--b-text);
+  font: inherit;
+  font-size: 24px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.b-key:active { background: var(--b-surface-2); transform: scale(0.97); }
+.b-key--op { color: var(--b-muted); font-size: 22px; }
+.b-key--cur { font-size: 15px; font-weight: 700; }
+.b-key--cur:disabled { opacity: 0.7; }
+
+.b-key--save {
+  grid-row: span 2;
+  height: auto;
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+  font-size: 30px;
+}
+
+.b-editor__date {
+  display: block;
+  width: 100%;
+  padding: 6px 0 calc(12px + env(safe-area-inset-bottom));
+  border: none;
+  background: transparent;
+  color: var(--b-muted);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* Account / category picker takes the keypad's place */
+.b-picker {
+  padding: 12px;
+  min-height: calc(4 * clamp(46px, 7.5vh, 64px) + 3 * 8px + 14px);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.b-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 6px;
+}
+
+.b-picker__item.is-selected .b-bubble__ring { box-shadow: 0 0 0 2px var(--accent); }
+
+ion-modal.b-date-modal {
+  --width: min(340px, calc(100% - 32px));
+  --height: auto;
+  --border-radius: 16px;
+}
+
+/* ─── Icon / colour picker ─────────────────────────────────────────────────── */
+.b-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 10px;
+}
+
+.b-swatch {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: var(--b-surface-2);
+  color: var(--b-text);
+}
+
+.b-swatch.is-selected { border-color: var(--b-text); }
+
+.b-field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.b-field > span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--b-muted);
+  margin: 0 4px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.b-input {
+  width: 100%;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--b-border);
+  background: var(--b-surface);
+  color: var(--b-text);
+  padding: 0 14px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.b-input:focus { outline: 2px solid var(--ion-color-primary); outline-offset: -1px; }
+
+/* Two form fields side by side, e.g. currency + balance */
+.b-field-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) 2fr;
+  gap: 10px;
+}
+
+.b-rate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.b-rate .b-input { flex: 1; min-width: 0; height: 40px; }
+
+/* ─── Charts ───────────────────────────────────────────────────────────────── */
+.b-donut text { font-family: inherit; }
+
+.b-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 150px;
+  padding: 8px 4px 0;
+}
+
+.b-bars__group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  min-width: 0;
+}
+
+.b-bars__cols {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+}
+
+.b-bars__col {
+  width: 40%;
+  max-width: 16px;
+  border-radius: 6px 6px 2px 2px;
+  min-height: 2px;
+  transition: height 0.3s ease;
+}
+
+.b-bars__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--b-muted);
+  white-space: nowrap;
+}
+
+.b-bars__group.is-current .b-bars__label { color: var(--b-text); }
+
+.b-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--b-muted);
+  font-weight: 600;
+}
+
+.b-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-inline-end: 5px;
+  vertical-align: -1px;
+}
+
+.b-fab {
+  position: fixed;
+  inset-inline-end: 18px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  border: none;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+  font-size: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+  z-index: 10;
+}
+
+ion-searchbar.b-search {
+  --background: var(--b-surface);
+  --border-radius: 12px;
+  --box-shadow: none;
+  padding: 0 0 4px;
+}
+
+/* ─── App header (menu · filtered balance · action) ────────────────────────── */
+.b-apphead ion-title { padding-inline: 60px; }
+
+.b-apphead__me {
+  border: none;
+  background: transparent;
+  padding: 0 0 0 10px;
+  display: flex;
+}
+
+.b-apphead__balance {
+  border: none;
+  background: transparent;
+  color: var(--b-text);
+  font: inherit;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.b-apphead__balance small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--b-muted);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.b-apphead__balance > span { font-size: 18px; font-weight: 800; }
+
+/* Full-screen message when the on-device database can't be opened (rendered outside IonApp). */
+.b-dberror {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: var(--b-bg, #fff);
+  color: var(--b-text, #0f172a);
+}
+
+.b-dberror img { width: 72px; height: 72px; border-radius: 18px; }
+.b-dberror h1 { font-size: 20px; margin: 8px 0 0; }
+.b-dberror p { max-width: 320px; margin: 0 0 8px; color: var(--b-muted, #64748b); line-height: 1.5; }
+
+/* "Not counted: USD" — shown under the header while a used currency has no exchange rate. */
+.b-ratewarn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(100% - 24px);
+  margin: 0 12px 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--b-expense) 12%, transparent);
+  color: var(--b-expense);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: start;
+}
+
+.b-ratewarn ion-icon { font-size: 16px; flex-shrink: 0; }
+
+.b-profile-avatar {
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────────── */
+.b-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.b-btn--primary { background: var(--ion-color-primary); color: var(--ion-color-primary-contrast); }
+.b-btn--muted { background: var(--b-surface-2); color: var(--b-text); }
+.b-btn:disabled { opacity: 0.45; }
+
+/* ─── Accounts page ────────────────────────────────────────────────────────── */
+.b-tabs {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 8px;
+}
+
+.b-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--b-muted);
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 6px 8px;
+}
+
+.b-tabs button ion-icon { font-size: 20px; }
+.b-tabs button.is-active { color: var(--b-text); border-bottom-color: var(--ion-color-primary); }
+
+.b-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.b-actions .b-btn { height: 38px; font-size: 13.5px; }
+
+.b-group__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 18px 4px 8px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.b-group__head > span:first-child { color: var(--ion-color-primary); }
+.b-group__head > span:last-child { text-align: end; }
+.b-group__line { display: block; }
+
+.b-hint { font-size: 12.5px; line-height: 1.5; margin: 14px 4px 0; }
+
+/* My finances: currency rows × Assets / Debts, then the net worth */
+.b-fin {
+  display: grid;
+  grid-template-columns: 56px 1fr 1fr;
+  border: 1px solid var(--b-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--b-surface);
+}
+
+.b-fin__cell {
+  padding: 14px 10px;
+  border-top: 1px solid var(--b-border);
+  border-inline-start: 1px solid var(--b-border);
+  text-align: end;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.b-fin__corner,
+.b-fin__colhead { border-top: none; }
+.b-fin__corner,
+.b-fin__rowhead { border-inline-start: none; text-align: center; font-weight: 600; color: var(--b-muted); }
+.b-fin__colhead { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--b-muted); }
+
+.b-fin__net {
+  grid-column: 1 / -1;
+  border-inline-start: none;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.b-fin__net small { display: block; font-size: 12px; font-weight: 600; color: var(--b-muted); }
+
+/* ─── Bottom sheets (accounts filter) ──────────────────────────────────────── */
+ion-modal.b-sheet-modal {
+  --height: auto;
+  --width: min(600px, 100%);
+  --border-radius: 22px;
+}
+
+.b-sheet { background: var(--b-bg); }
+
+.b-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 4px;
+}
+
+.b-sheet__head h2 { margin: 0; font-size: 20px; font-weight: 700; }
+
+.b-sheet__body {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 0 16px 12px;
+}
+
+.b-sheet__foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--b-border);
+}
+
+.b-chipgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* An account chip: outlined in the account colour, filled when selected */
+.b-acchip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1.5px solid var(--c);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--c);
+  font: inherit;
+  text-align: start;
+}
+
+.b-acchip ion-icon { font-size: 22px; flex-shrink: 0; }
+.b-acchip__text { display: flex; flex-direction: column; min-width: 0; font-size: 13.5px; }
+.b-acchip__text strong { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b-acchip.is-on { background: var(--c); color: #fff; }
+.b-acchip.is-on .b-money__cur { color: inherit; opacity: 0.8; }
+
+/* Archived accounts and categories are listed faded */
+.b-archived { opacity: 0.6; }
+
+/* ─── Side menu ────────────────────────────────────────────────────────────── */
+ion-menu.b-menu { --background: var(--b-bg); --width: min(320px, 85vw); }
+
+.b-menu__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: calc(18px + env(safe-area-inset-top)) 18px 18px;
+  border-bottom: 1px solid var(--b-border);
+}
+
+.b-menu__head strong { display: block; font-size: 19px; font-weight: 700; }
+
+.b-menu__head small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--b-muted);
+}
+
+.b-menu__list { background: transparent; padding-top: 8px; }
+
+.b-menu__list ion-item {
+  --background: transparent;
+  --padding-start: 18px;
+  --min-height: 52px;
+  font-weight: 600;
+}
+
+.b-menu__list ion-item ion-icon { color: var(--b-muted); margin-inline-end: 18px; }
+
+/* ─── Transactions: selection mode and category filter ────────────────────── */
+/* Long-pressing a row selects it, so don't start a text selection or the native callout. */
+.b-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.b-row.is-selected { background: rgba(var(--ion-color-primary-rgb), 0.14); }
+.b-avatar--check { background: var(--ion-color-primary); color: var(--ion-color-primary-contrast); }
+
+/* The selection summary takes the tab bar's place */
+body.b-selecting ion-tab-bar { display: none; }
+
+.b-selbar__count { font-size: 20px; font-weight: 700; margin-inline-start: 4px; }
+
+.b-selsum {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: var(--b-surface);
+  border-top: 1px solid var(--b-border);
+}
+
+.b-selsum__item {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.b-selsum__item em { font-style: normal; color: var(--b-muted); }
+
+ion-fab-button.b-fab {
+  --border-radius: 18px;
+  width: 60px;
+  height: 60px;
+  font-size: 28px;
+}
+
+.b-filterchips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.b-filterchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 12px;
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.b-filtersum {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 4px;
+  border-block: 1px solid var(--b-border);
+  font-weight: 600;
+}
+
+.b-filtersum > span:first-child { font-style: italic; color: var(--b-muted); }
+
+ion-popover.b-popmenu { --width: 230px; }

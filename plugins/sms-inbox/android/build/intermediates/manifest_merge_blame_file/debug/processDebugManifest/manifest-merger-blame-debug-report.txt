@@ -1,0 +1,8 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<!-- No permissions here on purpose: READ_SMS is added by the app (debug builds only for now). -->
+3<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+4    package="com.budgy.smsinbox" >
+5
+6    <uses-sdk android:minSdkVersion="24" />
+7
+8</manifest>

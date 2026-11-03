@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- READ_SMS for SMS import. Debug builds only until Google Play approves the Permissions
+     Declaration; then move this line to src/main/AndroidManifest.xml (see the SMS import spec). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_SMS" />
+</manifest>

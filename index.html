@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#10b981" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/png" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Budgy</title>
+    <style>
+      #budgy-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        background: #ffffff;
+        transition: opacity 0.35s ease;
+      }
+      @media (prefers-color-scheme: dark) {
+        #budgy-splash { background: #0b1220; }
+      }
+      #budgy-splash.budgy-splash--hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #budgy-splash img {
+        width: 112px;
+        height: 112px;
+        border-radius: 28px;
+        animation: budgy-splash-pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes budgy-splash-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.06); opacity: 0.85; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="budgy-splash">
+      <img src="/icon.png" alt="Budgy" />
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

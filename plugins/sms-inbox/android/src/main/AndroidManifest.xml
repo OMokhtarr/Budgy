@@ -1,0 +1,2 @@
+<!-- No permissions here on purpose: READ_SMS is added by the app (debug builds only for now). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

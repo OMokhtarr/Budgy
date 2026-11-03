@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Budgy</string>
+    <string name="title_activity_main">Budgy</string>
+    <string name="package_name">com.budgy.app</string>
+    <string name="custom_url_scheme">com.budgy.app</string>
+</resources>
