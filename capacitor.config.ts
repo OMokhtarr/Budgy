@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.budgy.app',
+  appId: 'com.budgymoney.app',
   appName: 'Budgy',
   webDir: 'dist',
   server: {

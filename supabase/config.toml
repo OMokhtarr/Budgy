@@ -340,7 +340,7 @@ email_optional = false
 
 [auth.external.apple]
 enabled = true
-# The iOS bundle ID (com.budgy.app). For Apple sign-in on the web too, put the Services ID first.
+# The iOS bundle ID (com.budgymoney.app). For Apple sign-in on the web too, put the Services ID first.
 client_id = "env(SUPABASE_AUTH_EXTERNAL_APPLE_CLIENT_ID)"
 # Only needed for Apple sign-in on the web; Apple requires a new one every 6 months.
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
