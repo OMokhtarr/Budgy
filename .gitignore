@@ -11,6 +11,7 @@ android/app/build/
 android/build/
 android/.gradle/
 android/.kotlin/
+android/.idea/
 android/local.properties
 android/app/release/
 ios/App/build/
