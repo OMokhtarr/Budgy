@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo } from 'react';
 import { alive, db } from './db';
 import { openingOf, roundTo } from '@/core/utils/currency';
-import type { Account, Amounts, Category, DateRange, Flow, Transaction } from '@/shared/models';
+import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
 
 export function useAccounts(includeArchived = false): Account[] | undefined {
   return useLiveQuery(async () => {
@@ -112,12 +112,15 @@ export interface PeriodTotals {
   byCategory: Record<Flow, Map<string, number>>;
   /** Per-category totals in their original currencies, e.g. { EGP: 120, USD: 10 }. */
   byCategoryCur: Record<Flow, Map<string, Amounts>>;
+  /** Per-subcategory totals. */
+  bySubcategory: Record<Flow, Map<string, number>>;
 }
 
 /** Income/expense totals in the main currency; `toBase` converts each transaction's amount. */
 export function totalsOf(txs: Transaction[] | undefined, toBase: (n: number, cur: string) => number): PeriodTotals {
   const byCategory: Record<Flow, Map<string, number>> = { expense: new Map(), income: new Map() };
   const byCategoryCur: Record<Flow, Map<string, Amounts>> = { expense: new Map(), income: new Map() };
+  const bySubcategory: Record<Flow, Map<string, number>> = { expense: new Map(), income: new Map() };
   let expense = 0;
   let income = 0;
   for (const t of txs ?? []) {
@@ -131,6 +134,22 @@ export function totalsOf(txs: Transaction[] | undefined, toBase: (n: number, cur
     const raw = byCategoryCur[t.type].get(t.categoryId) ?? {};
     raw[t.currency] = roundTo((raw[t.currency] ?? 0) + t.amount, t.currency);
     byCategoryCur[t.type].set(t.categoryId, raw);
+    if (t.subcategoryId != null) bySubcategory[t.type].set(t.subcategoryId, (bySubcategory[t.type].get(t.subcategoryId) ?? 0) + v);
   }
-  return { expense, income, byCategory, byCategoryCur };
+  return { expense, income, byCategory, byCategoryCur, bySubcategory };
+}
+
+/**
+ * How a category's total splits: subcategories with money in them (highest first), and the `rest`
+ * with no subcategory. Empty when none were used, as the category's own row already says it all.
+ */
+export function subcategoryBreakdown(c: Category, flow: Flow, totals: PeriodTotals): { subs: { sub: Subcategory; value: number }[]; rest: number } {
+  const subs = (c.subcategories ?? [])
+    .map((sub) => ({ sub, value: totals.bySubcategory[flow].get(sub.id) ?? 0 }))
+    .filter((x) => x.value > 0)
+    .sort((a, b) => b.value - a.value);
+  if (!subs.length) return { subs, rest: 0 };
+  const rest = (totals.byCategory[flow].get(c.id!) ?? 0) - subs.reduce((sum, x) => sum + x.value, 0);
+  // Adding decimals can leave a tiny remainder that isn't real money.
+  return { subs, rest: rest > 1e-6 ? rest : 0 };
 }

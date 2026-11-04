@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
 import { pieChartOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +7,7 @@ import { alive, db } from '@/core/db/db';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
-import { totalsOf, useCategories, useNames } from '@/core/db/hooks';
+import { subcategoryBreakdown, totalsOf, useCategories, useNames } from '@/core/db/hooks';
 import AppHeader from '@/shared/components/AppHeader';
 import { rangeFor, shiftBy } from '@/core/utils/period';
 import PeriodBar from '@/shared/components/PeriodBar';
@@ -202,21 +202,42 @@ export default function OverviewPage() {
               </div>
               {breakdown.map(({ c, v }) => {
                 const pct = kindTotal ? (v / kindTotal) * 100 : 0;
+                const { subs, rest } = subcategoryBreakdown(c, kind, totals);
                 return (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <Avatar icon={c.icon} color={c.color} size="sm" />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, fontWeight: 600, marginBottom: 5 }}>
-                        <span>
-                          {categoryName(c)} <span className="b-muted">· {pct.toFixed(pct < 10 ? 1 : 0)}%</span>
-                        </span>
-                        <span className="b-num">{money.format(v)}</span>
-                      </div>
-                      <div className="b-bar">
-                        <span style={{ width: `${pct}%`, background: c.color }} />
+                  <Fragment key={c.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <Avatar icon={c.icon} color={c.color} size="sm" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, fontWeight: 600, marginBottom: 5 }}>
+                          <span>
+                            {categoryName(c)} <span className="b-muted">· {pct.toFixed(pct < 10 ? 1 : 0)}%</span>
+                          </span>
+                          <span className="b-num">{money.format(v)}</span>
+                        </div>
+                        <div className="b-bar">
+                          <span style={{ width: `${pct}%`, background: c.color }} />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    {subs.length > 0 && (
+                      <div className="b-subrows">
+                        {subs.map(({ sub, value }) => (
+                          <div key={sub.id} className="b-subrow">
+                            <Avatar icon={sub.icon} color={c.color} size="sm" />
+                            <span className="b-subrow__name">{sub.name}</span>
+                            <span className="b-num">{money.format(value)}</span>
+                          </div>
+                        ))}
+                        {rest > 0 && (
+                          <div className="b-subrow">
+                            <span className="b-subrow__blank" />
+                            <span className="b-subrow__name b-muted">{t('overview.noSubcategory')}</span>
+                            <span className="b-num">{money.format(rest)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </Fragment>
                 );
               })}
             </div>

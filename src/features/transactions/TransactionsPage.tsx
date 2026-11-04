@@ -15,6 +15,7 @@ import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
 import { categoryFits, totalsOf, useAccounts, useCategories, useLookups, useNames } from '@/core/db/hooks';
 import { addDays, dayKey, isSameDay } from '@/core/utils/period';
+import { subcategoryName } from '@/core/utils/subcategories';
 import { useLongPress } from '@/shared/hooks/useLongPress';
 import { iconFor } from '@/shared/icons';
 import AppHeader from '@/shared/components/AppHeader';
@@ -60,6 +61,7 @@ export default function TransactionsPage() {
       const hay = [
         x.note,
         categoryName(categories.get(x.categoryId!)),
+        subcategoryName(categories.get(x.categoryId!), x.subcategoryId),
         accountName(accounts.get(x.accountId)),
         x.toAccountId != null ? accountName(accounts.get(x.toAccountId)) : '',
         String(x.amount),
@@ -368,11 +370,12 @@ export default function TransactionsPage() {
                     }
                     const cat = categories.get(x.categoryId!);
                     const isExp = x.type === 'expense';
+                    const sub = subcategoryName(cat, x.subcategoryId);
                     return (
                       <button key={x.id} className={cls} {...bind(x)}>
                         {avatarFor(x)}
                         <div className="b-row__main">
-                          <div className="b-row__title">{categoryName(cat)}</div>
+                          <div className="b-row__title">{categoryName(cat)}{sub ? ` · ${sub}` : ''}</div>
                           <div className="b-row__sub">
                             {accountName(acc)}
                             {x.note ? ` · ${x.note}` : ''}

@@ -38,7 +38,10 @@ export async function moveToAccount(txs: Transaction[], account: Account): Promi
   return skipped;
 }
 
-/** Recategorises expenses/income; skips transfers and transactions of a type the category doesn't accept. */
+/**
+ * Recategorises expenses/income; skips transfers and transactions of a type the category doesn't accept.
+ * A subcategory belongs to its category, so moving to a different one clears it.
+ */
 export async function moveToCategory(txs: Transaction[], category: Category): Promise<number> {
   let skipped = 0;
   await db.transaction('rw', db.transactions, async () => {
@@ -47,7 +50,7 @@ export async function moveToCategory(txs: Transaction[], category: Category): Pr
         skipped++;
         continue;
       }
-      await db.transactions.update(x.id!, { categoryId: category.id! });
+      await db.transactions.update(x.id!, x.categoryId === category.id ? { categoryId: category.id! } : { categoryId: category.id!, subcategoryId: undefined });
     }
   });
   return skipped;

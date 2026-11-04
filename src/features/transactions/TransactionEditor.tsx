@@ -7,6 +7,7 @@ import { db, softDelete } from '@/core/db/db';
 import { useAccounts, useBalances, useCategories, useNames } from '@/core/db/hooks';
 import { evaluate, hasOperator, pressKey } from '@/core/utils/calc';
 import { addDays, dayKey, isSameDay } from '@/core/utils/period';
+import { pickableSubcategories } from '@/core/utils/subcategories';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { currenciesOf, decimalsOf } from '@/core/utils/currency';
 import type { EditorInit } from '@/core/contexts/TxEditorContext';
@@ -53,6 +54,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [accountId, setAccountId] = useState<string | undefined>(tx?.accountId ?? init.accountId);
   const [toAccountId, setToAccountId] = useState<string | undefined>(tx?.toAccountId ?? init.toAccountId);
   const [categoryId, setCategoryId] = useState<string | undefined>(tx?.categoryId ?? init.categoryId);
+  const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId);
   const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : '');
   // Currency the user picked for the amount, and for what arrives in a transfer.
   const [curPick, setCurPick] = useState<string | undefined>(tx?.currency);
@@ -89,6 +91,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
 
   const cats = type === 'income' ? incomeCats : expenseCats;
   const category = allCats?.find((c) => c.id === categoryId);
+  const subcategories = type === 'transfer' ? [] : pickableSubcategories(category, subcategoryId);
 
   // All three types only for a brand-new transaction from the + button. A transfer stays a transfer;
   // an expense/income (new from a category, or being edited) offers just the types its category accepts.
@@ -201,6 +204,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
       toAmount: cross ? toAmount : undefined,
       toCurrency: cross ? toCurrency : undefined,
       categoryId: type === 'transfer' ? undefined : categoryId,
+      subcategoryId: subcategories.find((s) => s.id === subcategoryId)?.id,
       date: iso,
       note: note.trim() || undefined,
       createdAt: tx?.createdAt ?? new Date().toISOString(),
@@ -284,6 +288,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     setPicking(null);
   };
   const pickCategory = (id: string) => {
+    if (id !== categoryId) setSubcategoryId(undefined);
     setCategoryId(id);
     setPicking(null);
   };
@@ -346,6 +351,21 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
           {fromBox}
           {toBox}
         </div>
+
+        {subcategories.length > 0 && (
+          <div className="b-subchips b-subchips--row" style={{ '--c': accent } as CSSProperties}>
+            {subcategories.map((s) => (
+              <button
+                key={s.id}
+                className={`b-subchip ${s.id === subcategoryId ? 'is-on' : ''}`}
+                onClick={() => setSubcategoryId(s.id === subcategoryId ? undefined : s.id)}
+              >
+                <IonIcon icon={iconFor(s.icon)} />
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="b-amount">
           <div className="b-typeline">

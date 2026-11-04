@@ -7,6 +7,7 @@ import { alive, db, eraseAll, exportBackup, importBackup } from '@/core/db/db';
 import { useNames } from '@/core/db/hooks';
 import { pickTextFile, saveTextFile, toCsv } from '@/core/utils/files';
 import { dayKey } from '@/core/utils/period';
+import { subcategoryName } from '@/core/utils/subcategories';
 
 /** Export, backup, restore and erase — used by the Data page and the Profile page's "Back up now". */
 export function useDataActions() {
@@ -29,7 +30,7 @@ export function useDataActions() {
       const accMap = new Map(accounts.map((a) => [a.id, a]));
       const catMap = new Map(categories.map((c) => [c.id, c]));
       const rows: (string | number)[][] = [
-        ['Date', 'Type', 'Amount', 'Currency', 'Account', 'To account', 'Category', 'Note', 'Received', 'Received currency'],
+        ['Date', 'Type', 'Amount', 'Currency', 'Account', 'To account', 'Category', 'Subcategory', 'Note', 'Received', 'Received currency'],
       ];
       for (const x of txs) {
         rows.push([
@@ -41,6 +42,7 @@ export function useDataActions() {
           accountName(accMap.get(x.accountId)),
           x.toAccountId != null ? accountName(accMap.get(x.toAccountId)) : '',
           x.categoryId != null ? categoryName(catMap.get(x.categoryId)) : '',
+          subcategoryName(catMap.get(x.categoryId!), x.subcategoryId),
           x.note ?? '',
           x.toAmount ?? '',
           x.toCurrency ?? '',

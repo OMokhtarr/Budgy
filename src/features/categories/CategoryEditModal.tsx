@@ -7,9 +7,11 @@ import { alive, db, softDelete } from '@/core/db/db';
 import { useNames } from '@/core/db/hooks';
 import { useSettings } from '@/core/contexts/SettingsContext';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
+import { cleanSubcategories } from '@/core/utils/subcategories';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
-import type { Category, CategoryKind, Flow } from '@/shared/models';
+import SubcategoriesField from './SubcategoriesField';
+import type { Category, CategoryKind, Flow, Subcategory } from '@/shared/models';
 
 interface Props {
   isOpen: boolean;
@@ -33,6 +35,7 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
   const [color, setColor] = useState('#10b981');
   const [budget, setBudget] = useState('');
   const [catKind, setCatKind] = useState<CategoryKind>(kind);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,6 +44,7 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
     setColor(category?.color ?? '#10b981');
     setBudget(category?.budget ? String(category.budget) : '');
     setCatKind(category?.kind ?? kind);
+    setSubcategories(category?.subcategories ?? []);
   }, [isOpen, category, kind, categoryName]);
 
   const hasBudget = catKind !== 'income';
@@ -58,6 +62,7 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
         return;
       }
     }
+    const subs = cleanSubcategories(subcategories, category?.subcategories);
     const patch = {
       // keep built-in categories translatable unless the user actually renamed them
       name: category && trimmed === categoryName(category) && category.key ? category.name : trimmed,
@@ -65,6 +70,7 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
       color,
       kind: catKind,
       budget: hasBudget && b > 0 ? b : undefined,
+      subcategories: subs.length ? subs : undefined,
     };
     if (category?.id != null) {
       await db.categories.update(category.id, patch);
@@ -152,6 +158,7 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
               />
             </label>
           )}
+          <SubcategoriesField subcategories={subcategories} saved={category?.subcategories} color={color} icon={icon} onChange={setSubcategories} />
           <IconColorPicker icon={icon} color={color} onIcon={setIcon} onColor={setColor} />
           {category && (
             <>
