@@ -15,12 +15,13 @@ import {
   takeRedirectError,
   type Provider,
 } from './auth';
-import { clearLocal, hasLocalTransactions, syncOnce, type SettingsPort, type SyncState } from './sync';
+import { hasWorkToSync, clearLocal, hasLocalTransactions, syncOnce, type SettingsPort, type SyncState } from './sync';
 
 /**
- * Who is signed in, and background sync of their data. Sync runs after sign-in, a few seconds after
- * each local change, when the app comes back to the front, when the connection returns, and every few
- * minutes while open. Without cloud settings in the build (see `.env.example`) this is all off.
+ * Who is signed in, and the backup of their data to the account. Sync runs after sign-in and on start,
+ * and a few seconds after each local change. When the app comes back to the front, when the connection
+ * returns, and every few minutes while open, it only runs if something is left to send or finish.
+ * Without cloud settings in the build (see `.env.example`) this is all off.
  */
 
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error';
@@ -51,7 +52,7 @@ function isAuthError(err: unknown): boolean {
 }
 
 const AFTER_CHANGE_MS = 3000;
-const EVERY_MS = 5 * 60_000;
+const RETRY_MS = 5 * 60_000;
 
 interface Stored extends SyncState {
   lastSyncedAt?: string;
@@ -204,21 +205,26 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       (await db.transactions.where('dirty').equals(1).count()),
   );
   const settingsDirty = !!settings.syncedDirty;
+  const unsent = useRef(false);
+  unsent.current = !!pending || settingsDirty;
   useEffect(() => {
     if (!user || (!pending && !settingsDirty)) return;
     const timer = window.setTimeout(() => void sync(), AFTER_CHANGE_MS);
     return () => window.clearTimeout(timer);
   }, [user, pending, settingsDirty, sync]);
 
-  // Back in front, back online, and every few minutes (other devices' changes).
+  // Sync is this device's backup, so there's no need to ask the cloud for changes while the app is open.
+  // Back in front, back online, and every few minutes: only send or finish what's left, retrying failures.
   useEffect(() => {
     if (!user) return;
-    const run = () => void sync();
+    const run = () => {
+      if (hasWorkToSync(loadState(user.id), unsent.current)) void sync();
+    };
     const onVisible = () => document.visibilityState === 'visible' && run();
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('online', run);
     const resume = Capacitor.isNativePlatform() ? CapApp.addListener('resume', run) : undefined;
-    const timer = window.setInterval(() => document.visibilityState === 'visible' && run(), EVERY_MS);
+    const timer = window.setInterval(() => document.visibilityState === 'visible' && run(), RETRY_MS);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('online', run);

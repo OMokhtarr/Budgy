@@ -57,6 +57,11 @@ export interface SyncState {
   replaceCloud?: boolean;
 }
 
+/** Whether there's anything to send or finish: unsent changes, or a first sync or restore / erase that didn't complete. */
+export function hasWorkToSync(state: SyncState, unsent: boolean): boolean {
+  return unsent || !state.synced || !!state.replaceCloud;
+}
+
 const PAGE = 500;
 /** Pulls re-read the last minute too: a row committed late with an earlier server time is still seen. */
 const OVERLAP_MS = 60_000;

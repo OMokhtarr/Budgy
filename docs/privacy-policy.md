@@ -13,8 +13,8 @@ explains what data the app handles and why.
 ## The short version
 
 - Without an account, **everything stays on your device**. We never see it.
-- If you choose to sign in, your Budgy data is **stored in your account so it can sync** between your
-  devices. It is used for nothing else.
+- If you choose to sign in, your Budgy data is **stored in your account as a backup**, so you can get it
+  back if you change phones or reinstall the app. It is used for nothing else.
 - No ads, no analytics, no selling or sharing of data.
 - You can delete your account and all its data from inside the app at any time.
 
@@ -23,7 +23,8 @@ explains what data the app handles and why.
 **Your budget data:** accounts, categories, transactions, notes, budgets, currencies and exchange
 rates, and your profile name and colour.
 - **Not signed in:** this is stored only on your device. Backups you make are files you control.
-- **Signed in:** it is also stored in our cloud database so it can sync between your devices.
+- **Signed in:** it is also stored in our cloud database as a backup, so you can get it back on a new
+  phone or after reinstalling.
 
 **Account information, only if you sign in:** your email address and a user ID from Google or Apple,
 and your name if Apple shares it on first sign-in. These identify your account and are used for

@@ -36,8 +36,6 @@
 - [ ] **In a later release:** delete the old `budgy` IndexedDB database once everyone has upgraded
   (the data now lives in `budgy2`).
 - [ ] Capacitor core is pinned to `~8.5.3` (8.6.0 was only 6 days old). Move to 8.6.x after a few weeks.
-- [ ] **Later, maybe:** Supabase Realtime for instant updates between devices. Today, sync runs at
-  start, on resume, after changes and every 5 minutes.
 - [ ] **Later, maybe:** sign in with Apple on Android. It needs Apple's web flow and a deep link back
   into the app.
 
@@ -86,13 +84,15 @@ settings (`.env`) shows no sign-in at all.
 
 ### Phase 0 — Decisions
 - [x] **Backend:** Supabase.
+- [x] **What sync is for:** a copy of this device's data in the account, to get it back after changing phones
+  or reinstalling. Using several phones at once isn't a goal, but two signed-in phones stay safe: the second
+  sees the first's changes when it next starts.
 - [x] **Conflict rule:** last edit wins, per record, on `updatedAt`. The server enforces it, and a local
   edit is always stamped later than the version it changes, even if the phone's clock is behind.
 - [x] **First sign-in with data on both sides:** ask "Merge both" or "Use the account's data", or cancel.
   When only one side has data, they merge without asking. The starting accounts and categories have
   fixed ids, so they never duplicate.
-- [x] **Restore / erase while signed in:** replaces the account's data on every device. The confirmation
-  says so.
+- [x] **Restore / erase while signed in:** replaces the account's data too. The confirmation says so.
 - [ ] **Your part:** create the project and check the costs (see "Your work" at the end).
 
 ### Phase 1 — Data model ✅
@@ -134,8 +134,9 @@ settings (`.env`) shows no sign-in at all.
   - **Push** records marked `dirty`, in batches.
   - **Settings:** the account's settings win on a phone's first sync.
   - **Restore / erase:** makes the cloud match the phone.
-- [x] `CloudContext`: sync runs at sign-in, 3 seconds after changes, on resume, when the connection
-  returns, and every 5 minutes. It never blocks the app.
+- [x] `CloudContext`: sync runs at sign-in, on start, and 3 seconds after changes. On resume, when the
+  connection returns, and every 5 minutes it only runs if something is left to send or finish, so an idle
+  app makes no requests. It never blocks the app.
 - [x] **Tests:** `src/core/cloud/sync.test.ts` with two phones and a server following the same rules:
   - merging defaults, no echo, conflicting edits, late offline edits;
   - deletes, restore, and switching accounts.
@@ -147,7 +148,7 @@ settings (`.env`) shows no sign-in at all.
 - [x] **Elsewhere:**
   - The side menu shows the last sync when signed in.
   - The "stays on this device" text changes when signed in.
-  - The restore and erase warnings mention all devices.
+  - The restore and erase warnings mention the account.
   - The backup reminder is off when signed in.
 
 ### Phase 6 — Privacy & store
@@ -241,12 +242,16 @@ Roughly in this order:
    - Check on a real phone that the header and tab bar clear the status and navigation bars (Android
      draws edge-to-edge), and that the status bar icons follow the app theme.
 7. [ ] **iOS project** (on a Mac with Xcode 26+): `npx cap add ios`, then the same checks.
-8. [ ] **Real-device sync test** with two phones on one account:
-   - offline edits on both, the same transaction edited on both, a delete while the other edits;
+8. [ ] **Real-device backup test** on one account:
+   - reinstall: delete the app, install it again, sign in, and check that everything comes back;
+   - a new phone: sign in and check the same;
+   - offline edits that upload when the connection returns;
    - a first sign-in with data on the phone only, in the account only, and on both;
-   - sign out (keep / remove), a new phone, delete account;
+   - sign out (keep / remove), delete account;
    - restore a backup while signed in.
 9. [ ] **Privacy & store:**
+   - [ ] Update `privacy.html` and `privacy-ar.html` on `gh-pages`: `docs/privacy-policy.md` now describes
+     sync as a backup, not as a way to use several devices.
    - [x] The [bracketed] parts of `docs/privacy-policy.md` are filled in. The minimum age is 13, so choose
      13+ age groups in Play Console's target audience form too.
    - [x] Pushed to the `gh-pages` branch: `privacy.html`, `delete-account.html` and their `-ar` versions. The

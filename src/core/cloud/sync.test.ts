@@ -1,7 +1,7 @@
 import '@/test/setup-db';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { BudgyDB, SEED_TIME, alive, exportBackup, importBackup, db, seedIfEmpty, softDelete, type SyncedTable } from '@/core/db/db';
-import { syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
+import { hasWorkToSync, syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
 
 /** An in-memory server with the same rules as the Supabase migration: last edit wins, equal stamps ignored. */
 function fakeServer() {
@@ -160,5 +160,25 @@ describe('sync between two phones', () => {
     await A2.sync();
     expect(other.server.tables.accounts.size).toBe(await db.accounts.count());
     expect(other.server.tables.transactions.size).toBe(await db.transactions.count());
+  });
+});
+
+describe('hasWorkToSync', () => {
+  const finished: SyncState = { cursors: {}, synced: true };
+
+  it('has nothing to do when the last sync finished and nothing is unsent', () => {
+    expect(hasWorkToSync(finished, false)).toBe(false);
+  });
+
+  it('has work when there are unsent changes', () => {
+    expect(hasWorkToSync(finished, true)).toBe(true);
+  });
+
+  it("retries a first sync that didn't finish, so a new phone still gets its data", () => {
+    expect(hasWorkToSync({ cursors: {} }, false)).toBe(true);
+  });
+
+  it("retries a restore or erase that hasn't reached the cloud, even when it left nothing unsent", () => {
+    expect(hasWorkToSync({ ...finished, replaceCloud: true }, false)).toBe(true);
   });
 });
