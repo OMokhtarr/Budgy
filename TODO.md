@@ -203,7 +203,8 @@ Roughly in this order:
    - Or authorize the Supabase connector (`/mcp`) and ask me to do these steps.
 4. [ ] **Google sign-in** (Google Cloud Console → APIs & Services):
    - **Status:** web and two Android clients exist (project `budgy-513623`), both env files are filled in, and
-     Google is on in Supabase. **Not yet tested on a real phone.** `supabase/config.toml` now matches the live
+     Google is on in Supabase. **Sign-in works on a real phone with a debug build (2026-11-04).** Release builds
+     are untested: check that the upload and Play signing SHA-1s each have an Android client. `supabase/config.toml` now matches the live
      project, with Apple off, so `config diff` should show nothing. Turn Apple on there in step 5.
    - **OAuth consent screen:** app name, support email, privacy policy link. In Testing mode, add test
      users.
@@ -250,8 +251,8 @@ Roughly in this order:
    - sign out (keep / remove), delete account;
    - restore a backup while signed in.
 9. [ ] **Privacy & store:**
-   - [ ] Update `privacy.html` and `privacy-ar.html` on `gh-pages`: `docs/privacy-policy.md` now describes
-     sync as a backup, not as a way to use several devices.
+   - [x] `privacy.html` and `privacy-ar.html` on `gh-pages` now describe sync as a backup, not as a way to use
+     several devices.
    - [x] The [bracketed] parts of `docs/privacy-policy.md` are filled in. The minimum age is 13, so choose
      13+ age groups in Play Console's target audience form too.
    - [x] Pushed to the `gh-pages` branch: `privacy.html`, `delete-account.html` and their `-ar` versions. The
