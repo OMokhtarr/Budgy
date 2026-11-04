@@ -1,6 +1,6 @@
 import '@/test/setup-db';
 import Dexie from 'dexie';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { alive, db, exportBackup, importBackup, openData, softDelete } from './db';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -60,6 +60,19 @@ describe('move to UUID ids (budgy → budgy2)', () => {
   it("doesn't copy twice on the next start", async () => {
     localStorage.removeItem('budgy-migrated-to-budgy2');
     await openData();
+    expect(await db.transactions.count()).toBe(2);
+  });
+
+  it('keeps the old database for 30 days after copying it, then removes it', async () => {
+    const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    localStorage.setItem('budgy-migrated-to-budgy2', daysAgo(29));
+    await openData();
+    expect(await Dexie.exists('budgy')).toBe(true);
+
+    localStorage.setItem('budgy-migrated-to-budgy2', daysAgo(31));
+    await openData();
+    await vi.waitFor(async () => expect(await Dexie.exists('budgy')).toBe(false));
     expect(await db.transactions.count()).toBe(2);
   });
 });

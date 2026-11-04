@@ -221,14 +221,21 @@ function remapStoredAccountIds(map: Map<string, string>) {
 }
 
 const MIGRATED_KEY = 'budgy-migrated-to-budgy2';
+/** How long a device keeps the old database after copying it, as a safety net. */
+const KEEP_LEGACY_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * One-time copy from the old database. The old one is left untouched as a safety net (remove it in a
- * later release). Runs only while `budgy2` has never had any accounts, so erased data can't come back.
+ * One-time copy from the old database, which is removed 30 days later. Runs only while `budgy2` has never
+ * had any accounts, so erased data can't come back.
  */
 async function migrateLegacy(): Promise<void> {
   try {
-    if (localStorage.getItem(MIGRATED_KEY)) return;
+    const migratedAt = localStorage.getItem(MIGRATED_KEY);
+    if (migratedAt) {
+      // Not awaited: a tab still on the old version can hold this up, and startup mustn't wait for it.
+      if (Date.now() - Date.parse(migratedAt) > KEEP_LEGACY_MS) void Dexie.delete('budgy').catch(() => {});
+      return;
+    }
   } catch {
     /* fall back to the checks below */
   }
