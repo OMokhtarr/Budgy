@@ -54,7 +54,8 @@ function initSocialLogin(): Promise<void> {
       iOSServerClientId: cloudConfig.googleWebClientId,
       mode: 'online',
     },
-    apple: {},
+    // iOS only: Android's plugin rejects the whole setup, Google included, without an Apple client ID.
+    apple: Capacitor.getPlatform() === 'ios' ? {} : undefined,
   }).catch((err) => {
     initialized = null; // let a later attempt try again
     throw err;
@@ -113,7 +114,8 @@ async function doSignIn(provider: Provider): Promise<SignInResult> {
   const hashed = await sha256Hex(nonce);
   const res =
     provider === 'google'
-      ? await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'], nonce: hashed } })
+      ? // No scopes: the plugin already asks for email and profile, and Android rejects any list unless MainActivity is changed.
+        await SocialLogin.login({ provider: 'google', options: { nonce: hashed } })
       : await SocialLogin.login({ provider: 'apple', options: { scopes: ['name', 'email'], nonce: hashed } });
 
   const result = res.result as { idToken?: string | null; profile?: { givenName?: string | null; familyName?: string | null } };

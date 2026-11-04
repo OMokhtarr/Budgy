@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   platform: 'android' as 'android' | 'ios' | 'web',
   cloudConfig: { url: 'x', key: 'x', googleWebClientId: 'web-client', googleIosClientId: 'ios-client', appleOnWeb: false },
+  // Like the real Android plugin, rejects the whole setup when Apple comes without a client ID.
+  initialize: vi.fn(async (config: { apple?: { clientId?: string } }) => {
+    if (mocks.platform === 'android' && config.apple && !config.apple.clientId) {
+      throw new Error('apple.android.clientId is null or empty');
+    }
+  }),
   login: vi.fn(),
   signInWithIdToken: vi.fn(),
   signInWithOAuth: vi.fn(),
@@ -13,7 +19,7 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => mocks.platform !== 'web', getPlatform: () => mocks.platform },
 }));
 vi.mock('@capgo/capacitor-social-login', () => ({
-  SocialLogin: { initialize: vi.fn(async () => {}), login: mocks.login, logout: vi.fn(async () => {}) },
+  SocialLogin: { initialize: mocks.initialize, login: mocks.login, logout: vi.fn(async () => {}) },
 }));
 vi.mock('./client', () => ({
   cloudConfig: mocks.cloudConfig,
@@ -42,6 +48,29 @@ beforeEach(() => {
   mocks.updateUser.mockResolvedValue({ error: null });
 });
 
+describe('plugin setup', () => {
+  // A fresh copy of the module, because the plugin is only set up once per module.
+  const freshAuth = async () => {
+    vi.resetModules();
+    return import('./auth');
+  };
+
+  it('signs in with Google on Android, without an Apple client ID', async () => {
+    const auth = await freshAuth();
+    mocks.login.mockResolvedValue({ result: { idToken: token({ sub: '1' }) } });
+    await auth.signIn('google');
+    expect(mocks.signInWithIdToken.mock.calls[0][0].provider).toBe('google');
+  });
+
+  it('still sets up Apple on iOS', async () => {
+    mocks.platform = 'ios';
+    const auth = await freshAuth();
+    mocks.login.mockResolvedValue({ result: { idToken: token({ sub: '1' }) } });
+    await auth.signIn('apple');
+    expect(mocks.initialize.mock.lastCall?.[0].apple).toEqual({});
+  });
+});
+
 describe('native sign-in', () => {
   it('sends the provider the SHA-256 of the nonce, and Supabase the raw nonce', async () => {
     mocks.login.mockImplementation(async ({ options }) => ({ result: { idToken: token({ nonce: options.nonce }) } }));
@@ -57,6 +86,12 @@ describe('native sign-in', () => {
     mocks.login.mockResolvedValue({ result: { idToken: token({ sub: '1' }) } });
     await signIn('google');
     expect(mocks.signInWithIdToken.mock.calls[0][0].nonce).toBeUndefined();
+  });
+
+  it("doesn't send Google scopes, which the Android plugin rejects unless MainActivity is changed", async () => {
+    mocks.login.mockResolvedValue({ result: { idToken: token({ sub: '1' }) } });
+    await signIn('google');
+    expect(mocks.login.mock.calls[0][0].options.scopes).toBeUndefined();
   });
 
   it("keeps the name Apple sends on the first sign-in", async () => {
