@@ -64,7 +64,7 @@
   },
   "categories": {
     "add": "إضافة",
-    "editHint": "اضغط على فئة لتعديلها أو تحديد ميزانية شهرية",
+    "editHint": "اضغط على فئة لتعديلها أو إضافة فئات فرعية أو تحديد ميزانية شهرية",
     "editTitle": "تعديل الفئة",
     "newExpense": "فئة مصروفات جديدة",
     "newIncome": "فئة دخل جديدة",
@@ -95,7 +95,20 @@
     "switchKind": "التبديل بين المصروفات والدخل",
     "archive": "أرشفة الفئة",
     "restore": "استعادة الفئة",
-    "archived": "مؤرشفة"
+    "archived": "مؤرشفة",
+    "subcategories": "الفئات الفرعية",
+    "addSubcategory": "إضافة فئة فرعية",
+    "newSubcategory": "فئة فرعية جديدة",
+    "restoreSubcategory": "استعادة الفئة الفرعية",
+    "deleteSubcategory": "حذف الفئة الفرعية",
+    "deleteSubcategoryTitle": "حذف الفئة الفرعية؟",
+    "deleteSubcategoryMessage": "سيتم حذف هذه الفئة الفرعية.",
+    "deleteSubcategoryUsed_zero": "لا توجد معاملات في هذه الفئة الفرعية.",
+    "deleteSubcategoryUsed_one": "تحتوي هذه الفئة الفرعية على معاملة واحدة. سيتم إخفاؤها مع الاحتفاظ بالمعاملة.",
+    "deleteSubcategoryUsed_two": "تحتوي هذه الفئة الفرعية على معاملتين. سيتم إخفاؤها مع الاحتفاظ بالمعاملتين.",
+    "deleteSubcategoryUsed_few": "تحتوي هذه الفئة الفرعية على {{count}} معاملات. سيتم إخفاؤها مع الاحتفاظ بالمعاملات.",
+    "deleteSubcategoryUsed_many": "تحتوي هذه الفئة الفرعية على {{count}} معاملة. سيتم إخفاؤها مع الاحتفاظ بالمعاملات.",
+    "deleteSubcategoryUsed_other": "تحتوي هذه الفئة الفرعية على {{count}} معاملة. سيتم إخفاؤها مع الاحتفاظ بالمعاملات."
   },
   "accounts": {
     "transfer": "تحويل",
@@ -234,6 +247,7 @@
     "backspace": "حذف (اضغط مطولًا للمسح)"
   },
   "overview": {
+    "noSubcategory": "بدون فئة فرعية",
     "net": "الصافي",
     "avgPerDay": "متوسط الصرف / يوم",
     "trend": "الاتجاه",

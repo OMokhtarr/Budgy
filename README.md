@@ -15,9 +15,9 @@ offline-only and shows no sign-in at all.
 | Where | What it does |
 |---|---|
 | **Accounts** | Three tabs:<br>• **Accounts:** everyday and Savings groups, live balances, transfers, and a Sum / Split view for multi-currency accounts.<br>• **Debts:** who owes you and whom you owe.<br>• **My finances:** assets and debts per currency, plus net worth.<br>Accounts can hold a second currency and can be archived. |
-| **Categories** (home) | Category bubbles around a donut of the period's spending. Tap one to add a transaction. In *Edit* mode you can add, rename, recolour or change the icon, choose expense / income / both, set a monthly budget, and archive. |
+| **Categories** (home) | Category bubbles around a donut of the period's spending. Tap one to add a transaction. In *Edit* mode you can add, rename, recolour or change the icon, choose expense / income / both, set a monthly budget, add subcategories, and archive. |
 | **Transactions** | History grouped by day, with each day's net and search. Long-press to select several, then change their date, account or category, delete them, or filter by them. |
-| **Overview** | Income, expenses, net, average spend per day, trend bars, budget progress, and a breakdown by category. |
+| **Overview** | Income, expenses, net, average spend per day, trend bars, budget progress, and a breakdown by category and subcategory. |
 | **Header** | Total balance of the accounts in the accounts filter (tap it to change the filter). A warning appears when some currency has no exchange rate. |
 | **Side menu** | Profile (name, colour, account & sync), Settings, Data, Rate us, Support, About. |
 | **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week. |
@@ -113,7 +113,7 @@ src/
     utils/      period, calc (keypad), currency (decimals, rounding), number (typed numbers), files, id
   features/
     accounts/      AccountsPage, AccountEditModal, AccountsFilterSheet
-    categories/    CategoriesPage, CategoryEditModal
+    categories/    CategoriesPage, CategoryEditModal, SubcategoriesField
     transactions/  TransactionsPage, TransactionEditor (keypad sheet), bulk.ts
     overview/      OverviewPage
     settings/      SettingsPage

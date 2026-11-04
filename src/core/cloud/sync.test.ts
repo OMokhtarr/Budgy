@@ -139,6 +139,16 @@ describe('sync between two phones', () => {
     expect((await db.transactions.get(fromB))?.amount).toBe(7);
   });
 
+  it('subcategories and the transactions that use them reach the other phone', async () => {
+    const subcategories = [{ id: 'akl', name: 'Akl', icon: 'restaurant' }];
+    await db.categories.update(GROCERIES, { subcategories });
+    const id = await db.transactions.add({ type: 'expense', amount: 9, currency: 'USD', accountId: CASH, categoryId: GROCERIES, subcategoryId: 'akl', date: 'x', createdAt: 'x' });
+    await A.sync();
+    await B.sync();
+    expect((await bDb.categories.get(GROCERIES))?.subcategories).toEqual(subcategories);
+    expect((await bDb.transactions.get(id))?.subcategoryId).toBe('akl');
+  });
+
   it('restoring a backup on A makes the account (and B) match it', async () => {
     vi.setSystemTime('2026-11-03T15:00:00Z');
     const backup = await exportBackup({ currency: 'USD', rates: {}, balanceView: 'sum', weekStart: 6, profileName: '', profileColor: '#10b981' });

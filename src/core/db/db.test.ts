@@ -108,6 +108,20 @@ describe('backups', () => {
     expect(await db.transactions.get(someId!)).toBeTruthy();
   });
 
+  it('restores subcategories and the transactions that use them', async () => {
+    const subcategories = [{ id: 'akl', name: 'Akl', icon: 'restaurant' }];
+    const categoryId = await db.categories.add({ name: 'Food', kind: 'expense', icon: 'restaurant', color: '#f00', order: 9, subcategories });
+    const txId = await db.transactions.add({
+      type: 'expense', amount: 5, currency: 'EGP', accountId: 'cash', categoryId, subcategoryId: 'akl', date: '2026-11-01T10:00:00.000Z', createdAt: 'x',
+    });
+    const backup = JSON.parse(JSON.stringify(await exportBackup(SETTINGS)));
+    await db.categories.clear();
+    await db.transactions.clear();
+    await importBackup(backup);
+    expect((await db.categories.get(categoryId))?.subcategories).toEqual(subcategories);
+    expect((await db.transactions.get(txId))?.subcategoryId).toBe('akl');
+  });
+
   it('version 4 (numbered ids) restores with new UUIDs and links rewritten', async () => {
     await importBackup({
       app: 'budgy', version: 4, exportedAt: 'x',

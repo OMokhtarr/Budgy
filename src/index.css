@@ -460,6 +460,93 @@ ion-toolbar.b-toolbar {
   border-radius: 999px;
 }
 
+/* ─── Subcategories ────────────────────────────────────────────────────────── */
+/* A button: outlined in the category colour (--c), filled when selected */
+.b-subchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* On the transaction screen: one centred row that scrolls sideways when it doesn't fit */
+.b-subchips--row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 10px 16px 0;
+  scrollbar-width: none;
+}
+
+.b-subchips--row::-webkit-scrollbar { display: none; }
+.b-subchips--row > :first-child { margin-inline-start: auto; }
+.b-subchips--row > :last-child { margin-inline-end: auto; }
+
+.b-subchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 1.5px solid var(--c);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--c);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.b-subchip ion-icon { font-size: 17px; }
+.b-subchip.is-on { background: var(--c); color: #fff; }
+.b-subchip.is-archived { border-style: dashed; opacity: 0.6; }
+
+.b-subchip--add {
+  border-style: dashed;
+  border-color: var(--b-faint);
+  color: var(--b-muted);
+}
+
+.b-subform {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--b-border);
+  border-radius: 12px;
+}
+
+/* Overview: rows under a category, lined up with its name */
+.b-subrows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: -4px 0 12px;
+  margin-inline-start: 40px;
+}
+
+.b-subrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.b-subrow .b-avatar { width: 24px; height: 24px; font-size: 13px; }
+
+.b-subrow__blank {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 1.5px dashed var(--b-faint);
+  border-radius: 50%;
+}
+
+.b-subrow__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ─── Segmented pills ──────────────────────────────────────────────────────── */
 .b-pills {
   display: flex;

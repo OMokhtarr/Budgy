@@ -42,6 +42,15 @@ export interface Account extends Synced {
   createdAt: string;
 }
 
+/** A part of a category that people add themselves. Stored inside its category, so it syncs with it. */
+export interface Subcategory {
+  id: string;
+  name: string;
+  icon: string;
+  /** Hidden from the transaction screen because transactions still use it. */
+  archived?: boolean;
+}
+
 export interface Category extends Synced {
   /** Translation key for built-in categories. If set and `name` is empty, the translated label is shown. */
   key?: string;
@@ -51,6 +60,7 @@ export interface Category extends Synced {
   color: string;
   /** Monthly budget limit (expense categories only). */
   budget?: number;
+  subcategories?: Subcategory[];
   archived?: boolean;
   order: number;
 }
@@ -69,6 +79,8 @@ export interface Transaction extends Synced {
   toCurrency?: string;
   /** Expense or income category. Undefined for transfers. */
   categoryId?: string;
+  /** Optional: one of the category's subcategories. */
+  subcategoryId?: string;
   /** ISO date-time string of when the transaction happened. */
   date: string;
   note?: string;

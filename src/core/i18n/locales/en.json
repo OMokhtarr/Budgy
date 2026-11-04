@@ -64,7 +64,7 @@
   },
   "categories": {
     "add": "Add",
-    "editHint": "Tap a category to edit it or set a monthly budget",
+    "editHint": "Tap a category to edit it, add subcategories or set a monthly budget",
     "editTitle": "Edit category",
     "newExpense": "New expense category",
     "newIncome": "New income category",
@@ -87,7 +87,16 @@
     "switchKind": "Switch between expenses and income",
     "archive": "Archive category",
     "restore": "Restore category",
-    "archived": "Archived"
+    "archived": "Archived",
+    "subcategories": "Subcategories",
+    "addSubcategory": "Add subcategory",
+    "newSubcategory": "New subcategory",
+    "restoreSubcategory": "Restore subcategory",
+    "deleteSubcategory": "Delete subcategory",
+    "deleteSubcategoryTitle": "Delete subcategory?",
+    "deleteSubcategoryMessage": "This subcategory will be removed.",
+    "deleteSubcategoryUsed_one": "This subcategory has 1 transaction. It will be hidden, but the transaction is kept.",
+    "deleteSubcategoryUsed_other": "This subcategory has {{count}} transactions. It will be hidden, but those transactions are kept."
   },
   "accounts": {
     "transfer": "Transfer",
@@ -190,6 +199,7 @@
     "backspace": "Delete (hold to clear)"
   },
   "overview": {
+    "noSubcategory": "No subcategory",
     "net": "Net",
     "avgPerDay": "Avg. spend / day",
     "trend": "Trend",
