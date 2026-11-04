@@ -2,6 +2,7 @@ import Dexie, { type EntityTable, type Table, type Transaction as DexieTx } from
 import type { Account, Category, Synced, Transaction } from '@/shared/models';
 import { backupSettingsOf, savedCurrency, type BackupSettings } from '@/core/contexts/SettingsContext';
 import { newId } from '@/core/utils/id';
+import { stampAfter } from '@/core/utils/stamp';
 
 /**
  * Budgy is local-first: everything lives in IndexedDB on the device (works the same
@@ -51,16 +52,8 @@ function stampWrites(table: Table<Synced, string>) {
   });
   table.hook('updating', (mods, _key, obj, tx) => {
     if (fromCloud.has(tx)) return undefined;
-    return 'updatedAt' in mods ? { dirty: 1 } : { updatedAt: after(obj.updatedAt), dirty: 1 };
+    return 'updatedAt' in mods ? { dirty: 1 } : { updatedAt: stampAfter(obj.updatedAt), dirty: 1 };
   });
-}
-
-/**
- * Now, but always later than `prev`: an edit must count as newer than the version it changes, even when
- * that version came from a device whose clock runs ahead (otherwise "last edit wins" would drop it).
- */
-function after(prev: string | undefined): string {
-  return new Date(Math.max(Date.now(), prev ? Date.parse(prev) + 1 : 0)).toISOString();
 }
 
 /** Runs `fn` in a transaction whose writes count as coming from the cloud (see `fromCloud`). */

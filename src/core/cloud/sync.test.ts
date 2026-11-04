@@ -1,6 +1,7 @@
 import '@/test/setup-db';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { BudgyDB, SEED_TIME, alive, exportBackup, importBackup, db, seedIfEmpty, softDelete, type SyncedTable } from '@/core/db/db';
+import { BudgyDB, SEED_TIME, alive, eraseAll, exportBackup, importBackup, db, seedIfEmpty, softDelete, type SyncedTable } from '@/core/db/db';
+import { stampIfSynced, type Settings } from '@/core/contexts/SettingsContext';
 import { hasWorkToSync, syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
 
 /** An in-memory server with the same rules as the Supabase migration: last edit wins, equal stamps ignored. */
@@ -24,7 +25,7 @@ function fakeServer() {
         .slice(0, limit)
         .map((r) => structuredClone(r));
     },
-    allIds: async (table) => [...tables[table].keys()],
+    allStamps: async (table) => [...tables[table].values()].map(({ id, updated_at }) => ({ id, updated_at })),
     hasTransactions: async () => [...tables.transactions.values()].some((r) => !r.deleted_at),
     getSettings: async () => server.settings && structuredClone(server.settings),
     async putSettings(s) {
@@ -160,6 +161,77 @@ describe('sync between two phones', () => {
     await A2.sync();
     expect(other.server.tables.accounts.size).toBe(await db.accounts.count());
     expect(other.server.tables.transactions.size).toBe(await db.transactions.count());
+  });
+});
+
+describe('a phone whose clock is behind the cloud', () => {
+  const SETTINGS = { currency: 'USD', rates: {}, balanceView: 'sum' as const, weekStart: 6, profileName: '', profileColor: '#10b981' };
+
+  /** A phone that synced at noon, with an extra transaction and a renamed account, and whose clock then fell back to 8am. */
+  async function syncedThenSlow() {
+    const { server, remote } = fakeServer();
+    const A = phone(db, remote, { data: { currency: 'USD' }, updatedAt: '2026-11-04T09:00:00.000Z', dirty: true });
+    vi.setSystemTime('2026-11-04T12:00:00Z');
+    await db.accounts.update(CASH, { name: 'Before' });
+    const backup = await exportBackup(SETTINGS);
+    const extra = (await db.transactions.add({ type: 'expense', amount: 99, currency: 'USD', accountId: CASH, categoryId: GROCERIES, date: 'x', createdAt: 'x' }))!;
+    await db.accounts.update(CASH, { name: 'Renamed later' });
+    await A.sync();
+    vi.setSystemTime('2026-11-04T08:00:00Z');
+    return { server, A, backup, extra };
+  }
+
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it('a restore still replaces the cloud, and stays after the next sync', async () => {
+    const { server, A, backup, extra } = await syncedThenSlow();
+    await importBackup(backup);
+    A.replaceCloud();
+    await A.sync();
+    expect(server.tables.transactions.get(extra)?.deleted_at).toBeTruthy();
+    expect((server.tables.accounts.get(CASH)!.data as { name: string }).name).toBe('Before');
+    await A.sync();
+    expect((await db.accounts.get(CASH))?.name).toBe('Before');
+    expect(await dirtyCount(db)).toBe(0);
+  });
+
+  it('an erase still empties the cloud', async () => {
+    const { server, A, extra } = await syncedThenSlow();
+    await eraseAll();
+    A.replaceCloud();
+    await A.sync();
+    expect(server.tables.transactions.get(extra)?.deleted_at).toBeTruthy();
+    expect((server.tables.accounts.get(CASH)!.data as { name: string }).name).toBe('');
+  });
+
+  it('restored settings replace the cloud and are not overwritten by its copy', async () => {
+    const { server, A, backup } = await syncedThenSlow();
+    expect(server.settings?.data.currency).toBe('USD');
+    await importBackup(backup);
+    Object.assign(A.settings, { data: { currency: 'EUR' }, updatedAt: new Date().toISOString(), dirty: true });
+    A.replaceCloud();
+    await A.sync();
+    expect(server.settings?.data.currency).toBe('EUR');
+    expect(A.settings.data.currency).toBe('EUR');
+    expect(A.settings.dirty).toBe(false);
+  });
+
+  it('a settings edit still reaches the cloud, and stays after the next sync', async () => {
+    const { server, A } = await syncedThenSlow();
+    const edited = stampIfSynced(
+      { currency: 'USD', syncedUpdatedAt: A.settings.updatedAt } as Settings,
+      { currency: 'EUR', syncedUpdatedAt: A.settings.updatedAt } as Settings,
+    );
+    Object.assign(A.settings, { data: { currency: 'EUR' }, updatedAt: edited.syncedUpdatedAt, dirty: edited.syncedDirty });
+    await A.sync();
+    expect(server.settings?.data.currency).toBe('EUR');
+    await A.sync();
+    expect(A.settings.data.currency).toBe('EUR');
   });
 });
 

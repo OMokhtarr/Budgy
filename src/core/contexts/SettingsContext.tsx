@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { decimalsOf, roundTo } from '@/core/utils/currency';
+import { stampAfter } from '@/core/utils/stamp';
 import type { Amounts } from '@/shared/models';
 
 export type ThemePref = 'system' | 'light' | 'dark';
@@ -109,9 +110,9 @@ const SettingsContext = createContext<SettingsContextValue>({
 });
 
 /** Stamps a change to any synced setting so sync uploads it. */
-function stampIfSynced(prev: Settings, next: Settings): Settings {
+export function stampIfSynced(prev: Settings, next: Settings): Settings {
   const changed = BACKUP_KEYS.some((k) => JSON.stringify(prev[k]) !== JSON.stringify(next[k]));
-  return changed ? { ...next, syncedUpdatedAt: new Date().toISOString(), syncedDirty: true } : next;
+  return changed ? { ...next, syncedUpdatedAt: stampAfter(prev.syncedUpdatedAt), syncedDirty: true } : next;
 }
 
 function applyTheme(theme: ThemePref) {
