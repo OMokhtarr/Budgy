@@ -185,8 +185,9 @@ Roughly in this order:
      be paused).
    - [x] URL and **publishable** key are in `.env`, which is the file Vite reads for `npm run dev` and for
      builds. It doesn't read `.env.dev` unless you pass `--mode dev`. Never use the secret key.
-   - [ ] **Turn off email sign-up:** Authentication → Providers → Email. The app doesn't use it, and it's
-     on in the live project. `supabase/config.toml` already has it off for `config push`.
+   - [ ] **Turn off email sign-up:** Authentication → Sign In / Providers → Email (the Email provider's own
+     switch, not "Allow new users to sign up", which would also block new Google and Apple users). The app
+     doesn't use it, and it's on in the live project. `supabase/config.toml` already has it off for `config push`.
    - [x] Schema applied with `npx supabase@2.121.0 db push`. To change it, add a migration and push again.
    - [x] Advisors (`npx supabase@2.121.0 db advisors --linked`): no security warnings. The "unused index"
      notes are expected until the app has real traffic.
@@ -200,6 +201,9 @@ Roughly in this order:
      dashboard (steps 4–5). The CLI hasn't validated this file yet: `config diff` will.
    - Or authorize the Supabase connector (`/mcp`) and ask me to do these steps.
 4. [ ] **Google sign-in** (Google Cloud Console → APIs & Services):
+   - **Status:** web and two Android clients exist (project `budgy-513623`), both env files are filled in, and
+     Google is on in Supabase. **Not yet tested on a real phone.** `supabase/config.toml` now matches the live
+     project, with Apple off, so `config diff` should show nothing. Turn Apple on there in step 5.
    - **OAuth consent screen:** app name, support email, privacy policy link. In Testing mode, add test
      users.
    - **Credentials:** a **Web** client (put it in `VITE_GOOGLE_WEB_CLIENT_ID`), an **iOS** client (bundle
@@ -224,7 +228,7 @@ Roughly in this order:
 6. [ ] **Android project:** `android/` now exists (created by the SMS session).
    - [x] Release signing is set up: `android/app/build.gradle` reads `android/keystore.properties`, and the
      upload key is `android/budgy-upload.jks`. Both are git-ignored.
-   - [ ] **Back up `android/budgy-upload.jks` and `android/keystore.properties` (it holds the password)
+   - [x] **Back up `android/budgy-upload.jks` and `android/keystore.properties` (it holds the password)
      somewhere safe outside the project.** They exist only on this computer. If they're lost, you can't
      publish updates until Google resets the upload key, and only if you use Play App Signing.
    - SHA-1s for the Android OAuth clients (step 4): debug `E4:BC:45:A6:EE:9A:77:78:F0:07:9B:D8:95:31:1A:5E:2B:D1:11:DA`,
@@ -247,8 +251,7 @@ Roughly in this order:
      13+ age groups in Play Console's target audience form too.
    - [x] Pushed to the `gh-pages` branch: `privacy.html`, `delete-account.html` and their `-ar` versions. The
      Arabic pages still need checking by a fluent speaker.
-   - [ ] Turn on Pages in the repo: Settings → Pages → Deploy from a branch → `gh-pages`, `/ (root)`. Then the
-     links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
+   - [x] Pages is on (Settings → Pages → Deploy from a branch → `gh-pages`, `/ (root)`). The links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
      https://omokhtarr.github.io/Budgy/delete-account.html (Play's account deletion link).
    - [ ] Changes to `docs/privacy-policy.md` must also go in those pages.
    - [x] Android Auto Backup is off (`android:allowBackup="false"`), so cloud backups match the policy. Direct
