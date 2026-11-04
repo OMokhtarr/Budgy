@@ -193,8 +193,8 @@ Roughly in this order:
    - [x] Advisors (`npx supabase@2.121.0 db advisors --linked`): no security warnings. The "unused index"
      notes are expected until the app has real traffic.
    - [x] `delete-account` is deployed (`npx supabase@2.121.0 functions deploy delete-account --use-api`;
-     `--use-api` doesn't need Docker). It rejects callers who aren't signed in. **The real deletion hasn't
-     run yet:** it needs a signed-in user, so step 8's "delete account" is its first real test.
+     `--use-api` doesn't need Docker). It rejects callers who aren't signed in. **Deleting an account works
+     from the app on a real phone (2026-11-04).** Still check in Supabase that the user and their rows are gone.
    - **Sign-in providers:** the Google and Apple settings are in `supabase/config.toml`, with their IDs and
      secrets in `supabase/.env` (copy `supabase/.env.example`). Either push them with
      `npx supabase@2.121.0 config diff`, then `config push`, after setting your real web address in
@@ -248,7 +248,7 @@ Roughly in this order:
    - a new phone: sign in and check the same;
    - offline edits that upload when the connection returns;
    - a first sign-in with data on the phone only, in the account only, and on both;
-   - sign out (keep / remove), delete account;
+   - sign out (keep / remove);
    - restore a backup while signed in.
 9. [ ] **Privacy & store:**
    - [x] `privacy.html` and `privacy-ar.html` on `gh-pages` now describe sync as a backup, not as a way to use
