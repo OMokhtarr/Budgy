@@ -17,7 +17,18 @@
     "android:apk:debug": "node scripts/android-build.mjs assembleDebug",
     "android:apk:release": "node scripts/android-build.mjs assembleRelease",
     "android:aab:release": "node scripts/android-build.mjs bundleRelease",
-    "android:build:all": "vite build && cap sync android && node scripts/android-build.mjs assembleDebug && node scripts/android-build.mjs bundleRelease"
+    "android:build:all": "vite build && cap sync android && node scripts/android-build.mjs assembleDebug && node scripts/android-build.mjs bundleRelease",
+    "start": "vite --open",
+    "build:prod": "npm run build",
+    "ios:sync": "npm run build:prod && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:run": "npx cap run ios",
+    "android:sync": "npm run build:prod && npx cap sync android",
+    "android:build": "npm run android:sync && node scripts/android-build.mjs assembleDebug && node scripts/android-build.mjs bundleRelease",
+    "android:open": "npx cap open android",
+    "android:run": "npx cap run android",
+    "analyze": "npx vite-bundle-visualizer@1.2.1",
+    "lighthouse": "npx lighthouse@13.6.0 http://localhost:5175 --view"
   },
   "dependencies": {
     "@budgy/sms-inbox": "file:plugins/sms-inbox",
