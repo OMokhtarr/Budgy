@@ -227,12 +227,27 @@ ion-toolbar.b-toolbar {
 [dir='rtl'] .b-flip { transform: scaleX(-1); }
 
 /* ─── Category grid (1Money-style ring layout) ─────────────────────────────── */
+/* Fills the space between the header and the tab bar; scrolls only when the categories don't fit. */
+.b-catpage {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding-bottom: 12px;
+}
+
 .b-catgrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px 6px;
   padding: 8px 0 0;
 }
+
+.b-catpage > .b-catgrid:not(.b-archived) {
+  flex: 1;
+  grid-auto-rows: 1fr;
+}
+
+.b-catpage .b-bubble { justify-content: center; }
 
 .b-catgrid__center {
   grid-column: 2 / span 2;

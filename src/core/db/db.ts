@@ -2,6 +2,7 @@ import Dexie, { type EntityTable, type Table, type Transaction as DexieTx } from
 import type { Account, Category, Synced, Transaction } from '@/shared/models';
 import { backupSettingsOf, savedCurrency, type BackupSettings } from '@/core/contexts/SettingsContext';
 import { newId } from '@/core/utils/id';
+import { stampAfter } from '@/core/utils/stamp';
 
 /**
  * Budgy is local-first: everything lives in IndexedDB on the device (works the same
@@ -51,16 +52,8 @@ function stampWrites(table: Table<Synced, string>) {
   });
   table.hook('updating', (mods, _key, obj, tx) => {
     if (fromCloud.has(tx)) return undefined;
-    return 'updatedAt' in mods ? { dirty: 1 } : { updatedAt: after(obj.updatedAt), dirty: 1 };
+    return 'updatedAt' in mods ? { dirty: 1 } : { updatedAt: stampAfter(obj.updatedAt), dirty: 1 };
   });
-}
-
-/**
- * Now, but always later than `prev`: an edit must count as newer than the version it changes, even when
- * that version came from a device whose clock runs ahead (otherwise "last edit wins" would drop it).
- */
-function after(prev: string | undefined): string {
-  return new Date(Math.max(Date.now(), prev ? Date.parse(prev) + 1 : 0)).toISOString();
 }
 
 /** Runs `fn` in a transaction whose writes count as coming from the cloud (see `fromCloud`). */
@@ -228,14 +221,21 @@ function remapStoredAccountIds(map: Map<string, string>) {
 }
 
 const MIGRATED_KEY = 'budgy-migrated-to-budgy2';
+/** How long a device keeps the old database after copying it, as a safety net. */
+const KEEP_LEGACY_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * One-time copy from the old database. The old one is left untouched as a safety net (remove it in a
- * later release). Runs only while `budgy2` has never had any accounts, so erased data can't come back.
+ * One-time copy from the old database, which is removed 30 days later. Runs only while `budgy2` has never
+ * had any accounts, so erased data can't come back.
  */
 async function migrateLegacy(): Promise<void> {
   try {
-    if (localStorage.getItem(MIGRATED_KEY)) return;
+    const migratedAt = localStorage.getItem(MIGRATED_KEY);
+    if (migratedAt) {
+      // Not awaited: a tab still on the old version can hold this up, and startup mustn't wait for it.
+      if (Date.now() - Date.parse(migratedAt) > KEEP_LEGACY_MS) void Dexie.delete('budgy').catch(() => {});
+      return;
+    }
   } catch {
     /* fall back to the checks below */
   }

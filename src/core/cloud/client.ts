@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import type { SyncedTable } from '@/core/db/db';
-import type { Remote, RemoteRow, RemoteSettings } from './sync';
+import type { Remote, RemoteRow, RemoteSettings, RemoteStamp } from './sync';
 
 /**
  * Cloud settings come from the build environment (see `.env.example`). Without a Supabase URL and
@@ -68,13 +68,13 @@ export class SupabaseRemote implements Remote {
     return (data ?? []) as RemoteRow[];
   }
 
-  async allIds(table: SyncedTable): Promise<string[]> {
-    const ids: string[] = [];
+  async allStamps(table: SyncedTable): Promise<RemoteStamp[]> {
+    const stamps: RemoteStamp[] = [];
     for (let from = 0; ; from += 1000) {
-      const { data, error, status } = await this.client.from(table).select('id').order('id').range(from, from + 999);
+      const { data, error, status } = await this.client.from(table).select('id, updated_at').order('id').range(from, from + 999);
       if (error) throw withStatus(error, status);
-      ids.push(...(data ?? []).map((r: { id: string }) => r.id));
-      if ((data?.length ?? 0) < 1000) return ids;
+      stamps.push(...((data ?? []) as RemoteStamp[]));
+      if ((data?.length ?? 0) < 1000) return stamps;
     }
   }
 

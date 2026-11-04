@@ -72,7 +72,7 @@ export default function CategoriesPage() {
       </IonHeader>
 
       <IonContent>
-        <div className="b-page">
+        <div className="b-page b-catpage">
           {editMode && <p className="b-muted" style={{ textAlign: 'center', fontSize: 13, margin: '10px 0 0' }}>{t('categories.editHint')}</p>}
 
           <div className="b-catgrid">

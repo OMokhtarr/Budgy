@@ -22,6 +22,8 @@ export interface RemoteRow {
   server_updated_at?: string;
 }
 
+export type RemoteStamp = Pick<RemoteRow, 'id' | 'updated_at'>;
+
 export interface RemoteSettings {
   data: Partial<BackupSettings>;
   updated_at: string;
@@ -32,8 +34,8 @@ export interface Remote {
   push(table: SyncedTable, rows: RemoteRow[]): Promise<void>;
   /** Rows with server_updated_at after `since` (all when null), oldest first, at most `limit`. */
   pull(table: SyncedTable, since: string | null, limit: number): Promise<RemoteRow[]>;
-  /** Every id the account has in `table`, deleted ones included. */
-  allIds(table: SyncedTable): Promise<string[]>;
+  /** Every record the account has in `table`, deleted ones included. */
+  allStamps(table: SyncedTable): Promise<RemoteStamp[]>;
   /** Whether the account already has transactions in the cloud. */
   hasTransactions(): Promise<boolean>;
   getSettings(): Promise<RemoteSettings | null>;
@@ -134,19 +136,35 @@ async function pushTable(database: BudgyDB, remote: Remote, table: SyncedTable) 
   }
 }
 
-/** Soft-deletes in the cloud everything this device no longer has (after a restore or erase). */
-async function deleteMissingInCloud(database: BudgyDB, remote: Remote) {
-  const stamp = new Date().toISOString();
-  for (const table of SYNCED_TABLES) {
-    const local = new Set((await database.table<Synced, string>(table).toCollection().primaryKeys()) as string[]);
-    const gone = (await remote.allIds(table)).filter((id) => !local.has(id));
+/**
+ * Makes the cloud match this device (after a restore or erase). The data here must win even where the
+ * cloud's copy is newer, and the server ignores writes that aren't newer, so everything is stamped later
+ * than anything in the account, even when this phone's clock is behind it. The write hooks also mark the
+ * records for upload; what's no longer here is soft-deleted in the cloud.
+ */
+async function replaceCloud(database: BudgyDB, remote: Remote, settings: SettingsPort) {
+  const cloud = await Promise.all(SYNCED_TABLES.map((table) => remote.allStamps(table)));
+  const cloudSettings = await remote.getSettings();
+  const latest = [...cloud.flat(), ...(cloudSettings ? [cloudSettings] : [])].reduce(
+    (max, r) => Math.max(max, Date.parse(r.updated_at) + 1),
+    Date.now(),
+  );
+  const stamp = new Date(latest).toISOString();
+  for (const [n, table] of SYNCED_TABLES.entries()) {
+    const t = database.table<Synced, string>(table);
+    await t.toCollection().modify({ updatedAt: stamp });
+    const local = new Set((await t.toCollection().primaryKeys()) as string[]);
+    const gone = cloud[n].filter((r) => !local.has(r.id));
     for (let i = 0; i < gone.length; i += PAGE) {
       await remote.push(
         table,
-        gone.slice(i, i + PAGE).map((id) => ({ id, data: {}, updated_at: stamp, deleted_at: stamp })),
+        gone.slice(i, i + PAGE).map(({ id }) => ({ id, data: {}, updated_at: stamp, deleted_at: stamp })),
       );
     }
   }
+  const { data } = settings.get();
+  settings.apply(data, stamp);
+  await remote.putSettings({ data, updated_at: stamp });
 }
 
 async function syncSettings(remote: Remote, settings: SettingsPort, firstSync: boolean) {
@@ -177,11 +195,7 @@ export async function syncOnce(database: BudgyDB, remote: Remote, settings: Sett
     });
   }
   if (next.replaceCloud) {
-    // The restored/erased data must win even where the cloud's copy is newer: stamp it all as of now
-    // (the write hooks also mark it for upload), then delete in the cloud what's no longer here.
-    const stamp = new Date().toISOString();
-    for (const table of SYNCED_TABLES) await database.table<Synced, string>(table).toCollection().modify({ updatedAt: stamp });
-    await deleteMissingInCloud(database, remote);
+    await replaceCloud(database, remote, settings);
     next.replaceCloud = false;
   } else {
     for (const table of SYNCED_TABLES) await pullTable(database, remote, table, next);
