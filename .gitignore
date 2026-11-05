@@ -31,3 +31,6 @@ supabase/.temp/
 # Local tool state (contains a session token)
 .superpowers/
 .vscode/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
