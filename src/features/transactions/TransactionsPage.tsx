@@ -4,8 +4,8 @@ import {
   IonModal, IonPage, IonPopover, IonSearchbar, IonToolbar, useIonActionSheet, useIonAlert, useIonToast,
 } from '@ionic/react';
 import {
-  addOutline, arrowDownOutline, arrowUpOutline, checkboxOutline, checkmarkOutline, closeCircle, closeOutline,
-  ellipsisVertical, filterOutline, receiptOutline, searchOutline, squareOutline, swapHorizontalOutline, trashOutline,
+  addOutline, arrowDownOutline, arrowUpOutline, checkboxOutline, checkmarkOutline, closeCircle,
+  ellipsisVertical, receiptOutline, squareOutline, swapHorizontalOutline, trashOutline,
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -20,7 +20,7 @@ import { addDays, dayKey, isSameDay, parseDayKey } from '@/core/utils/period';
 import { subcategoryName } from '@/core/utils/subcategories';
 import { useLongPress } from '@/shared/hooks/useLongPress';
 import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
-import { iconFor } from '@/shared/icons';
+import { closeIcon, filterIcon, iconFor, searchIcon } from '@/shared/icons';
 import AppHeader from '@/shared/components/AppHeader';
 import PeriodBar from '@/shared/components/PeriodBar';
 import Avatar from '@/shared/components/Avatar';
@@ -247,7 +247,7 @@ export default function TransactionsPage() {
           <IonToolbar className="b-toolbar b-selbar">
             <IonButtons slot="start">
               <IonButton onClick={clearSelection} aria-label={t('common.close')}>
-                <IonIcon slot="icon-only" icon={closeOutline} />
+                <IonIcon slot="icon-only" icon={closeIcon} />
               </IonButton>
               <span className="b-selbar__count">{chosen.length}</span>
             </IonButtons>
@@ -273,7 +273,7 @@ export default function TransactionsPage() {
                 }}
                 aria-label={t('transactions.searchToggle')}
               >
-                <IonIcon slot="icon-only" icon={searchOpen ? closeOutline : searchOutline} />
+                <IonIcon slot="icon-only" icon={searchOpen ? closeIcon : searchIcon} />
               </IonButton>
             }
           />
@@ -418,7 +418,7 @@ export default function TransactionsPage() {
         <IonFab slot="fixed" vertical="bottom" horizontal="end">
           {selecting ? (
             <IonFabButton className="b-fab" onClick={filterBySelection} aria-label={t('transactions.filterBySelection')}>
-              <IonIcon icon={filterOutline} />
+              <IonIcon icon={filterIcon} />
             </IonFabButton>
           ) : (
             <IonFabButton className="b-fab" onClick={() => openEditor()} aria-label={t('transactions.add')}>

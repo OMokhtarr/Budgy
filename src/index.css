@@ -43,6 +43,8 @@
   --b-balance: #c8553d;
   /* Mixed into amounts, so they stay readable when a category's colour is close to the background */
   --b-amount-grey: #707070;
+  /* The solid dot in Budgy's own icons (src/shared/icons.ts) */
+  --b-dot: var(--ion-color-primary);
 
   --ion-background-color: var(--b-bg);
   --ion-toolbar-background: var(--b-surface);
@@ -134,7 +136,15 @@ ion-tab-bar {
 ion-tab-button {
   --color: color-mix(in srgb, var(--b-text) 82%, transparent);
   --color-selected: var(--b-text);
+  /* The icon's dot is grey, and turns green on the selected tab */
+  --b-dot: var(--b-faint);
 }
+
+ion-tab-button.tab-selected { --b-dot: var(--ion-color-primary); }
+
+/* On a green button the dot would vanish, so it takes the icon's colour there */
+.b-fab,
+.b-btn--primary { --b-dot: currentColor; }
 
 /* The pill behind the selected icon; every icon has its padding so nothing moves between tabs */
 ion-tab-button ion-icon {

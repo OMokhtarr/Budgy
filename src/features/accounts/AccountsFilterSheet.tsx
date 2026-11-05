@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { IonIcon, IonModal } from '@ionic/react';
-import { closeOutline, funnelOutline } from 'ionicons/icons';
+import { closeOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useAccountFilter } from '@/core/contexts/AccountFilterContext';
 import { selectedByDefault } from '@/core/utils/accountFilter';
@@ -8,7 +8,7 @@ import { accountSections } from '@/core/utils/defaultAccount';
 import { useMoney } from '@/core/contexts/SettingsContext';
 import { useAccounts, useBalances, useNames } from '@/core/db/hooks';
 import { currenciesOf, groupOf } from '@/core/utils/currency';
-import { iconFor } from '@/shared/icons';
+import { filterIcon, iconFor } from '@/shared/icons';
 import MoneyText from '@/shared/components/MoneyText';
 import type { Account, AccountGroup } from '@/shared/models';
 
@@ -104,7 +104,7 @@ export default function AccountsFilterSheet({ isOpen, onClose }: { isOpen: boole
             {t('filter.reset')}
           </button>
           <button className="b-btn b-btn--primary" onClick={done} disabled={draft.size === 0}>
-            <IonIcon icon={funnelOutline} />
+            <IonIcon icon={filterIcon} />
             {t('filter.done')}
           </button>
         </div>

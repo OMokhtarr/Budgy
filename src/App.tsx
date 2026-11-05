@@ -1,11 +1,10 @@
 import { IonApp, IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Redirect, Route } from 'react-router-dom';
-import { pieChartOutline, walletOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { TxEditorProvider } from '@/core/contexts/TxEditorContext';
 import { CloudProvider } from '@/core/cloud/CloudContext';
-import { barsAndTrend, receiptUpright } from '@/shared/icons';
+import { accountsIcon, categoriesIcon, overviewIcon, transactionsIcon } from '@/shared/icons';
 
 import AccountsPage from '@/features/accounts/AccountsPage';
 import CategoriesPage from '@/features/categories/CategoriesPage';
@@ -47,19 +46,19 @@ export default function App() {
 
           <IonTabBar slot="bottom">
             <IonTabButton tab="accounts" href="/accounts">
-              <IonIcon icon={walletOutline} />
+              <IonIcon icon={accountsIcon} />
               <IonLabel>{t('tabs.accounts')}</IonLabel>
             </IonTabButton>
             <IonTabButton tab="categories" href="/categories">
-              <IonIcon icon={pieChartOutline} />
+              <IonIcon icon={categoriesIcon} />
               <IonLabel>{t('tabs.categories')}</IonLabel>
             </IonTabButton>
             <IonTabButton tab="transactions" href="/transactions">
-              <IonIcon icon={receiptUpright} />
+              <IonIcon icon={transactionsIcon} />
               <IonLabel>{t('tabs.transactions')}</IonLabel>
             </IonTabButton>
             <IonTabButton tab="overview" href="/overview">
-              <IonIcon icon={barsAndTrend} />
+              <IonIcon icon={overviewIcon} />
               <IonLabel>{t('tabs.overview')}</IonLabel>
             </IonTabButton>
           </IonTabBar>
