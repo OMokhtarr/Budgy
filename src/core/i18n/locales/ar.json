@@ -49,6 +49,13 @@
     "savings": "استثمار",
     "wallet": "محفظة إلكترونية"
   },
+  "accountTypes": {
+    "cash": "نقدي",
+    "card": "بطاقات",
+    "bank": "بنوك",
+    "savings": "استثمارات",
+    "wallet": "محافظ إلكترونية"
+  },
   "cat": {
     "groceries": "بقالة",
     "restaurant": "مطاعم",

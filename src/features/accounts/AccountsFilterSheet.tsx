@@ -4,7 +4,7 @@ import { closeOutline, funnelOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useAccountFilter } from '@/core/contexts/AccountFilterContext';
 import { selectedByDefault } from '@/core/utils/accountFilter';
-import { splitMainAccounts } from '@/core/utils/defaultAccount';
+import { accountSections } from '@/core/utils/defaultAccount';
 import { useMoney } from '@/core/contexts/SettingsContext';
 import { useAccounts, useBalances, useNames } from '@/core/db/hooks';
 import { currenciesOf, groupOf } from '@/core/utils/currency';
@@ -80,15 +80,20 @@ export default function AccountsFilterSheet({ isOpen, onClose }: { isOpen: boole
           {GROUPS.map((g) => {
             const list = (accounts ?? []).filter((a) => groupOf(a) === g);
             if (!list.length) return null;
-            const [main, rest] = splitMainAccounts(list);
+            const { main, byType } = accountSections(list);
             return (
               <div key={g}>
                 <div className="b-section-title">{t(`filter.group.${g}`)}</div>
-                <div className="b-chipgrid">
-                  {main.map(chip)}
-                  {main.length > 0 && rest.length > 0 && <hr className="b-chipgrid__sep" />}
-                  {rest.map(chip)}
-                </div>
+                {main.length > 0 && <div className="b-chipgrid">{main.map(chip)}</div>}
+                {byType.map(([type, accountsOfType]) => (
+                  <div key={type}>
+                    <div className="b-subhead">
+                      <span>{t(`accountTypes.${type}`)}</span>
+                      <span className="b-subhead__line" />
+                    </div>
+                    <div className="b-chipgrid">{accountsOfType.map(chip)}</div>
+                  </div>
+                ))}
               </div>
             );
           })}

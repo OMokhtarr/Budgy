@@ -49,6 +49,13 @@
     "savings": "Investment",
     "wallet": "E-wallet"
   },
+  "accountTypes": {
+    "cash": "Cash",
+    "card": "Cards",
+    "bank": "Banks",
+    "savings": "Investments",
+    "wallet": "E-wallets"
+  },
   "cat": {
     "groceries": "Groceries",
     "restaurant": "Restaurants",

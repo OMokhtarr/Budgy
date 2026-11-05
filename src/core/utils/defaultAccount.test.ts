@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultAccountFor, splitMainAccounts } from './defaultAccount';
+import { accountSections, defaultAccountFor, splitMainAccounts } from './defaultAccount';
 import type { Account } from '@/shared/models';
 
 const account = (id: string, fields: Partial<Account> = {}): Account => ({
@@ -32,5 +32,23 @@ describe('splitMainAccounts', () => {
     const cashIn = account('cashIn', { key: 'cashIn' });
     const cashOut = account('cashOut', { key: 'cashOut', name: 'Spending' });
     expect(splitMainAccounts([OTHER, cashOut, IN, cashIn])).toEqual([[cashOut, cashIn], [OTHER, IN]]);
+  });
+});
+
+describe('accountSections', () => {
+  it('puts the main accounts first, then one section per type in the usual type order', () => {
+    const cashIn = account('cashIn', { key: 'cashIn' });
+    const bank = account('bank', { type: 'bank' });
+    const wallet = account('wallet', { type: 'wallet' });
+    const card = account('card', { type: 'card' });
+    const bank2 = account('bank2', { type: 'bank' });
+    expect(accountSections([bank, wallet, cashIn, OTHER, card, bank2])).toEqual({
+      main: [cashIn],
+      byType: [['cash', [OTHER]], ['card', [card]], ['bank', [bank, bank2]], ['wallet', [wallet]]],
+    });
+  });
+
+  it('has no sections for an empty list', () => {
+    expect(accountSections([])).toEqual({ main: [], byType: [] });
   });
 });
