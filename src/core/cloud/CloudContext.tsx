@@ -36,8 +36,12 @@ interface CloudValue {
   signOut: (keepLocal: boolean) => Promise<void>;
   deleteAccount: (keepLocal: boolean) => Promise<void>;
   syncNow: () => void;
-  /** Local data was replaced (restore / erase): the next sync makes the account match it. */
-  localReplaced: () => void;
+  /**
+   * Replaces the local data (restore / erase) while no sync runs, then makes the account match it.
+   * A sync that was already running could otherwise write the account's old records back in, or save
+   * over the request to replace the account, so old categories and transactions would return.
+   */
+  replaceLocal: <T>(replace: () => Promise<T>) => Promise<T>;
   /** A failed web sign-in reported back in the URL, to show once. */
   redirectError?: string;
   clearRedirectError: () => void;
@@ -147,13 +151,19 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   // ── Sync ──
   const running = useRef(false);
   const again = useRef(false);
+  /** Settles when the running sync ends. */
+  const idle = useRef<Promise<void>>(Promise.resolve());
+  /** Set while `replaceLocal` swaps the data: no sync may start. */
+  const paused = useRef(false);
   const sync = useCallback(async () => {
-    if (!supabase || !user) return;
+    if (!supabase || !user || paused.current) return;
     if (running.current) {
       again.current = true;
       return;
     }
     running.current = true;
+    let ended!: () => void;
+    idle.current = new Promise((resolve) => (ended = resolve));
     setStatus('syncing');
     try {
       const remote = new SupabaseRemote(supabase, user.id);
@@ -185,6 +195,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       running.current = false;
+      ended();
       if (again.current) {
         again.current = false;
         void sync();
@@ -269,11 +280,22 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     [user, removeLocalData],
   );
 
-  const localReplaced = useCallback(() => {
-    if (!user) return;
-    saveState(user.id, { ...loadState(user.id), replaceCloud: true });
-    void sync();
-  }, [user, sync]);
+  const replaceLocal = useCallback(
+    async <T,>(replace: () => Promise<T>): Promise<T> => {
+      paused.current = true;
+      try {
+        // A finishing sync may start another (`again`); that one sees `paused` and returns at once.
+        while (running.current) await idle.current;
+        const result = await replace();
+        if (user) saveState(user.id, { ...loadState(user.id), replaceCloud: true });
+        return result;
+      } finally {
+        paused.current = false;
+        void sync();
+      }
+    },
+    [user, sync],
+  );
 
   const value = useMemo<CloudValue>(
     () => ({
@@ -285,11 +307,11 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       signOut,
       deleteAccount,
       syncNow: () => void sync(),
-      localReplaced,
+      replaceLocal,
       redirectError,
       clearRedirectError: () => setRedirectError(undefined),
     }),
-    [user, status, lastSyncedAt, signIn, signOut, deleteAccount, sync, localReplaced, redirectError],
+    [user, status, lastSyncedAt, signIn, signOut, deleteAccount, sync, replaceLocal, redirectError],
   );
 
   return <CloudContext.Provider value={value}>{children}</CloudContext.Provider>;

@@ -3,7 +3,7 @@ import { COLORS } from '@/shared/icons';
 import { newId } from '@/core/utils/id';
 import { dayKey } from '@/core/utils/period';
 import { subcategoryName } from '@/core/utils/subcategories';
-import { alive, db } from './db';
+import { alive, db, softDelete } from './db';
 
 /** The columns of an exported file. An import needs only `REQUIRED`, and takes them in any order. */
 export const CSV_HEADER = [
@@ -88,6 +88,13 @@ export interface CsvPlan {
   newCategories: Category[];
   /** Existing categories that gain a subcategory. */
   changedCategories: Category[];
+  /**
+   * Existing categories no transaction would use after the import, which it can delete (see `unusedAfter`).
+   * Only for the flows the file gives categories to, so a file of expenses leaves income categories alone.
+   */
+  unusedCategories: Category[];
+  /** Subcategories no transaction would use, in the kept categories the file gives subcategories to. */
+  unusedSubcategories: { categoryId: string; ids: string[] }[];
   /** Rows already in Budgy, which are skipped. */
   duplicates: number;
   /** Rows that can't be read, numbered as in a spreadsheet: the header is row 1. */
@@ -191,7 +198,9 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
   const findCategory = (name: string, flow: Flow) => categories.find((c) => fits(c, flow) && named(c, name));
   const findSubcategory = (c: Category | undefined, name: string) => c?.subcategories?.find((s) => norm(s.name) === norm(name));
 
-  const plan: CsvPlan = { transactions: [], newAccounts: [], newCategories: [], changedCategories: [], duplicates: 0, badRows: [] };
+  const plan: CsvPlan = {
+    transactions: [], newAccounts: [], newCategories: [], changedCategories: [], unusedCategories: [], unusedSubcategories: [], duplicates: 0, badRows: [],
+  };
   const nextOrder = (list: { order: number }[]) => Math.max(-1, ...list.map((x) => x.order)) + 1;
   const stamp = new Date().toISOString();
 
@@ -262,6 +271,8 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
     return left > 0;
   };
 
+  /** What the readable rows give categories to, new or already saved: their flows, and categories by subcategory. */
+  const categorized: Row[] = [];
   const rowsOnDay = new Map<string, number>();
   rows.forEach((cells, i) => {
     const rowNumber = i + 2;
@@ -271,6 +282,7 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
       plan.badRows.push(rowNumber);
       return;
     }
+    if (r.category && r.type !== 'transfer') categorized.push(r);
     if (alreadySaved(r)) {
       plan.duplicates++;
       return;
@@ -301,15 +313,57 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
     }
     plan.transactions.push(t);
   });
+
+  const unused = unusedAfter(
+    data.categories.filter(alive),
+    [...data.transactions.filter(alive), ...plan.transactions],
+    new Set(categorized.map((r) => r.type as Flow)),
+    new Set(categorized.filter((r) => r.subcategory).map((r) => findCategory(r.category, r.type as Flow)?.id)),
+  );
+  plan.unusedCategories = unused.categories;
+  plan.unusedSubcategories = unused.subcategories;
   return plan;
 }
 
-/** Adds a plan's records to the data. The write hooks stamp them, so sync uploads them like any local change. */
-export async function saveCsvImport(plan: CsvPlan): Promise<void> {
+/**
+ * Categories (and subcategories) no transaction uses. A category goes only when the file gives categories
+ * to every flow it takes ("both" needs expenses and income); a subcategory only when the file gives
+ * subcategories to its category. A file without categories therefore removes nothing.
+ */
+function unusedAfter(categories: Category[], transactions: Transaction[], flows: Set<Flow>, withSubcategories: Set<string | undefined>) {
+  const usedCategories = new Set(transactions.map((t) => t.categoryId));
+  const usedSubcategories = new Set(transactions.map((t) => t.subcategoryId));
+  const covered = (c: Category) => (c.kind === 'both' ? flows.has('expense') && flows.has('income') : flows.has(c.kind));
+  const gone = categories.filter((c) => !usedCategories.has(c.id) && covered(c));
+  return {
+    categories: gone,
+    subcategories: categories
+      .filter((c) => !gone.includes(c) && withSubcategories.has(c.id))
+      .map((c) => ({ categoryId: c.id!, ids: (c.subcategories ?? []).filter((s) => !usedSubcategories.has(s.id)).map((s) => s.id) }))
+      .filter((x) => x.ids.length),
+  };
+}
+
+/**
+ * Adds a plan's records to the data, and with `removeUnused` deletes the categories and subcategories it
+ * found unused. The write hooks stamp everything, so sync uploads it like any local change.
+ */
+export async function saveCsvImport(plan: CsvPlan, { removeUnused = false } = {}): Promise<void> {
   await db.transaction('rw', db.accounts, db.categories, db.transactions, async () => {
     await db.accounts.bulkAdd(plan.newAccounts);
     await db.categories.bulkAdd(plan.newCategories);
-    await Promise.all(plan.changedCategories.map((c) => db.categories.update(c.id!, { subcategories: c.subcategories })));
+    const subcategories = new Map(plan.changedCategories.map((c) => [c.id!, c.subcategories ?? []]));
+    if (removeUnused) {
+      await softDelete(db.categories, plan.unusedCategories.map((c) => c.id!));
+      for (const { categoryId, ids } of plan.unusedSubcategories) {
+        const list = subcategories.get(categoryId) ?? (await db.categories.get(categoryId))?.subcategories ?? [];
+        subcategories.set(categoryId, list.filter((s) => !ids.includes(s.id)));
+      }
+    }
+    await Promise.all([...subcategories].map(([id, list]) => db.categories.update(id, { subcategories: list })));
     await db.transactions.bulkAdd(plan.transactions);
   });
 }
+
+/** Whether a plan found any category or subcategory it could delete. */
+export const hasUnused = (plan: CsvPlan) => plan.unusedCategories.length > 0 || plan.unusedSubcategories.length > 0;

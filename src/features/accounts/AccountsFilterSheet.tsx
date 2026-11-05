@@ -4,12 +4,13 @@ import { closeOutline, funnelOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useAccountFilter } from '@/core/contexts/AccountFilterContext';
 import { selectedByDefault } from '@/core/utils/accountFilter';
+import { splitMainAccounts } from '@/core/utils/defaultAccount';
 import { useMoney } from '@/core/contexts/SettingsContext';
 import { useAccounts, useBalances, useNames } from '@/core/db/hooks';
-import { groupOf } from '@/core/utils/currency';
+import { currenciesOf, groupOf } from '@/core/utils/currency';
 import { iconFor } from '@/shared/icons';
 import MoneyText from '@/shared/components/MoneyText';
-import type { AccountGroup } from '@/shared/models';
+import type { Account, AccountGroup } from '@/shared/models';
 
 const GROUPS: AccountGroup[] = ['regular', 'savings', 'debt'];
 
@@ -38,6 +39,25 @@ export default function AccountsFilterSheet({ isOpen, onClose }: { isOpen: boole
     onClose();
   };
 
+  // A balance line for each currency the account holds.
+  const chip = (a: Account) => (
+    <button
+      key={a.id}
+      className={`b-acchip ${draft.has(a.id!) ? 'is-on' : ''}`}
+      style={{ '--c': a.color } as CSSProperties}
+      onClick={() => toggle(a.id!)}
+      aria-pressed={draft.has(a.id!)}
+    >
+      <IonIcon icon={iconFor(a.icon)} />
+      <span className="b-acchip__text">
+        <strong>{accountName(a)}</strong>
+        {currenciesOf(a).map((c) => (
+          <MoneyText key={c} currency={c} text={money.plain(balances?.get(a.id!)?.[c] ?? 0, c)} />
+        ))}
+      </span>
+    </button>
+  );
+
   return (
     <IonModal
       className="b-sheet-modal"
@@ -60,25 +80,14 @@ export default function AccountsFilterSheet({ isOpen, onClose }: { isOpen: boole
           {GROUPS.map((g) => {
             const list = (accounts ?? []).filter((a) => groupOf(a) === g);
             if (!list.length) return null;
+            const [main, rest] = splitMainAccounts(list);
             return (
               <div key={g}>
                 <div className="b-section-title">{t(`filter.group.${g}`)}</div>
                 <div className="b-chipgrid">
-                  {list.map((a) => (
-                    <button
-                      key={a.id}
-                      className={`b-acchip ${draft.has(a.id!) ? 'is-on' : ''}`}
-                      style={{ '--c': a.color } as CSSProperties}
-                      onClick={() => toggle(a.id!)}
-                      aria-pressed={draft.has(a.id!)}
-                    >
-                      <IonIcon icon={iconFor(a.icon)} />
-                      <span className="b-acchip__text">
-                        <strong>{accountName(a)}</strong>
-                        <MoneyText currency={a.currency} text={money.plain(balances?.get(a.id!)?.[a.currency] ?? 0, a.currency)} />
-                      </span>
-                    </button>
-                  ))}
+                  {main.map(chip)}
+                  {main.length > 0 && rest.length > 0 && <hr className="b-chipgrid__sep" />}
+                  {rest.map(chip)}
                 </div>
               </div>
             );

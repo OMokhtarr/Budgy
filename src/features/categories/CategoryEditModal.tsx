@@ -3,7 +3,7 @@ import {
   IonButton, IonButtons, IonContent, IonHeader, IonModal, IonTitle, IonToolbar, useIonAlert, useIonToast,
 } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
-import { alive, db, softDelete } from '@/core/db/db';
+import { alive, db, nextCategoryOrder, softDelete } from '@/core/db/db';
 import { useNames } from '@/core/db/hooks';
 import { useSettings } from '@/core/contexts/SettingsContext';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
@@ -75,8 +75,7 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
     if (category?.id != null) {
       await db.categories.update(category.id, patch);
     } else {
-      const order = await db.categories.where('kind').equals(catKind).count();
-      await db.categories.add({ ...patch, order });
+      await db.categories.add({ ...patch, order: await nextCategoryOrder() });
     }
     onClose();
   };

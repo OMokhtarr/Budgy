@@ -4,7 +4,7 @@ import type { Account, Category, Transaction } from '@/shared/models';
 import { toCsv } from '@/core/utils/files';
 import { dayKey } from '@/core/utils/period';
 import { alive, db, writeFromCloud } from './db';
-import { CSV_HEADER, csvRows, parseCsv, planCsvImport, saveCsvImport, type CsvData } from './transactionsCsv';
+import { CSV_HEADER, csvRows, hasUnused, parseCsv, planCsvImport, saveCsvImport, type CsvData } from './transactionsCsv';
 
 const account = (over: Partial<Account> & { id: string }): Account => ({
   name: '', type: 'cash', icon: 'wallet', color: '#000000', currency: 'EGP', initialBalance: 0, order: 0, createdAt: '2026-01-01T00:00:00.000Z', ...over,
@@ -265,6 +265,48 @@ describe('planCsvImport: rows already in Budgy', () => {
   });
 });
 
+describe('planCsvImport: categories nothing uses', () => {
+  const GROCERIES = category({ id: 'groceries', name: 'Groceries', order: 2 });
+  const BOTH = category({ id: 'both', name: 'Gifts', kind: 'both', order: 3 });
+  const data: CsvData = { ...DATA, categories: [FOOD, SALARY, GROCERIES, BOTH] };
+
+  it('offers to delete categories of the file flows that no transaction would use', () => {
+    const result = plan(file(lunch), data);
+    expect(result.unusedCategories.map((c) => c.id)).toEqual(['groceries']);
+  });
+
+  it('keeps a category a saved transaction uses, even if the file does not name it', () => {
+    const saved: Transaction = { id: 't', type: 'expense', amount: 5, currency: 'EGP', accountId: 'cash', categoryId: 'groceries', date: '2025-01-01T12:00:00.000Z', createdAt: 'x' };
+    expect(plan(file(lunch), { ...data, transactions: [saved] }).unusedCategories).toEqual([]);
+  });
+
+  it('leaves a "both" category until the file gives categories to expenses and income', () => {
+    expect(plan(file(lunch), data).unusedCategories.map((c) => c.id)).not.toContain('both');
+    const pay = { ...lunch, Type: 'income', Category: 'Salary', Note: 'Pay' };
+    expect(plan(file(lunch, pay), data).unusedCategories.map((c) => c.id)).toEqual(['groceries', 'both']);
+  });
+
+  it('removes nothing for a file without categories', () => {
+    const result = plan(file({ ...lunch, Category: '' }), data);
+    expect(hasUnused(result)).toBe(false);
+  });
+
+  it('counts rows already in Budgy as using their category', () => {
+    const saved: Transaction = { id: 't', type: 'expense', amount: 120.5, currency: 'EGP', accountId: 'cash', categoryId: 'food', note: 'Lunch', date: new Date(2026, 2, 15, 12).toISOString(), createdAt: 'x' };
+    const result = plan(file(lunch), { ...data, transactions: [saved] });
+    expect(result.duplicates).toBe(1);
+    expect(result.unusedCategories.map((c) => c.id)).toEqual(['groceries']);
+  });
+
+  it('offers unused subcategories only in categories the file gives subcategories to', () => {
+    const food = { ...FOOD, subcategories: [{ id: 'veg', name: 'Veg', icon: 'other' }, { id: 'meat', name: 'Meat', icon: 'other' }] };
+    const salary = { ...SALARY, subcategories: [{ id: 'bonus', name: 'Bonus', icon: 'other' }] };
+    const pay = { ...lunch, Type: 'income', Category: 'Salary', Note: 'Pay' };
+    const result = plan(file({ ...lunch, Subcategory: 'Veg' }, pay), { ...data, categories: [food, salary] });
+    expect(result.unusedSubcategories).toEqual([{ categoryId: 'food', ids: ['meat'] }]);
+  });
+});
+
 describe('csvRows', () => {
   const names = {
     accountName: (a?: Account) => a?.name ?? 'Deleted',
@@ -332,6 +374,27 @@ describe('saveCsvImport', () => {
     const food = await db.categories.get('food');
     expect(food?.subcategories?.map((s) => s.name)).toEqual(['Groceries']);
     expect(food?.dirty).toBe(1);
+  });
+
+  it('keeps unused categories unless asked to delete them', async () => {
+    await db.categories.add(category({ id: 'groceries', name: 'Groceries' }));
+    await saveCsvImport(plan(file(lunch), await current()));
+    expect((await db.categories.get('groceries'))?.deletedAt).toBeUndefined();
+  });
+
+  it('deletes unused categories and subcategories when asked, marked for upload', async () => {
+    await writeFromCloud(db, async () => {
+      await db.categories.add(category({ id: 'groceries', name: 'Groceries' }));
+      await db.categories.update('food', { subcategories: [{ id: 'veg', name: 'Veg', icon: 'other' }] });
+    });
+    await saveCsvImport(plan(file({ ...lunch, Subcategory: 'Meat' }), await current()), { removeUnused: true });
+    const groceries = await db.categories.get('groceries');
+    expect(groceries?.deletedAt).toBeDefined();
+    expect(groceries?.dirty).toBe(1);
+    const food = await db.categories.get('food');
+    expect(food?.subcategories?.map((s) => s.name)).toEqual(['Meat']);
+    expect(food?.deletedAt).toBeUndefined();
+    expect((await db.categories.get('salary'))?.deletedAt).toBeUndefined();
   });
 
   it('finds nothing new when the same file is imported again', async () => {
