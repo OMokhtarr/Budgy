@@ -1,24 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { getsTile } from './accountFilter';
+import { tileIsSpending } from './accountFilter';
 import { spentOnTile, tileMoveOf } from './accountTiles';
 import type { Account, AccountGroup, Transaction } from '@/shared/models';
 
 const tx = (fields: Partial<Transaction>): Transaction => ({
   type: 'transfer', amount: 100, currency: 'EGP', accountId: 'cash', toAccountId: 'debt', date: 'x', createdAt: 'x', ...fields,
 });
-const SCOPE = { tileIds: new Set(['debt', 'savings']), shownIds: new Set(['cash', 'debt', 'savings']) };
+const SCOPE = { tileIds: new Set(['debt', 'savings']), shownIds: new Set(['cash', 'bank', 'debt', 'savings']) };
 /** 1 USD = 50 EGP; everything else is already in the main currency. */
 const CONV = { base: 'EGP', toBase: (n: number, cur: string) => (cur === 'USD' ? n * 50 : n) };
 const spent = (fields: Partial<Transaction>, scope = SCOPE) => spentOnTile(tx(fields), scope, CONV);
 
-describe('getsTile', () => {
+describe('tileIsSpending', () => {
   it.each<[AccountGroup | undefined, boolean]>([
     ['debt', true],
     ['savings', true],
     ['regular', false],
     [undefined, false],
   ])('group %s: %s', (group, want) => {
-    expect(getsTile({ group } as Account)).toBe(want);
+    expect(tileIsSpending({ group } as Account)).toBe(want);
   });
 });
 
@@ -58,6 +58,7 @@ describe('spentOnTile', () => {
     ['a transfer between two tiles', { accountId: 'savings', toAccountId: 'debt' }],
     ['a transfer inside one tile', { accountId: 'debt', toAccountId: 'debt', toCurrency: 'USD', toAmount: 2 }],
     ['a transfer between accounts without tiles', { toAccountId: 'other' }],
+    ['a transfer between two everyday accounts', { toAccountId: 'bank' }],
   ])('ignores %s', (_name, fields) => {
     expect(spent(fields)).toBe(0);
   });

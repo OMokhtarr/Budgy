@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useAccounts, useTransactionsInRange } from '@/core/db/hooks';
-import { forgetAccount, getsTile, resolveFilter, selectedByDefault, type FilterOverrides } from '@/core/utils/accountFilter';
+import { forgetAccount, resolveFilter, tileIsSpending, selectedByDefault, type FilterOverrides } from '@/core/utils/accountFilter';
 import type { TileScope } from '@/core/utils/accountTiles';
 import type { DateRange, Transaction } from '@/shared/models';
 
@@ -16,7 +16,7 @@ interface AccountFilterValue {
   inTotal: Set<string>;
   /** Ids of the selected accounts whose expenses and income are shown. */
   inExpenses: Set<string>;
-  /** Which accounts show as tiles among the categories, for counting the money moved to them as spending. */
+  /** The debt and savings tiles among the categories, for counting the money moved to them as spending. */
   tiles: TileScope;
   isDefault: boolean;
   setSelected: (ids: Set<string>) => void;
@@ -57,8 +57,9 @@ export function AccountFilterProvider({ children }: { children: React.ReactNode 
   const [overrides, setOverrides] = useState<FilterOverrides>(load);
 
   const { selected, inTotal, inExpenses } = useMemo(() => resolveFilter(accounts ?? [], overrides), [accounts, overrides]);
+  // Debt and savings tiles count whatever the filter says; only the account the money comes from has to be shown.
   const tiles = useMemo<TileScope>(
-    () => ({ tileIds: new Set((accounts ?? []).filter((a) => getsTile(a) && inExpenses.has(a.id!)).map((a) => a.id!)), shownIds: inExpenses }),
+    () => ({ tileIds: new Set((accounts ?? []).filter(tileIsSpending).map((a) => a.id!)), shownIds: inExpenses }),
     [accounts, inExpenses],
   );
 

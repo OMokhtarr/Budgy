@@ -1,6 +1,6 @@
 import { IonIcon } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
-import { COLORS, ICONS } from '@/shared/icons';
+import { COLORS, ICON_GROUPS, ICONS, canonicalIcon } from '@/shared/icons';
 
 interface IconProps {
   icon: string;
@@ -14,23 +14,30 @@ interface Props extends IconProps {
 
 export function IconPicker({ icon, color, onIcon }: IconProps) {
   const { t } = useTranslation();
+  const selected = canonicalIcon(icon);
   return (
     <div className="b-field">
       <span>{t('editor.icon')}</span>
-      <div className="b-swatches">
-        {Object.entries(ICONS).map(([name, svg]) => (
-          <button
-            key={name}
-            type="button"
-            className={`b-swatch ${name === icon ? 'is-selected' : ''}`}
-            style={name === icon ? { background: color, color: '#fff' } : undefined}
-            onClick={() => onIcon(name)}
-            aria-label={name}
-          >
-            <IonIcon icon={svg} />
-          </button>
-        ))}
-      </div>
+      {ICON_GROUPS.map((group) => (
+        <section key={group.key} className="b-icon-group">
+          <h3 className="b-icon-group__title">{t(`icons.groups.${group.key}`)}</h3>
+          <div className="b-swatches">
+            {group.icons.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={`b-swatch ${name === selected ? 'is-selected' : ''}`}
+                style={name === selected ? { background: color, color: '#fff' } : undefined}
+                onClick={() => onIcon(name)}
+                aria-label={name}
+              >
+                {/* lazy: only the icons scrolled into view get drawn. */}
+                <IonIcon icon={ICONS[name]} lazy />
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
