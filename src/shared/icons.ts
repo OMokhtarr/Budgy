@@ -80,18 +80,38 @@ export const COLORS = [
   '#64748b', '#0f766e',
 ];
 
-/** Line icons ionicons doesn't have. Drawn in the current text colour, like the outline icons above. */
+/**
+ * Budgy's own icons for the header, the period bar and the tab bar: single lines in the current text
+ * colour, most with one solid dot (Budgy's mark). The dot is filled with --b-dot (green by default; see
+ * index.css), which reaches inside ion-icon's shadow DOM because custom properties inherit.
+ */
 const lineIcon = (body: string) =>
-  `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>${body}</svg>`;
+  `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'>${body}</svg>`;
 
-export const doubleChevronBack = lineIcon("<path d='M10 4l-7 8 7 8h3l-7-8 7-8zM17 4l-7 8 7 8h3l-7-8 7-8z'/>");
-export const doubleChevronForward = lineIcon("<path d='M14 4l7 8-7 8h-3l7-8-7-8zM7 4l7 8-7 8H4l7-8-7-8z'/>");
-export const pencilUpright = lineIcon(
-  "<path d='M5 21V10.5L12 2.5l7 8V21M9 6h6M5 12.5q3.5-3 7 0q3.5-3 7 0M8.5 11v10M15.5 11v10M12 12.5V21'/>",
+const dot = (cx: number, cy: number, r = 1.7) =>
+  `<circle cx='${cx}' cy='${cy}' r='${r}' stroke='none' style='fill:var(--b-dot, currentColor)'/>`;
+
+// Tab bar
+export const accountsIcon = lineIcon(
+  `<rect x='3' y='6.5' width='18' height='13.5' rx='3'/><path d='M6.5 6.5 15 3.5l1.2 3'/>${dot(16.5, 13.3)}`,
 );
-export const receiptUpright = lineIcon(
-  "<path d='M5.5 3h13v18l-2.2-1.6-2.1 1.6-2.2-1.6-2.2 1.6-2.1-1.6-2.2 1.6zM8.5 8h4.5M8.5 12h4.5M15.5 8h.01M15.5 12h.01'/>",
+export const categoriesIcon = lineIcon(
+  `<circle cx='7.5' cy='7.5' r='3.3'/><circle cx='16.5' cy='7.5' r='3.3'/><circle cx='7.5' cy='16.5' r='3.3'/>${dot(16.5, 16.5, 3.3)}`,
 );
-export const barsAndTrend = lineIcon(
-  "<path d='M3 21h18M5.5 21v-6h3.5v6M10.5 21V11H14v10M15.5 21v-7H19v7M5 8l6-3 7 2'/><circle cx='5' cy='8' r='1.3'/><circle cx='11' cy='5' r='1.3'/><circle cx='18' cy='7' r='1.3'/>",
+export const transactionsIcon = lineIcon(
+  `<path d='M9.5 7H20M9.5 12H20M9.5 17H20'/><circle cx='5' cy='12' r='1'/><circle cx='5' cy='17' r='1'/>${dot(5, 7)}`,
 );
+export const overviewIcon = lineIcon(`<path d='M3.5 17l5-5 4 3 6.5-6.5M3.5 21h17'/>${dot(19.5, 8, 2)}`);
+
+// Period bar
+export const previousIcon = lineIcon(`<path d='M13 6l-6 6 6 6'/>${dot(17.5, 12)}`);
+export const nextIcon = lineIcon(`<path d='M11 6l6 6-6 6'/>${dot(6.5, 12)}`);
+export const chevronDownIcon = lineIcon("<path d='M7 10l5 5 5-5'/>");
+
+// Header actions
+export const editIcon = lineIcon(`<path d='M7.5 20H20M5 19l.8-4.2L15.5 5a2.5 2.5 0 0 1 3.5 3.5L9.2 18.2z'/>${dot(5, 19, 1.5)}`);
+export const doneIcon = lineIcon("<path d='M5 12.5l4.5 4.5L19 7.5'/>");
+export const addIcon = lineIcon("<path d='M12 5v14M5 12h14'/>");
+export const searchIcon = lineIcon(`<circle cx='11' cy='11' r='6.5'/><path d='M20 20l-4.3-4.3'/>${dot(11, 11, 1.6)}`);
+export const closeIcon = lineIcon("<path d='M6.5 6.5l11 11M17.5 6.5l-11 11'/>");
+export const filterIcon = lineIcon(`<path d='M4 7h16M4 17h16'/>${dot(15, 7, 2.5)}${dot(9, 17, 2.5)}`);

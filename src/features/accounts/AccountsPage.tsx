@@ -12,6 +12,7 @@ import AppHeader from '@/shared/components/AppHeader';
 import Avatar from '@/shared/components/Avatar';
 import MoneyText from '@/shared/components/MoneyText';
 import { useSwipe } from '@/shared/hooks/useSwipe';
+import { addIcon } from '@/shared/icons';
 import AccountEditModal from './AccountEditModal';
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
 
@@ -147,7 +148,7 @@ export default function AccountsPage() {
         <AppHeader
           end={
             <IonButton onClick={() => setEditing({ newGroup: tab === 'debts' ? 'debt' : 'regular' })} aria-label={t('accounts.add')}>
-              <IonIcon slot="icon-only" icon={addOutline} />
+              <IonIcon slot="icon-only" icon={addIcon} />
             </IonButton>
           }
         />

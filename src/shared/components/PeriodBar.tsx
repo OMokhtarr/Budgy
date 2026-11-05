@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { IonIcon } from '@ionic/react';
-import { chevronDownOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useLocale } from '@/core/contexts/SettingsContext';
 import { addDays, daysIn, formatRange, isSameDay } from '@/core/utils/period';
-import { doubleChevronBack, doubleChevronForward } from '@/shared/icons';
+import { chevronDownIcon, nextIcon, previousIcon } from '@/shared/icons';
 import PeriodSheet from './PeriodSheet';
 
 export function usePeriodLabel(): string {
@@ -43,15 +42,15 @@ export default function PeriodBar() {
   return (
     <div className="b-period">
       <button className="b-period__nav" onClick={prev} disabled={mode === 'all'} aria-label={t('period.previous')}>
-        <IonIcon icon={doubleChevronBack} className="b-flip" />
+        <IonIcon icon={previousIcon} className="b-flip" />
       </button>
       <button className="b-period__label" onClick={() => setSheetOpen(true)} aria-label={`${t('period.choose')}: ${label}`}>
         <span className="b-period__days">{mode === 'all' ? '∞' : daysIn(range)}</span>
         {label}
-        <IonIcon icon={chevronDownOutline} />
+        <IonIcon icon={chevronDownIcon} />
       </button>
       <button className="b-period__nav" onClick={next} disabled={mode === 'all'} aria-label={t('period.next')}>
-        <IonIcon icon={doubleChevronForward} className="b-flip" />
+        <IonIcon icon={nextIcon} className="b-flip" />
       </button>
       <PeriodSheet isOpen={sheetOpen} label={label} onClose={() => setSheetOpen(false)} />
     </div>
