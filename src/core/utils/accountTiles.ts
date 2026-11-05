@@ -2,12 +2,12 @@ import type { Transaction } from '@/shared/models';
 import type { BaseConverter } from './txRate';
 
 /**
- * Debt and savings accounts can show as tiles among the categories. Money sent to a tile counts as
- * spending and money coming back from it takes that away. A tile's own expenses aren't part of this:
- * they already count through their categories.
+ * Every account has a tile among the categories. Money sent to a debt or savings tile counts as
+ * spending and money coming back from it takes that away; moving money between everyday accounts
+ * isn't spending. A tile's own expenses aren't part of this: they already count through their categories.
  */
 export interface TileScope {
-  /** Accounts with a tile. */
+  /** Debt and savings accounts, whatever the filter says: money sent to them counts as spending. */
   tileIds: Set<string>;
   /** Accounts whose spending is shown; only money moving to or from these counts. */
   shownIds: Set<string>;

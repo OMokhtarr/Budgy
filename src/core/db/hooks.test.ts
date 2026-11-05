@@ -18,7 +18,7 @@ const breakdown = (txs: Transaction[], flow: 'expense' | 'income' = 'expense', c
 const values = (b: ReturnType<typeof breakdown>) => b.subs.map(({ sub, value }) => [sub.name, value]);
 
 describe('totalsOf with account tiles', () => {
-  const TILES = { tileIds: new Set(['debt']), shownIds: new Set(['cash', 'debt']) };
+  const TILES = { tileIds: new Set(['debt']), shownIds: new Set(['cash', 'bank', 'debt']) };
   const move = (amount: number, accountId: string, toAccountId: string, fields: Partial<Transaction> = {}): Transaction => ({
     type: 'transfer', amount, currency: 'EGP', accountId, toAccountId, date: 'x', createdAt: 'x', ...fields,
   });
@@ -50,6 +50,12 @@ describe('totalsOf with account tiles', () => {
   it("doesn't count a tile's own expense twice", () => {
     const t = totals([{ ...tx(70), accountId: 'debt' }]);
     expect(t.expense).toBe(70);
+    expect(t.byTile.size).toBe(0);
+  });
+
+  it("doesn't count money moved between everyday accounts", () => {
+    const t = totals([tx(50), move(1000, 'cash', 'bank')]);
+    expect(t.expense).toBe(50);
     expect(t.byTile.size).toBe(0);
   });
 

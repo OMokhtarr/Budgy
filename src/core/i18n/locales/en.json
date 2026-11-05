@@ -155,7 +155,7 @@
     "includeInTotal": "Include in total balance",
     "includeInTotalHint": "Adds this account's balance to the total at the top.",
     "showInExpenses": "Display in expenses",
-    "showInExpensesHint": "Counts this account's expenses and income in Categories, Transactions and Overview. Debts and savings also get a tile in Categories, and money sent to them counts as spending, minus what comes back.",
+    "showInExpensesHint": "Counts this account's expenses and income in Categories, Transactions and Overview. Money sent to a debt or savings from a shown account counts as spending, minus what comes back, whatever this switch says; moving money between everyday accounts doesn't.",
     "group": "Group",
     "groups": {
       "regular": "Everyday",
@@ -198,6 +198,29 @@
     "noCategory": "Transfers don't have a category",
     "filterBySelection": "Show only these categories",
     "removeFilter": "Remove filter"
+  },
+  "icons": {
+    "groups": {
+      "money": "Money & accounts",
+      "shopping": "Shopping",
+      "food": "Food & drink",
+      "transport": "Transport",
+      "entertainment": "Entertainment",
+      "home": "Home & utilities",
+      "nature": "Nature & weather",
+      "clothing": "Clothing",
+      "family": "People & family",
+      "education": "Education",
+      "work": "Work & office",
+      "health": "Health",
+      "beauty": "Beauty & care",
+      "celebrations": "Gifts & celebrations",
+      "sports": "Sports & fitness",
+      "tech": "Tech",
+      "travel": "Travel",
+      "pets": "Pets & animals",
+      "other": "Other"
+    }
   },
   "editor": {
     "fromAccount": "From account",

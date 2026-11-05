@@ -13,7 +13,7 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 
   muted?: boolean;
   selected?: boolean;
   variant?: 'add';
-  /** A rounded square instead of a circle: an account among the categories. */
+  /** A rectangle instead of a circle: an account among the categories. */
   square?: boolean;
   /** Lifted, being dragged to a new place. */
   dragging?: boolean;

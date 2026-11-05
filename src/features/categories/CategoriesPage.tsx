@@ -21,9 +21,9 @@ import type { Account, Amounts, Category, Flow } from '@/shared/models';
 
 /**
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
- * Tap a category to add a transaction to it. Debts and savings with "Display in expenses" on follow
- * as square tiles: tap one to send it money, which counts as spending. In edit mode, hold a category
- * and drag it to move it.
+ * Tap a category to add a transaction to it. Every account follows as a square tile: tap one to send
+ * it money. Money sent to a debt or savings counts as spending and shows on its tile; an everyday tile
+ * shows no amount. In edit mode, hold a category and drag it to move it.
  */
 export default function CategoriesPage() {
   const { t } = useTranslation();
@@ -54,13 +54,15 @@ export default function CategoriesPage() {
   const totals = useMemo(() => totalsOf(txs, conv, tiles), [txs, conv, tiles]);
 
   const accounts = useAccounts();
-  const tileAccounts = (accounts ?? []).filter((a) => tiles.tileIds.has(a.id!));
+  // Every account has a tile, like every category; only debts and savings carry spending.
+  const tileAccounts = accounts ?? [];
+  const isSpending = (a: Account) => tiles.tileIds.has(a.id!);
   const sentTo = (a: Account) => totals.byTile.get(a.id!)?.value ?? 0;
 
   const isExpense = kind === 'expense';
   const slices = [
     ...(categories ?? []).map((c) => ({ value: totals.byCategory[kind].get(c.id!) ?? 0, color: c.color })),
-    ...(isExpense ? tileAccounts.map((a) => ({ value: sentTo(a), color: a.color })) : []),
+    ...(isExpense ? tileAccounts.filter(isSpending).map((a) => ({ value: sentTo(a), color: a.color })) : []),
   ];
 
   // A total in each currency it was made in (main currency first); "EGP 0" when there is nothing yet.
@@ -148,8 +150,8 @@ export default function CategoriesPage() {
                   name={accountName(a)}
                   icon={a.icon}
                   color={a.color}
-                  amount={amountLines(totals.byTile.get(a.id!)?.amounts, a.currency)}
-                  muted={sentTo(a) === 0 && !editMode}
+                  amount={isSpending(a) ? amountLines(totals.byTile.get(a.id!)?.amounts, a.currency) : undefined}
+                  muted={isSpending(a) && sentTo(a) === 0 && !editMode}
                   onClick={() => (editMode ? setEditingAccount(a) : openEditor({ type: 'transfer', toAccountId: a.id }))}
                 />
               ))}
