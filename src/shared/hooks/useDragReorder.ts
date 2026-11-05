@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { menuController } from '@ionic/core/components';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { moveItem } from '@/core/utils/reorder';
@@ -19,18 +19,22 @@ function swallowNext(type: 'click' | 'touchend') {
 }
 
 /**
- * Hold an item, then drag it over the others: it takes the place of whichever one is under the finger,
- * and `onMove` gets the new order when it's let go. `ids` is the current order; each item needs
- * `itemProps(id)`. While an item is lifted the page doesn't scroll, swipe to another period or open the
- * side menu.
+ * Hold an item, then drag it over the others: it follows the finger and takes the place of whichever
+ * one is under it, and `onMove` gets the new order when it's let go. `ids` is the current order; each
+ * item needs `itemProps(id)`. While an item is lifted the page doesn't scroll, swipe to another period
+ * or open the side menu.
  */
 export function useDragReorder(ids: string[], onMove: (ids: string[]) => void, enabled = true) {
   const [draft, setDraft] = useState<string[] | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   /** Ends the press in progress, if any, without saving. */
   const stop = useRef<(() => void) | null>(null);
+  /** Keeps the lifted item under the finger, also after the others moved around it. */
+  const follow = useRef<(() => void) | null>(null);
 
   useEffect(() => () => stop.current?.(), []);
+  // The list just took a new order, so the lifted item's own place moved: put it back under the finger.
+  useLayoutEffect(() => follow.current?.(), [draft]);
   useEffect(() => {
     if (!enabled) stop.current?.();
   }, [enabled]);
@@ -38,7 +42,17 @@ export function useDragReorder(ids: string[], onMove: (ids: string[]) => void, e
   const press = (id: string, e: PointerEvent) => {
     if (!enabled || e.button !== 0 || stop.current) return;
     const { pointerId, pointerType } = e;
+    const el = e.currentTarget as HTMLElement;
     const origin = { x: e.clientX, y: e.clientY };
+    const finger = { ...origin };
+    // Where the item was grabbed, and how far it's drawn from its own place in the list.
+    let grab = { x: 0, y: 0 };
+    let shift = { x: 0, y: 0 };
+    const place = () => {
+      const r = el.getBoundingClientRect();
+      shift = { x: finger.x - grab.x - (r.left - shift.x), y: finger.y - grab.y - (r.top - shift.y) };
+      el.style.transform = `translate(${shift.x}px, ${shift.y}px)`;
+    };
     let order = ids;
     let lifted = false;
     const listeners = new AbortController();
@@ -48,6 +62,9 @@ export function useDragReorder(ids: string[], onMove: (ids: string[]) => void, e
       window.clearTimeout(timer);
       listeners.abort();
       stop.current = null;
+      follow.current = null;
+      el.style.removeProperty('transform');
+      el.style.removeProperty('pointer-events');
       setDragging(null);
       setDraft(null);
       if (!lifted) return;
@@ -61,6 +78,11 @@ export function useDragReorder(ids: string[], onMove: (ids: string[]) => void, e
 
     const timer = window.setTimeout(() => {
       lifted = true;
+      const r = el.getBoundingClientRect();
+      grab = { x: origin.x - r.left, y: origin.y - r.top };
+      // Out of the way, so the finger finds the item under it.
+      el.style.pointerEvents = 'none';
+      follow.current = place;
       setDragging(id);
       setDraft(order);
       void menuController.swipeGesture(false);
@@ -75,6 +97,9 @@ export function useDragReorder(ids: string[], onMove: (ids: string[]) => void, e
           if (Math.hypot(ev.clientX - origin.x, ev.clientY - origin.y) > SLOP) end();
           return;
         }
+        finger.x = ev.clientX;
+        finger.y = ev.clientY;
+        place();
         const over = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-reorder-id]');
         const next = over?.dataset.reorderId ? moveItem(order, id, over.dataset.reorderId) : order;
         if (next !== order) {

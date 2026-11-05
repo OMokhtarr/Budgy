@@ -5,8 +5,9 @@ import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
-import { reorderCategories } from '@/core/db/db';
+import { reorderAccounts, reorderCategories } from '@/core/db/db';
 import { totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
+import { splitMainAccounts } from '@/core/utils/defaultAccount';
 import AppHeader from '@/shared/components/AppHeader';
 import PeriodBar from '@/shared/components/PeriodBar';
 import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
@@ -21,9 +22,10 @@ import type { Account, Amounts, Category, Flow } from '@/shared/models';
 
 /**
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
- * Tap a category to add a transaction to it. Every account follows as a square tile: tap one to send
- * it money. Money sent to a debt or savings counts as spending and shows on its tile; an everyday tile
- * shows no amount. In edit mode, hold a category and drag it to move it.
+ * Tap a category to add a transaction to it. Accounts with "Display in expenses" on (but Cash In and
+ * Cash Out) follow as square tiles: tap one to send it money. Each tile shows the money moved to it in
+ * the period; for a debt or savings that counts as spending, for an everyday account it doesn't. In
+ * edit mode, hold a category or an account and drag it to move it.
  */
 export default function CategoriesPage() {
   const { t } = useTranslation();
@@ -54,8 +56,16 @@ export default function CategoriesPage() {
   const totals = useMemo(() => totalsOf(txs, conv, tiles), [txs, conv, tiles]);
 
   const accounts = useAccounts();
-  // Every account has a tile, like every category; only debts and savings carry spending.
-  const tileAccounts = accounts ?? [];
+  // Accounts with "Display in expenses" on have a tile, except Cash In and Cash Out; only debts and savings are spending.
+  const tileAccounts = splitMainAccounts(accounts ?? [])[1].filter((a) => tiles.tileIds.has(a.id!) || tiles.everydayIds.has(a.id!));
+  // Account tiles are dragged among themselves, the same way as the categories.
+  const { order: accountOrder, dragging: draggingAccount, itemProps: accountProps } = useDragReorder(
+    tileAccounts.map((a) => a.id!),
+    (ids) => void reorderAccounts(ids),
+    editMode,
+  );
+  const accountById = new Map(tileAccounts.map((a) => [a.id!, a]));
+  const shownAccounts = accountOrder.map((id) => accountById.get(id)).filter((a): a is Account => !!a);
   const isSpending = (a: Account) => tiles.tileIds.has(a.id!);
   const sentTo = (a: Account) => totals.byTile.get(a.id!)?.value ?? 0;
 
@@ -142,17 +152,20 @@ export default function CategoriesPage() {
               <Bubble name={t('categories.add')} icon="other" color="" variant="add" amount="" onClick={() => setEditing('new')} />
             )}
 
+            {isExpense && shownAccounts.length > 0 && <div className="b-catgrid__break" aria-hidden="true" />}
             {isExpense &&
-              tileAccounts.map((a) => (
+              shownAccounts.map((a) => (
                 <Bubble
                   key={a.id}
                   square
                   name={accountName(a)}
                   icon={a.icon}
                   color={a.color}
-                  amount={isSpending(a) ? amountLines(totals.byTile.get(a.id!)?.amounts, a.currency) : undefined}
-                  muted={isSpending(a) && sentTo(a) === 0 && !editMode}
+                  amount={amountLines(totals.byTile.get(a.id!)?.amounts, a.currency)}
+                  muted={sentTo(a) === 0 && !editMode}
                   onClick={() => (editMode ? setEditingAccount(a) : openEditor({ type: 'transfer', toAccountId: a.id }))}
+                  dragging={draggingAccount === a.id}
+                  {...accountProps(a.id!)}
                 />
               ))}
           </div>

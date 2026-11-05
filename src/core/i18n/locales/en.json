@@ -76,7 +76,7 @@
   },
   "categories": {
     "add": "Add",
-    "editHint": "Tap a category to edit it, add subcategories or set a monthly budget. Hold and drag one to move it",
+    "editHint": "Tap a category to edit it, add subcategories or set a monthly budget. Hold and drag a category or an account to move it",
     "editTitle": "Edit category",
     "newExpense": "New expense category",
     "newIncome": "New income category",
@@ -155,7 +155,7 @@
     "includeInTotal": "Include in total balance",
     "includeInTotalHint": "Adds this account's balance to the total at the top.",
     "showInExpenses": "Display in expenses",
-    "showInExpensesHint": "Counts this account's expenses and income in Categories, Transactions and Overview. Money sent to a debt or savings from a shown account counts as spending, minus what comes back, whatever this switch says; moving money between everyday accounts doesn't.",
+    "showInExpensesHint": "Counts this account's expenses and income in Categories, Transactions and Overview, and gives it a tile in Categories. Money sent to a debt or savings tile counts as spending, minus what comes back; moving money between everyday accounts doesn't.",
     "group": "Group",
     "groups": {
       "regular": "Everyday",

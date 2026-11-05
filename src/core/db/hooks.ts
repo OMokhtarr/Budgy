@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo } from 'react';
 import { alive, db } from './db';
-import { moveInBase, tileMoveOf, type TileScope } from '@/core/utils/accountTiles';
+import { everydayShiftsOf, moveInBase, tileMoveOf, type Money, type TileScope } from '@/core/utils/accountTiles';
 import { txInBase, type BaseConverter } from '@/core/utils/txRate';
 import { openingOf, roundTo } from '@/core/utils/currency';
 import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
@@ -131,18 +131,23 @@ export function totalsOf(txs: Transaction[] | undefined, conv: BaseConverter, ti
   const byTile: PeriodTotals['byTile'] = new Map();
   let expense = 0;
   let income = 0;
+  const addToTile = (tileId: string, value: number, sign: 1 | -1, [amount, currency]: Money) => {
+    const entry = byTile.get(tileId) ?? { value: 0, amounts: {} };
+    entry.value += value;
+    entry.amounts[currency] = roundTo((entry.amounts[currency] ?? 0) + sign * amount, currency);
+    byTile.set(tileId, entry);
+  };
   for (const t of txs ?? []) {
     if (t.type === 'transfer') {
-      const move = tiles && tileMoveOf(t, tiles);
+      if (!tiles) continue;
+      const move = tileMoveOf(t, tiles);
       if (move) {
         const value = moveInBase(move, conv);
-        const [amount, currency] = move.onTile;
-        const entry = byTile.get(move.tileId) ?? { value: 0, amounts: {} };
-        entry.value += value;
-        entry.amounts[currency] = roundTo((entry.amounts[currency] ?? 0) + move.sign * amount, currency);
-        byTile.set(move.tileId, entry);
+        addToTile(move.tileId, value, move.sign, move.onTile);
         expense += value;
       }
+      // Everyday tiles only show what moved; it isn't spending.
+      for (const s of everydayShiftsOf(t, tiles)) addToTile(s.tileId, s.sign * conv.toBase(...s.onTile), s.sign, s.onTile);
       continue;
     }
     const v = txInBase(t, conv);

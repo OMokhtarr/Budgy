@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { tileIsSpending } from './accountFilter';
-import { spentOnTile, tileMoveOf } from './accountTiles';
+import { everydayShiftsOf, spentOnTile, tileMoveOf } from './accountTiles';
 import type { Account, AccountGroup, Transaction } from '@/shared/models';
 
 const tx = (fields: Partial<Transaction>): Transaction => ({
   type: 'transfer', amount: 100, currency: 'EGP', accountId: 'cash', toAccountId: 'debt', date: 'x', createdAt: 'x', ...fields,
 });
-const SCOPE = { tileIds: new Set(['debt', 'savings']), shownIds: new Set(['cash', 'bank', 'debt', 'savings']) };
+const SCOPE = { tileIds: new Set(['debt', 'savings']), everydayIds: new Set(['cash', 'bank']), shownIds: new Set(['cash', 'bank', 'debt', 'savings']) };
 /** 1 USD = 50 EGP; everything else is already in the main currency. */
 const CONV = { base: 'EGP', toBase: (n: number, cur: string) => (cur === 'USD' ? n * 50 : n) };
 const spent = (fields: Partial<Transaction>, scope = SCOPE) => spentOnTile(tx(fields), scope, CONV);
@@ -78,5 +78,34 @@ describe('tileMoveOf', () => {
   it('shows money coming back in the currency that left the tile', () => {
     const move = tileMoveOf(tx({ accountId: 'debt', toAccountId: 'cash', amount: 100, currency: 'USD', toAmount: 4900, toCurrency: 'EGP' }), SCOPE);
     expect(move).toMatchObject({ tileId: 'debt', sign: -1, onTile: [100, 'USD'] });
+  });
+});
+
+describe('everydayShiftsOf', () => {
+  const shifts = (fields: Partial<Transaction>) => everydayShiftsOf(tx(fields), SCOPE);
+
+  it('shows money moved between two everyday accounts on both tiles', () => {
+    expect(shifts({ toAccountId: 'bank', amount: 1000 })).toEqual([
+      { tileId: 'bank', sign: 1, onTile: [1000, 'EGP'] },
+      { tileId: 'cash', sign: -1, onTile: [1000, 'EGP'] },
+    ]);
+  });
+
+  it('shows money sent to savings as leaving the everyday account', () => {
+    expect(shifts({ toAccountId: 'savings' })).toEqual([{ tileId: 'cash', sign: -1, onTile: [100, 'EGP'] }]);
+  });
+
+  it('shows money coming back from a debt in the currency that reached the everyday account', () => {
+    expect(shifts({ accountId: 'debt', toAccountId: 'cash', amount: 100, currency: 'USD', toAmount: 4900, toCurrency: 'EGP' })).toEqual([
+      { tileId: 'cash', sign: 1, onTile: [4900, 'EGP'] },
+    ]);
+  });
+
+  it.each<[string, Partial<Transaction>]>([
+    ['an expense', { type: 'expense', toAccountId: undefined }],
+    ['an exchange inside one account', { toAccountId: 'cash', toCurrency: 'USD', toAmount: 2 }],
+    ['a transfer between two debt or savings tiles', { accountId: 'savings', toAccountId: 'debt' }],
+  ])('ignores %s', (_name, fields) => {
+    expect(shifts(fields)).toEqual([]);
   });
 });

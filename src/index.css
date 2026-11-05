@@ -437,7 +437,8 @@ ion-toolbar.b-toolbar {
 
 /* Edit mode: categories can be held and dragged, so a long press mustn't select text or open a menu */
 .b-catgrid--edit .b-bubble { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.b-bubble.is-dragging { opacity: 0.85; }
+/* Lifted: drawn above the others while it follows the finger */
+.b-bubble.is-dragging { opacity: 0.85; position: relative; z-index: 10; }
 .b-bubble.is-dragging .b-bubble__ring { transform: scale(1.15); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
 
 /* An account among the categories: a card-shaped rectangle as wide as the round bubbles (54px of
@@ -447,11 +448,13 @@ ion-toolbar.b-toolbar {
 .b-catgrid .b-bubble--square .b-bubble__ring { height: 58px; margin: 3px 0; }
 
 .b-bubble--add .b-bubble__icon {
-  background: var(--b-surface-2);
+  background: transparent;
   color: var(--b-muted);
-  border-style: dashed;
-  border-color: var(--b-border);
+  border: 2px dashed var(--b-muted);
 }
+
+/* Account tiles start on a row of their own, below the categories and the add button */
+.b-catgrid__break { grid-column: 1 / -1; height: 0; }
 
 /* ─── Category / account icon chip ─────────────────────────────────────────── */
 .b-avatar {

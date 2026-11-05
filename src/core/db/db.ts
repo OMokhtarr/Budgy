@@ -321,26 +321,38 @@ export async function keepOneDefault(id: string, flow: Flow, database: BudgyDB =
 }
 
 /**
- * Puts the categories `ids` (one screen of them) in this order, keeping the others where they are.
+ * Puts the records `ids` (the ones one screen shows) in this order, keeping the others where they are.
  * Usually the moved ones just swap their numbers, so nothing else is rewritten (and synced over another
- * phone's edit). Only if two of them share a number does every category get a fresh one.
+ * phone's edit). Only if two of them share a number does every record get a fresh one.
  */
-export async function reorderCategories(ids: string[], database: BudgyDB = db): Promise<void> {
-  await database.transaction('rw', database.categories, async () => {
+async function reorder<T extends Synced & { order: number }, K, I>(database: BudgyDB, table: Table<T, K, I>, ids: string[]): Promise<void> {
+  await database.transaction('rw', table, async () => {
     // Sorted by order, then id, as the screens show them.
-    const all = await database.categories.orderBy('order').filter(alive).toArray();
+    const all = await table.orderBy('order').filter(alive).toArray();
     const moving = new Set(ids);
-    const moved = ids.filter((id) => all.some((c) => c.id === id));
-    const slots = all.filter((c) => moving.has(c.id!)).map((c) => c.order);
+    const moved = ids.filter((id) => all.some((r) => r.id === id));
+    const slots = all.filter((r) => moving.has(r.id!)).map((r) => r.order);
     let orders: [string, number][];
     if (slots.every((n, i) => i === 0 || n > slots[i - 1])) orders = moved.map((id, i) => [id, slots[i]]);
     else {
       let next = 0;
-      orders = all.map((c, i) => [moving.has(c.id!) ? moved[next++] : c.id!, i]);
+      orders = all.map((r, i) => [moving.has(r.id!) ? moved[next++] : r.id!, i]);
     }
-    const orderOf = new Map(all.map((c) => [c.id!, c.order]));
-    await Promise.all(orders.map(([id, n]) => (orderOf.get(id) === n ? undefined : database.categories.update(id, { order: n }))));
+    const orderOf = new Map(all.map((r) => [r.id!, r.order]));
+    await Promise.all(
+      orders.map(([id, n]) => (orderOf.get(id) === n ? undefined : table.where('id').equals(id).modify((r: T) => { r.order = n; }))),
+    );
   });
+}
+
+/** Puts the categories `ids` (one screen of them) in this order; see `reorder`. */
+export async function reorderCategories(ids: string[], database: BudgyDB = db): Promise<void> {
+  await reorder(database, database.categories, ids);
+}
+
+/** Puts the accounts `ids` (the tiles on the Categories screen) in this order; see `reorder`. */
+export async function reorderAccounts(ids: string[], database: BudgyDB = db): Promise<void> {
+  await reorder(database, database.accounts, ids);
 }
 
 /** The order for a new category: after all the others. */
