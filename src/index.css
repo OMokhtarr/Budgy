@@ -36,6 +36,13 @@
   --b-track: #e5e9ee;
   --b-backdrop: #dfe4ea;
   --b-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 8px rgba(15, 23, 42, 0.04);
+  /* The period pill and the selected tab */
+  --b-pill: #e3e5f0;
+  --b-on-pill: #2d3044;
+  /* The balance in the header */
+  --b-balance: #c8553d;
+  /* Mixed into amounts, so they stay readable when a category's colour is close to the background */
+  --b-amount-grey: #707070;
 
   --ion-background-color: var(--b-bg);
   --ion-toolbar-background: var(--b-surface);
@@ -50,19 +57,23 @@
   --ion-color-primary-shade: #2eba87;
   --ion-color-primary-tint: #48d7a3;
 
-  --b-bg: #0b1220;
-  --b-surface: #131c2e;
-  --b-surface-2: #1c2740;
-  --b-text: #e7ecf3;
-  --b-muted: #94a3b8;
-  --b-faint: #64748b;
-  --b-border: #24314a;
-  --b-expense: #f87171;
-  --b-income: #34d399;
+  --b-bg: #131315;
+  --b-surface: #1f1e23;
+  --b-surface-2: #2b2a30;
+  --b-text: #f3f3f5;
+  --b-muted: #a3a2a7;
+  --b-faint: #77767c;
+  --b-border: #2f2e34;
+  --b-expense: #d96c92;
+  --b-income: #4fa594;
   --b-transfer: #60a5fa;
-  --b-track: #24314a;
-  --b-backdrop: #04070d;
+  --b-track: #2b2a30;
+  --b-backdrop: #08080a;
   --b-shadow: none;
+  --b-pill: #3f4255;
+  --b-on-pill: #e3e5f9;
+  --b-balance: #f0ae9e;
+  --b-amount-grey: #b0b0b0;
 
   --ion-background-color: var(--b-bg);
   --ion-toolbar-background: var(--b-surface);
@@ -115,15 +126,38 @@ ion-content {
 }
 
 ion-tab-bar {
-  --border: 1px solid var(--b-border);
+  --border: 0;
+  height: 72px;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 ion-tab-button {
-  --color: var(--b-faint);
-  --color-selected: var(--ion-color-primary);
-  font-weight: 600;
+  --color: color-mix(in srgb, var(--b-text) 82%, transparent);
+  --color-selected: var(--b-text);
 }
+
+/* The pill behind the selected icon; every icon has its padding so nothing moves between tabs */
+ion-tab-button ion-icon {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 4px 21px;
+  border-radius: 999px;
+  font-size: 24px;
+}
+
+ion-tab-button.tab-selected ion-icon {
+  background: var(--b-pill);
+  color: var(--b-on-pill);
+}
+
+ion-tab-button ion-label {
+  margin-top: 4px;
+  font-size: 13.5px;
+  font-weight: 400;
+}
+
+ion-tab-button.tab-selected ion-label { font-weight: 700; }
 
 ion-toolbar.b-toolbar {
   --border-width: 0;
@@ -179,35 +213,59 @@ ion-toolbar.b-toolbar {
 }
 
 /* ─── Period bar ───────────────────────────────────────────────────────────── */
-/* ‹ November 2026 › — the arrows sit right beside the period, centred as a group */
+/* « [30] NOVEMBER 2026 ⌄ » — the arrows at the edges, the period in a pill between them */
 .b-period {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 8px 10px;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 8px 10px;
 }
 
-.b-period__label {
-  /* fixed minimum width so the arrows don't shift as the label length changes */
-  min-width: 150px;
-  text-align: center;
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--b-text);
+.b-period__nav {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 4px;
   border: none;
   background: transparent;
-  padding: 6px;
-  border-radius: 10px;
+  color: var(--b-text);
+  font-size: 28px;
+  opacity: 0.85;
 }
 
-.b-period__label small {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--b-muted);
+.b-period__nav:disabled { opacity: 0.3; }
+
+.b-period__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  height: 42px;
+  padding: 0 14px 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--b-pill);
+  color: var(--b-on-pill);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.b-period__label > ion-icon { flex-shrink: 0; font-size: 18px; }
+
+/* A little calendar: how many days the period has */
+.b-period__days {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 3px;
+  border: 1.5px solid currentColor;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .b-iconbtn {
@@ -227,31 +285,49 @@ ion-toolbar.b-toolbar {
 [dir='rtl'] .b-flip { transform: scaleX(-1); }
 
 /* ─── Category grid (1Money-style ring layout) ─────────────────────────────── */
-/* Fills the space between the header and the tab bar; scrolls only when the categories don't fit. */
-.b-catpage {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  padding-bottom: 12px;
-}
+/* Rows stack from the top, so with few categories the empty space stays below the donut. */
+.b-page.b-catpage { padding: 16px 2px 12px; }
 
 .b-catgrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px 6px;
-  padding: 8px 0 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 0;
 }
 
-.b-catpage > .b-catgrid:not(.b-archived) {
-  flex: 1;
-  grid-auto-rows: 1fr;
+.b-catgrid .b-bubble { gap: 3px; }
+
+.b-catgrid .b-bubble__name {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--b-text);
 }
 
-.b-catpage .b-bubble { justify-content: center; }
+.b-catgrid .b-bubble__ring { width: 64px; height: 64px; }
+.b-catgrid .b-bubble__icon { border-width: 2px; font-size: 26px; }
+
+.b-catgrid .b-bubble__amount {
+  max-width: 100%;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--c) 65%, var(--b-amount-grey));
+  font-size: 14px;
+}
+
+.b-catgrid .b-bubble--muted .b-bubble__amount { color: var(--b-muted); }
+
+/* The currency code takes the colour of its amount */
+.b-catgrid .b-money__cur {
+  color: inherit;
+  font-size: 0.85em;
+  font-weight: 400;
+  opacity: 0.8;
+}
 
 .b-catgrid__center {
   grid-column: 2 / span 2;
   grid-row: 2 / span 2;
+  /* two rows of bubbles, so the donut sits the same whether or not there are bubbles beside it */
+  min-width: 0;
+  min-height: 224px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,12 +342,21 @@ ion-toolbar.b-toolbar {
 .b-catgrid__center:active { transform: scale(0.98); }
 
 .b-catgrid__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--b-muted);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--b-text);
+}
+
+.b-catgrid__main {
+  margin-top: 2px;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.b-catgrid__sub {
+  font-size: 15px;
+  opacity: 0.5;
 }
 
 /* Amount with its currency code, e.g. "EGP 1,050" */
@@ -318,12 +403,14 @@ ion-toolbar.b-toolbar {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--c);
   color: #fff;
   font-size: 24px;
   border: 3px solid var(--b-bg);
 }
 
 .b-bubble__amount {
+  color: var(--c);
   font-size: 13px;
   font-weight: 700;
 }
@@ -331,8 +418,15 @@ ion-toolbar.b-toolbar {
 /* One line per currency when a category was used with two */
 .b-bubble__line { display: block; line-height: 1.3; }
 
-.b-bubble--muted .b-bubble__icon { opacity: 0.45; }
+/* Nothing spent yet: the icon in the category's colour on a faint tint of it */
+.b-bubble--muted .b-bubble__icon {
+  background: color-mix(in srgb, var(--c) 18%, transparent);
+  color: var(--c);
+}
 .b-bubble--muted .b-bubble__amount { color: var(--b-faint); }
+
+.b-bubble--square .b-bubble__ring { border-radius: 14px; }
+.b-bubble--square .b-bubble__icon { border-radius: 10px; }
 
 .b-bubble--add .b-bubble__icon {
   background: var(--b-surface-2);
@@ -409,15 +503,74 @@ ion-toolbar.b-toolbar {
   margin-top: 2px;
 }
 
+/* ─── Transactions grouped by day ──────────────────────────────────────────── */
+.b-daygroup { padding-bottom: 6px; }
+.b-daygroup + .b-daygroup { border-top: 1px solid var(--b-border); }
+
 .b-dayhead {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 16px 6px 6px;
-  font-size: 13px;
-  font-weight: 700;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px 6px;
+}
+
+.b-dayhead__day {
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1;
   color: var(--b-muted);
 }
+
+.b-dayhead__date {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  font-size: 10.5px;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--b-muted);
+}
+
+.b-dayhead__date strong { font-size: 11.5px; font-weight: 700; }
+
+.b-dayhead__total {
+  font-size: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.b-daygroup .b-row { padding: 8px 6px; border-radius: 12px; }
+.b-daygroup .b-row + .b-row { border-top: none; }
+.b-daygroup .b-row__title { font-weight: 500; font-size: 16px; }
+.b-daygroup .b-row__amount { align-self: flex-start; font-weight: 500; font-size: 16px; }
+
+.b-daygroup .b-row__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.b-daygroup .b-row__sub ion-icon { flex-shrink: 0; font-size: 15px; }
+.b-daygroup .b-row__sub span { overflow: hidden; text-overflow: ellipsis; }
+
+.b-row__note {
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--b-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+  /* Room for the italic slant, which `overflow` would otherwise cut in right-to-left layouts */
+  padding-inline-start: 3px;
+  margin-inline-start: -3px;
+}
+
+/* The currency code takes the amount's colour, slightly faded */
+.b-daygroup .b-money__cur { color: inherit; font-weight: 400; opacity: 0.8; }
 
 /* ─── Summary tiles ────────────────────────────────────────────────────────── */
 .b-tiles {
@@ -706,7 +859,7 @@ ion-modal.b-date-modal .ion-page {
   border-radius: 8px;
 }
 
-.b-typeswitch button.is-active { background: var(--accent); color: #fff; }
+.b-typeswitch button.is-active { background: var(--accent, var(--ion-color-primary)); color: #fff; }
 
 .b-amt {
   color: var(--accent);
@@ -914,6 +1067,16 @@ ion-modal.b-date-modal {
 
 .b-rate .b-input { flex: 1; min-width: 0; height: 40px; }
 
+/* A transaction's own rate, under its amount */
+.b-rate--tx {
+  justify-content: center;
+  margin-top: 6px;
+  color: var(--b-muted);
+  font-size: 13px;
+}
+
+.b-rate--tx .b-input { flex: 0 1 96px; height: 34px; text-align: center; }
+
 /* ─── Charts ───────────────────────────────────────────────────────────────── */
 .b-donut text { font-family: inherit; }
 
@@ -981,7 +1144,7 @@ ion-modal.b-date-modal {
 .b-fab {
   position: fixed;
   inset-inline-end: 18px;
-  bottom: calc(76px + env(safe-area-inset-bottom));
+  bottom: calc(88px + env(safe-area-inset-bottom));
   width: 58px;
   height: 58px;
   border-radius: 20px;
@@ -1013,10 +1176,12 @@ ion-searchbar.b-search {
   display: flex;
 }
 
+.b-apphead ion-button { --color: var(--b-text); }
+
 .b-apphead__balance {
   border: none;
   background: transparent;
-  color: var(--b-text);
+  color: var(--b-balance);
   font: inherit;
   display: inline-flex;
   flex-direction: column;
@@ -1026,15 +1191,21 @@ ion-searchbar.b-search {
 }
 
 .b-apphead__balance small {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--b-muted);
+  font-size: 13.5px;
+  font-weight: 400;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.b-apphead__balance > span { font-size: 18px; font-weight: 800; }
+.b-apphead__balance > span { font-size: 21px; font-weight: 500; }
+
+.b-apphead__balance .b-money__cur {
+  color: inherit;
+  font-size: 0.9em;
+  font-weight: 400;
+  opacity: 0.85;
+}
 
 /* Full-screen message when the on-device database can't be opened (rendered outside IonApp). */
 .b-dberror {
@@ -1083,6 +1254,13 @@ ion-searchbar.b-search {
   flex-shrink: 0;
 }
 
+.b-profile-avatar.is-bare {
+  border: 1.5px solid currentColor;
+  color: var(--b-text);
+  font-size: 20px !important;
+  opacity: 0.85;
+}
+
 /* ─── Buttons ──────────────────────────────────────────────────────────────── */
 .b-btn {
   display: inline-flex;
@@ -1129,6 +1307,7 @@ ion-searchbar.b-search {
 .b-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 4px;
@@ -1186,6 +1365,79 @@ ion-searchbar.b-search {
 }
 
 .b-fin__net small { display: block; font-size: 12px; font-weight: 600; color: var(--b-muted); }
+
+/* ─── Period sheet ─────────────────────────────────────────────────────────── */
+.b-period__sheet-title { text-align: center; margin: 0; padding: 16px 16px 12px; font-size: 18px; font-weight: 700; }
+
+.b-periodgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 12px calc(16px + env(safe-area-inset-bottom));
+}
+
+.b-periodtile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 84px;
+  padding: 10px 6px;
+  border: none;
+  border-radius: 14px;
+  background: var(--b-surface);
+  color: var(--b-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.b-periodtile small { font-size: 12.5px; font-weight: 500; color: var(--b-muted); }
+.b-periodtile ion-icon { font-size: 26px; }
+
+.b-periodtile__num {
+  min-width: 26px;
+  padding: 3px 5px;
+  border: 1.5px solid currentColor;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.b-periodtile--wide { grid-column: 1 / -1; min-height: 104px; }
+.b-periodtile.is-active { background: rgba(var(--ion-color-primary-rgb), 0.18); }
+.b-periodtile.is-active .b-periodtile__num { border-color: transparent; background: var(--ion-color-primary); color: var(--ion-color-primary-contrast); }
+
+/* Range picker: From and To on top, the calendar below */
+.b-rangepick { background: var(--b-surface); }
+
+.b-rangepick__sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px 12px 0;
+}
+
+.b-rangepick__sides button {
+  padding: 8px 6px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: var(--b-surface-2);
+  color: var(--b-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.b-rangepick__sides small { display: block; font-size: 11px; font-weight: 600; color: var(--b-muted); }
+.b-rangepick__sides button.is-active { border-color: var(--ion-color-primary); }
+
+.b-rangepick__foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
 
 /* ─── Bottom sheets (accounts filter) ──────────────────────────────────────── */
 ion-modal.b-sheet-modal {

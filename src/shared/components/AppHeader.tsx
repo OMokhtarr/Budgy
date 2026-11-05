@@ -19,14 +19,14 @@ export default function AppHeader({ end }: { end?: ReactNode }) {
   const money = useMoney();
   const conv = useConverter();
   const { accountName } = useNames();
-  const { selected } = useAccountFilter();
+  const { inTotal } = useAccountFilter();
   const accounts = useAccounts();
   const balances = useBalances();
   const inUse = useCurrenciesInUse();
   const router = useIonRouter();
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const chosen = (accounts ?? []).filter((a) => selected.has(a.id!));
+  const chosen = (accounts ?? []).filter((a) => inTotal.has(a.id!));
   const total = conv.sum(addAmounts(chosen.map((a) => balances?.get(a.id!))));
   const label = chosen.length === 1 ? accountName(chosen[0]) : t('header.accounts', { count: chosen.length });
   // Amounts in these currencies count as 0 in every total until a rate is set.
@@ -38,7 +38,7 @@ export default function AppHeader({ end }: { end?: ReactNode }) {
       <IonButtons slot="start">
         <IonMenuToggle autoHide={false}>
           <button className="b-apphead__me" aria-label={t('menu.open')}>
-            <ProfileAvatar size={32} />
+            <ProfileAvatar size={32} outlined />
           </button>
         </IonMenuToggle>
       </IonButtons>

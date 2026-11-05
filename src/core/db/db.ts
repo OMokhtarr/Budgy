@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Table, type Transaction as DexieTx } from 'dexie';
-import type { Account, Category, Synced, Transaction } from '@/shared/models';
+import type { Account, Category, Flow, Synced, Transaction } from '@/shared/models';
 import { backupSettingsOf, savedCurrency, type BackupSettings } from '@/core/contexts/SettingsContext';
 import { newId } from '@/core/utils/id';
 import { stampAfter } from '@/core/utils/stamp';
@@ -73,7 +73,10 @@ export const db = new BudgyDB();
  */
 export const SEED_TIME = '1970-01-01T00:00:00.000Z';
 const seedId = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
-const SEED_ACCOUNT_IDS: Record<string, string> = { cash: seedId(1), card: seedId(2) };
+/** The Cash and Card accounts every install used to start with. */
+const OLD_STARTER_IDS: Record<string, string> = { cash: seedId(1), card: seedId(2) };
+const CASH_IN_ID = seedId(3);
+const CASH_OUT_ID = seedId(4);
 const seedCategoryId = (key: string) => {
   const i = [...DEFAULT_EXPENSE_CATEGORIES, ...DEFAULT_INCOME_CATEGORIES].findIndex((c) => c.key === key);
   return i < 0 ? undefined : seedId(0x100 + i);
@@ -172,7 +175,7 @@ function withNewIds(
     if (c.id != null && fixed && ![...categoryIds.values()].includes(fixed)) categoryIds.set(String(c.id), fixed);
   }
   for (const a of accounts) {
-    const fixed = !a.name ? SEED_ACCOUNT_IDS[a.type] : undefined;
+    const fixed = !a.name ? OLD_STARTER_IDS[a.type] : undefined;
     if (a.id != null && fixed && ![...accountIds.values()].includes(fixed)) accountIds.set(String(a.id), fixed);
   }
   // Links to records that no longer exist get an id too, so they still group together.
@@ -271,15 +274,17 @@ async function addSeeds<T extends Synced, K, I>(table: Table<T, K, I>, rows: T[]
   await table.bulkAdd(fresh as unknown as I[]);
 }
 
+/** One account all income goes into and one all spending comes out of; the difference is what's left. */
+const starterAccounts = (currency: string): Account[] => [
+  { id: CASH_IN_ID, key: 'cashIn', defaultFor: 'income', name: '', type: 'cash', icon: 'wallet', color: '#10b981', currency, initialBalance: 0, order: 0, createdAt: now() },
+  { id: CASH_OUT_ID, key: 'cashOut', defaultFor: 'expense', name: '', type: 'cash', icon: 'card', color: '#3b82f6', currency, initialBalance: 0, order: 1, createdAt: now() },
+];
+
 /** Seeds default accounts and categories when there are none. */
 export async function seedIfEmpty(database: BudgyDB = db): Promise<void> {
   await database.transaction('rw', database.accounts, database.categories, async () => {
     if ((await database.accounts.filter(alive).count()) === 0) {
-      const currency = savedCurrency();
-      await addSeeds(database.accounts, [
-        { id: SEED_ACCOUNT_IDS.cash, name: '', type: 'cash', icon: 'cash', color: '#10b981', currency, initialBalance: 0, order: 0, createdAt: now() },
-        { id: SEED_ACCOUNT_IDS.card, name: '', type: 'card', icon: 'card', color: '#3b82f6', currency, initialBalance: 0, order: 1, createdAt: now() },
-      ]);
+      await addSeeds(database.accounts, starterAccounts(savedCurrency()));
     }
     if ((await database.categories.filter(alive).count()) === 0) {
       await addSeeds(database.categories, [
@@ -288,6 +293,31 @@ export async function seedIfEmpty(database: BudgyDB = db): Promise<void> {
       ]);
     }
   });
+}
+
+/**
+ * Swaps the old Cash and Card starting accounts for Cash In and Cash Out, but only if neither was ever
+ * touched: not edited, no opening balance and no transactions. Otherwise nothing changes.
+ */
+export async function replaceOldStarters(database: BudgyDB = db): Promise<void> {
+  await database.transaction('rw', database.accounts, database.transactions, async () => {
+    const ids = Object.values(OLD_STARTER_IDS);
+    const old = (await database.accounts.bulkGet(ids)).filter((a): a is Account => !!a && alive(a));
+    if (!old.length) return;
+    if (old.some((a) => a.updatedAt !== SEED_TIME || a.name || a.initialBalance || a.initialBalance2)) return;
+    const used = await database.transactions.where('accountId').anyOf(ids).or('toAccountId').anyOf(ids).filter(alive).count();
+    if (used) return;
+    await softDelete(database.accounts, old.map((a) => a.id!));
+    // Skips any already here, including ones deleted on purpose.
+    const fresh = starterAccounts(old[0].currency);
+    const present = await database.accounts.bulkGet(fresh.map((a) => a.id!));
+    await addSeeds(database.accounts, fresh.filter((_, i) => !present[i]));
+  });
+}
+
+/** Makes `id` the only account that new transactions of this type start on. */
+export async function keepOneDefault(id: string, flow: Flow, database: BudgyDB = db): Promise<void> {
+  await database.accounts.filter((a) => a.defaultFor === flow && a.id !== id).modify({ defaultFor: undefined });
 }
 
 /**
@@ -306,6 +336,7 @@ export async function moveAccountsToCurrency(ids: string[], currency: string): P
 export async function openData(): Promise<boolean> {
   await migrateLegacy();
   const fresh = (await db.accounts.count()) === 0;
+  await replaceOldStarters();
   await seedIfEmpty();
   return fresh;
 }

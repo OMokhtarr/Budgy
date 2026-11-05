@@ -12,11 +12,14 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
-import { useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
+import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
+import { spentOnTile } from '@/core/utils/accountTiles';
+import { txInBase } from '@/core/utils/txRate';
 import { categoryFits, totalsOf, useAccounts, useCategories, useLookups, useNames } from '@/core/db/hooks';
-import { addDays, dayKey, isSameDay } from '@/core/utils/period';
+import { addDays, dayKey, isSameDay, parseDayKey } from '@/core/utils/period';
 import { subcategoryName } from '@/core/utils/subcategories';
 import { useLongPress } from '@/shared/hooks/useLongPress';
+import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
 import { iconFor } from '@/shared/icons';
 import AppHeader from '@/shared/components/AppHeader';
 import PeriodBar from '@/shared/components/PeriodBar';
@@ -27,6 +30,16 @@ import type { Transaction } from '@/shared/models';
 
 /** What the category filter matches on: a category, or all transfers. */
 const filterKey = (x: Transaction) => (x.type === 'transfer' ? 'transfer' : `c${x.categoryId}`);
+
+/** Colour tells income from expenses; the plus keeps income readable without it. */
+function SignedMoney({ plus, currency, text }: { plus: boolean; currency: string; text: string }) {
+  return (
+    <span dir="ltr">
+      {plus && '+'}
+      <MoneyText currency={currency} text={text} />
+    </span>
+  );
+}
 
 export default function TransactionsPage() {
   const { t } = useTranslation();
@@ -50,8 +63,11 @@ export default function TransactionsPage() {
   const [moreEvent, setMoreEvent] = useState<Event | undefined>();
   const [dateOpen, setDateOpen] = useState(false);
   const selecting = selected.size > 0;
+  // While picking transactions, a stray swipe shouldn't change the month and drop the selection.
+  const contentRef = usePeriodSwipe(!selecting);
 
   const txs = useFilteredTransactionsInRange(range);
+  const { tiles } = useAccountFilter();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -72,7 +88,7 @@ export default function TransactionsPage() {
     });
   }, [txs, query, filter, categories, accounts, categoryName, accountName]);
 
-  const totals = useMemo(() => totalsOf(filtered, conv.toBase), [filtered, conv]);
+  const totals = useMemo(() => totalsOf(filtered, conv, tiles), [filtered, conv, tiles]);
   const chosen = useMemo(() => filtered.filter((x) => selected.has(x.id!)), [filtered, selected]);
 
   const groups = useMemo(() => {
@@ -193,22 +209,21 @@ export default function TransactionsPage() {
       return next;
     });
 
-  const dayLabel = (k: string) => {
-    const [y, m, d] = k.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
+  /** A day's heading: "22", "Thursday" (or Today/Yesterday) and "October 2026". */
+  const dayHeading = (k: string) => {
+    const date = parseDayKey(k);
     const today = new Date();
-    if (isSameDay(date, today)) return t('period.today');
-    if (isSameDay(date, addDays(today, -1))) return t('period.yesterday');
-    return new Intl.DateTimeFormat(locale, {
-      weekday: 'long', day: 'numeric', month: 'long',
-      year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
-    }).format(date);
+    const format = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale, options).format(date);
+    let weekday = format({ weekday: 'long' });
+    if (isSameDay(date, today)) weekday = t('period.today');
+    else if (isSameDay(date, addDays(today, -1))) weekday = t('period.yesterday');
+    return { day: format({ day: '2-digit' }), weekday, month: format({ month: 'long', year: 'numeric' }) };
   };
 
   /** Expenses (2) · EGP 320 — the selection's or the filtered list's totals, in the main currency. */
   const sumOf = (list: Transaction[], type: Transaction['type']) => {
     const of = list.filter((x) => x.type === type);
-    return { count: of.length, value: of.reduce((s, x) => s + conv.toBase(x.amount, x.currency), 0) };
+    return { count: of.length, value: of.reduce((s, x) => s + txInBase(x, conv), 0) };
   };
   const filteredNet = totals.income - totals.expense;
 
@@ -268,7 +283,7 @@ export default function TransactionsPage() {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent>
+      <IonContent ref={contentRef}>
         <div className="b-page">
           {searchOpen && (
             <IonSearchbar
@@ -333,63 +348,69 @@ export default function TransactionsPage() {
 
           {groups.map(([k, list]) => {
             const net = list.reduce((s, x) => {
-              const v = conv.toBase(x.amount, x.currency);
-              return s + (x.type === 'income' ? v : x.type === 'expense' ? -v : 0);
+              const v = txInBase(x, conv);
+              return s + (x.type === 'income' ? v : x.type === 'expense' ? -v : -spentOnTile(x, tiles, conv));
             }, 0);
+            const heading = dayHeading(k);
             return (
-              <div key={k}>
+              <section key={k} className="b-daygroup">
                 <div className="b-dayhead">
-                  <span>{dayLabel(k)}</span>
-                  <span className={`b-num ${net < 0 ? 'b-expense' : net > 0 ? 'b-income' : ''}`}>
-                    {net > 0 ? '+' : ''}
-                    {money.format(net)}
+                  <span className="b-dayhead__day b-num">{heading.day}</span>
+                  <div className="b-dayhead__date">
+                    <span>{heading.weekday}</span>
+                    <strong>{heading.month}</strong>
+                  </div>
+                  <span className={`b-dayhead__total b-num ${net < 0 ? 'b-expense' : net > 0 ? 'b-income' : ''}`}>
+                    <SignedMoney plus={net > 0} currency={conv.base} text={money.plain(Math.abs(net))} />
                   </span>
                 </div>
-                <div className="b-card" style={{ overflow: 'hidden' }}>
-                  {list.map((x) => {
-                    const acc = accounts.get(x.accountId);
-                    const cls = `b-row ${selected.has(x.id!) ? 'is-selected' : ''}`;
-                    if (x.type === 'transfer') {
-                      const to = accounts.get(x.toAccountId!);
-                      return (
-                        <button key={x.id} className={cls} {...bind(x)}>
-                          {avatarFor(x)}
-                          <div className="b-row__main">
-                            <div className="b-row__title">{t('type.transfer')}</div>
-                            <div className="b-row__sub">
-                              {accountName(acc)} → {accountName(to)}
-                              {x.note ? ` · ${x.note}` : ''}
-                            </div>
-                          </div>
-                          <div className="b-row__amount b-transfer b-num">
-                            {money.format(x.amount, x.currency)}
-                            {x.toAmount != null && x.toCurrency && <small>→ {money.format(x.toAmount, x.toCurrency)}</small>}
-                          </div>
-                        </button>
-                      );
-                    }
-                    const cat = categories.get(x.categoryId!);
-                    const isExp = x.type === 'expense';
-                    const sub = subcategoryName(cat, x.subcategoryId);
+                {list.map((x) => {
+                  const acc = accounts.get(x.accountId);
+                  const cls = `b-row ${selected.has(x.id!) ? 'is-selected' : ''}`;
+                  const note = x.note && <div className="b-row__note">{x.note}</div>;
+                  if (x.type === 'transfer') {
+                    const to = accounts.get(x.toAccountId!);
                     return (
                       <button key={x.id} className={cls} {...bind(x)}>
                         {avatarFor(x)}
                         <div className="b-row__main">
-                          <div className="b-row__title">{categoryName(cat)}{sub ? ` · ${sub}` : ''}</div>
+                          <div className="b-row__title">{t('type.transfer')}</div>
                           <div className="b-row__sub">
-                            {accountName(acc)}
-                            {x.note ? ` · ${x.note}` : ''}
+                            <IonIcon icon={iconFor(acc?.icon)} />
+                            <span>{accountName(acc)} → {accountName(to)}</span>
                           </div>
+                          {note}
                         </div>
-                        <div className={`b-row__amount b-num ${isExp ? 'b-expense' : 'b-income'}`}>
-                          {isExp ? '−' : '+'}
-                          {money.format(x.amount, x.currency)}
+                        <div className="b-row__amount b-transfer b-num">
+                          <MoneyText currency={x.currency} text={money.plain(x.amount, x.currency)} />
+                          {x.toAmount != null && x.toCurrency && (
+                            <small>→ <MoneyText currency={x.toCurrency} text={money.plain(x.toAmount, x.toCurrency)} /></small>
+                          )}
                         </div>
                       </button>
                     );
-                  })}
-                </div>
-              </div>
+                  }
+                  const cat = categories.get(x.categoryId!);
+                  const isExp = x.type === 'expense';
+                  const sub = subcategoryName(cat, x.subcategoryId);
+                  return (
+                    <button key={x.id} className={cls} {...bind(x)}>
+                      {avatarFor(x)}
+                      <div className="b-row__main">
+                        <div className="b-row__title">{categoryName(cat)}{sub ? ` · ${sub}` : ''}</div>
+                        <div className="b-row__sub">
+                          <IonIcon icon={iconFor(acc?.icon)} />
+                          <span>{accountName(acc)}</span>
+                        </div>
+                        {note}
+                      </div>
+                      <div className={`b-row__amount b-num ${isExp ? 'b-expense' : 'b-income'}`}>
+                        <SignedMoney plus={!isExp} currency={x.currency} text={money.plain(x.amount, x.currency)} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </section>
             );
           })}
         </div>

@@ -31,9 +31,14 @@
     "year": "Year",
     "all": "All time",
     "allTime": "All time",
+    "range": "Custom range",
+    "selectRange": "Select range",
+    "selectDay": "Select day",
+    "from": "From",
+    "to": "To",
     "today": "Today",
     "yesterday": "Yesterday",
-    "choose": "Show period",
+    "choose": "Period",
     "previous": "Previous period",
     "next": "Next period"
   },
@@ -100,6 +105,8 @@
   },
   "accounts": {
     "transfer": "Transfer",
+    "exchange": "Exchange currency",
+    "exchangeShort": "Exchange",
     "add": "Add account",
     "yourAccounts": "Accounts",
     "empty": "No accounts yet",
@@ -132,6 +139,16 @@
       "finances": "My finances"
     },
     "savings": "Savings",
+    "starter": {
+      "cashIn": "Cash In",
+      "cashOut": "Cash Out"
+    },
+    "defaultFor": "Default account for",
+    "defaultForHint": "New income or expenses start on this account. You can still pick another one each time.",
+    "includeInTotal": "Include in total balance",
+    "includeInTotalHint": "Adds this account's balance to the total at the top.",
+    "showInExpenses": "Display in expenses",
+    "showInExpensesHint": "Counts this account's expenses and income in Categories, Transactions and Overview. Debts and savings also get a tile in Categories, and money sent to them counts as spending, minus what comes back.",
     "group": "Group",
     "groups": {
       "regular": "Everyday",
@@ -140,7 +157,7 @@
     },
     "groupHint": {
       "regular": "Everyday money. Shown in the balance at the top by default.",
-      "savings": "Money set aside. Listed separately and only counted when you pick it in the accounts filter.",
+      "savings": "Money set aside. Listed separately and left out of totals unless you switch it on below or pick it in the accounts filter.",
       "debt": "A person or loan. Positive balance: they owe you. Negative balance: you owe them."
     },
     "archive": "Archive account",
@@ -279,7 +296,7 @@
     "assets": "Assets",
     "debts": "Debts",
     "net": "Net worth",
-    "hint": "Assets are all positive balances, debts all negative ones, across every account."
+    "hint": "Assets are all positive balances, debts all negative ones, across every account. Your default income and expense accounts count as one balance: what's left after spending."
   },
   "menu": {
     "open": "Open menu",

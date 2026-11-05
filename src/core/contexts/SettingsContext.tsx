@@ -120,7 +120,7 @@ function applyTheme(theme: ThemePref) {
     theme === 'dark' ||
     (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('ion-palette-dark', !!dark);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0b1220' : '#10b981');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#1f1e23' : '#10b981');
   // Android draws the app edge-to-edge (Capacitor 8), so the status bar icons sit on the app's own
   // background: light icons on the dark theme, dark icons on the light one, whatever the device theme.
   if (Capacitor.isNativePlatform()) {

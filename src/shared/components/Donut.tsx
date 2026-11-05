@@ -16,16 +16,18 @@ interface Props {
 export default function Donut({ slices, size = 170, thickness = 16, children }: Props) {
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
-  const total = slices.reduce((s, x) => s + x.value, 0);
-  const gap = slices.filter((s) => s.value > 0).length > 1 ? 3 : 0;
+  // A slice can be negative (more came back from a debt than was sent): it just isn't drawn.
+  const drawn = slices.filter((s) => s.value > 0);
+  const total = drawn.reduce((s, x) => s + x.value, 0);
+  const gap = drawn.length > 1 ? 3 : 0;
 
   let offset = 0;
   return (
-    <div style={{ position: 'relative', width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="b-donut" style={{ transform: 'rotate(-90deg)' }}>
+    <div style={{ position: 'relative', width: size, maxWidth: '100%', aspectRatio: '1' }}>
+      <svg width="100%" height="100%" viewBox={`0 0 ${size} ${size}`} className="b-donut" style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--b-track)" strokeWidth={thickness} />
         {total > 0 &&
-          slices.filter((s) => s.value > 0).map((s, i) => {
+          drawn.map((s, i) => {
             const len = (s.value / total) * c;
             const el = (
               <circle

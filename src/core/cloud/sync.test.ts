@@ -61,7 +61,7 @@ const dirtyCount = async (d: BudgyDB) =>
   (await d.categories.where('dirty').equals(1).count()) +
   (await d.transactions.where('dirty').equals(1).count());
 
-const CASH = '00000000-0000-4000-8000-000000000001';
+const CASH = '00000000-0000-4000-8000-000000000003';
 const GROCERIES = '00000000-0000-4000-8000-000000000100';
 
 // One story, in order: phone A starts the account, phone B joins, both keep using it.

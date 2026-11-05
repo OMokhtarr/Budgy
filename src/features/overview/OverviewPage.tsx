@@ -7,15 +7,18 @@ import { alive, db } from '@/core/db/db';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
-import { subcategoryBreakdown, totalsOf, useCategories, useNames } from '@/core/db/hooks';
+import { subcategoryBreakdown, totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
+import { spentOnTile } from '@/core/utils/accountTiles';
+import { txInBase } from '@/core/utils/txRate';
 import AppHeader from '@/shared/components/AppHeader';
-import { rangeFor, shiftBy } from '@/core/utils/period';
+import { rangeFor, shiftBy, shiftRange } from '@/core/utils/period';
 import PeriodBar from '@/shared/components/PeriodBar';
+import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
 import Avatar from '@/shared/components/Avatar';
 import Donut from '@/shared/components/Donut';
-import type { Flow, PeriodMode } from '@/shared/models';
+import type { Category, Flow, PeriodMode } from '@/shared/models';
 
-const BUCKETS: Record<PeriodMode, number> = { day: 7, week: 6, month: 6, year: 5, all: 5 };
+const BUCKETS: Record<PeriodMode, number> = { day: 7, week: 6, month: 6, year: 5, all: 5, range: 6 };
 
 export default function OverviewPage() {
   const { t } = useTranslation();
@@ -24,21 +27,26 @@ export default function OverviewPage() {
   const locale = useLocale();
   const { weekStart } = useSettings();
   const { range, mode, anchor } = usePeriod();
-  const { categoryName } = useNames();
+  const { accountName, categoryName } = useNames();
   const [kind, setKind] = useState<Flow>('expense');
+  const contentRef = usePeriodSwipe();
 
   const txs = useFilteredTransactionsInRange(range);
-  const { matches } = useAccountFilter();
-  const totals = useMemo(() => totalsOf(txs, conv.toBase), [txs, conv]);
+  const { matches, tiles } = useAccountFilter();
+  const totals = useMemo(() => totalsOf(txs, conv, tiles), [txs, conv, tiles]);
+  const accounts = useAccounts(true);
   const categories = useCategories(kind, true);
   const expenseCats = useCategories('expense');
 
   // ── trend buckets (the selected period and the ones before it) ──
-  const bucketMode: PeriodMode = mode === 'all' ? 'year' : mode;
+  const bucketMode = mode === 'all' ? 'year' : mode;
   const buckets = useMemo(() => {
     const n = BUCKETS[mode];
-    return Array.from({ length: n }, (_, i) => rangeFor(bucketMode, shiftBy(bucketMode, anchor, -(n - 1 - i)), weekStart));
-  }, [mode, bucketMode, anchor, weekStart]);
+    return Array.from({ length: n }, (_, i) => {
+      const back = -(n - 1 - i);
+      return bucketMode === 'range' ? shiftRange(range, back) : rangeFor(bucketMode, shiftBy(bucketMode, anchor, back), weekStart);
+    });
+  }, [mode, bucketMode, anchor, range, weekStart]);
 
   const trend = useLiveQuery(async () => {
     const s = buckets[0].start.toISOString();
@@ -51,16 +59,17 @@ export default function OverviewPage() {
       let exp = 0;
       for (const r of rows) {
         if (r.date < bs || r.date >= be || !matches(r)) continue;
-        if (r.type === 'income') inc += conv.toBase(r.amount, r.currency);
-        else if (r.type === 'expense') exp += conv.toBase(r.amount, r.currency);
+        if (r.type === 'income') inc += txInBase(r, conv);
+        else if (r.type === 'expense') exp += txInBase(r, conv);
+        else exp += spentOnTile(r, tiles, conv);
       }
       return { inc, exp };
     });
-  }, [buckets, conv, matches]);
+  }, [buckets, conv, matches, tiles]);
 
   const bucketLabel = (d: Date) => {
     const o: Intl.DateTimeFormatOptions =
-      bucketMode === 'day' ? { weekday: 'short' } : bucketMode === 'week' ? { day: 'numeric', month: 'short' } : bucketMode === 'month' ? { month: 'short' } : { year: 'numeric' };
+      bucketMode === 'day' ? { weekday: 'short' } : bucketMode === 'week' || bucketMode === 'range' ? { day: 'numeric', month: 'short' } : bucketMode === 'month' ? { month: 'short' } : { year: 'numeric' };
     return new Intl.DateTimeFormat(locale, o).format(d);
   };
   const maxBar = Math.max(1, ...(trend ?? []).flatMap((x) => [x.inc, x.exp]));
@@ -78,10 +87,18 @@ export default function OverviewPage() {
 
   // ── breakdown ──
   const kindTotal = kind === 'expense' ? totals.expense : totals.income;
-  const breakdown = (categories ?? [])
-    .map((c) => ({ c, v: totals.byCategory[kind].get(c.id!) ?? 0 }))
+  const breakdown = [
+    ...(categories ?? []).map((c) => ({
+      key: c.id!, name: categoryName(c), icon: c.icon, color: c.color, square: false, category: c as Category | undefined, v: totals.byCategory[kind].get(c.id!) ?? 0,
+    })),
+    ...(kind === 'expense' ? accounts ?? [] : []).filter((a) => tiles.tileIds.has(a.id!)).map((a) => ({
+      key: a.id!, name: accountName(a), icon: a.icon, color: a.color, square: true, category: undefined, v: totals.byTile.get(a.id!)?.value ?? 0,
+    })),
+  ]
     .filter((x) => x.v > 0)
     .sort((a, b) => b.v - a.v);
+  // Money coming back can bring the total below what the rows add up to; shares stay within 100%.
+  const shareOf = Math.max(kindTotal, breakdown.reduce((s, x) => s + x.v, 0));
 
   const budgets = mode === 'month' ? (expenseCats ?? []).filter((c) => c.budget) : [];
   const budgetTotal = budgets.reduce((s, c) => s + (c.budget ?? 0), 0);
@@ -95,7 +112,7 @@ export default function OverviewPage() {
           <PeriodBar />
         </IonToolbar>
       </IonHeader>
-      <IonContent>
+      <IonContent ref={contentRef}>
         <div className="b-page">
           <div className="b-tiles">
             <div className="b-card b-tile">
@@ -196,26 +213,26 @@ export default function OverviewPage() {
           ) : (
             <div className="b-card" style={{ padding: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <Donut size={150} thickness={20} slices={breakdown.map((x) => ({ value: x.v, color: x.c.color }))}>
+                <Donut size={150} thickness={20} slices={breakdown.map((x) => ({ value: x.v, color: x.color }))}>
                   <div className="b-num" style={{ fontWeight: 800, fontSize: 16 }}>{money.format(kindTotal)}</div>
                 </Donut>
               </div>
-              {breakdown.map(({ c, v }) => {
-                const pct = kindTotal ? (v / kindTotal) * 100 : 0;
-                const { subs, rest } = subcategoryBreakdown(c, kind, totals);
+              {breakdown.map(({ key, name, icon, color, square, category, v }) => {
+                const pct = shareOf ? (v / shareOf) * 100 : 0;
+                const { subs, rest } = category ? subcategoryBreakdown(category, kind, totals) : { subs: [], rest: 0 };
                 return (
-                  <Fragment key={c.id}>
+                  <Fragment key={key}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                      <Avatar icon={c.icon} color={c.color} size="sm" />
+                      <Avatar icon={icon} color={color} size="sm" square={square} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5, fontWeight: 600, marginBottom: 5 }}>
                           <span>
-                            {categoryName(c)} <span className="b-muted">· {pct.toFixed(pct < 10 ? 1 : 0)}%</span>
+                            {name} <span className="b-muted">· {pct.toFixed(pct < 10 ? 1 : 0)}%</span>
                           </span>
                           <span className="b-num">{money.format(v)}</span>
                         </div>
                         <div className="b-bar">
-                          <span style={{ width: `${pct}%`, background: c.color }} />
+                          <span style={{ width: `${pct}%`, background: color }} />
                         </div>
                       </div>
                     </div>
@@ -223,7 +240,7 @@ export default function OverviewPage() {
                       <div className="b-subrows">
                         {subs.map(({ sub, value }) => (
                           <div key={sub.id} className="b-subrow">
-                            <Avatar icon={sub.icon} color={c.color} size="sm" />
+                            <Avatar icon={sub.icon} color={color} size="sm" />
                             <span className="b-subrow__name">{sub.name}</span>
                             <span className="b-num">{money.format(value)}</span>
                           </div>

@@ -1,40 +1,50 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useAccounts, useTransactionsInRange } from '@/core/db/hooks';
-import { groupOf } from '@/core/utils/currency';
-import type { Account, DateRange, Transaction } from '@/shared/models';
+import { forgetAccount, getsTile, resolveFilter, selectedByDefault, type FilterOverrides } from '@/core/utils/accountFilter';
+import type { TileScope } from '@/core/utils/accountTiles';
+import type { DateRange, Transaction } from '@/shared/models';
 
 /**
- * The accounts filter (tap the balance at the top of a tab). By default every everyday account is
- * selected; savings and debt accounts can be added and everyday ones removed. Only those changes are
- * stored, so accounts created later are picked up automatically.
+ * The accounts filter (tap the balance at the top of a tab). By default it follows each account's
+ * "Include in total balance" and "Display in expenses" switches; accounts can then be added or removed.
+ * Only those changes are stored, so accounts created later are picked up automatically.
  */
-interface Overrides {
-  add: string[];
-  remove: string[];
-}
-
 interface AccountFilterValue {
-  /** Ids of the accounts the app currently shows. */
+  /** Ids of the accounts ticked in the filter. */
   selected: Set<string>;
+  /** Ids of the selected accounts whose balance counts in the total at the top. */
+  inTotal: Set<string>;
+  /** Ids of the selected accounts whose expenses and income are shown. */
+  inExpenses: Set<string>;
+  /** Which accounts show as tiles among the categories, for counting the money moved to them as spending. */
+  tiles: TileScope;
   isDefault: boolean;
   setSelected: (ids: Set<string>) => void;
   /** Back to the default selection, e.g. after a restore, when the stored ids may name other accounts. */
   reset: () => void;
-  /** Whether a transaction touches one of the selected accounts. */
+  /** Lets an account's switches decide again after the user changed them. */
+  forget: (id: string) => void;
+  /** Whether a transaction touches an account whose expenses and income are shown. */
   matches: (t: Transaction) => boolean;
 }
 
 const STORAGE_KEY = 'budgy-account-filter';
-const EMPTY: Overrides = { add: [], remove: [] };
+const EMPTY: FilterOverrides = { add: [], remove: [] };
 
-export const selectedByDefault = (a: Account) => groupOf(a) === 'regular';
-
-function load(): Overrides {
+function load(): FilterOverrides {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? { ...EMPTY, ...JSON.parse(raw) } : EMPTY;
   } catch {
     return EMPTY;
+  }
+}
+
+function save(overrides: FilterOverrides) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+  } catch {
+    /* storage unavailable */
   }
 }
 
@@ -44,16 +54,12 @@ export function AccountFilterProvider({ children }: { children: React.ReactNode 
   // Archived accounts keep the selection they had, so their past transactions still show up in
   // categories, transactions and reports; they just aren't offered in the filter sheet.
   const accounts = useAccounts(true);
-  const [overrides, setOverrides] = useState<Overrides>(load);
+  const [overrides, setOverrides] = useState<FilterOverrides>(load);
 
-  const selected = useMemo(
-    () =>
-      new Set(
-        (accounts ?? [])
-          .filter((a) => (selectedByDefault(a) && !overrides.remove.includes(a.id!)) || overrides.add.includes(a.id!))
-          .map((a) => a.id!),
-      ),
-    [accounts, overrides],
+  const { selected, inTotal, inExpenses } = useMemo(() => resolveFilter(accounts ?? [], overrides), [accounts, overrides]);
+  const tiles = useMemo<TileScope>(
+    () => ({ tileIds: new Set((accounts ?? []).filter((a) => getsTile(a) && inExpenses.has(a.id!)).map((a) => a.id!)), shownIds: inExpenses }),
+    [accounts, inExpenses],
   );
 
   const setSelected = useCallback(
@@ -61,18 +67,23 @@ export function AccountFilterProvider({ children }: { children: React.ReactNode 
       const all = accounts ?? [];
       const keep = new Set(ids);
       for (const a of all) if (a.archived && selected.has(a.id!)) keep.add(a.id!);
-      const next: Overrides = {
+      const next: FilterOverrides = {
         add: all.filter((a) => !selectedByDefault(a) && keep.has(a.id!)).map((a) => a.id!),
         remove: all.filter((a) => selectedByDefault(a) && !keep.has(a.id!)).map((a) => a.id!),
       };
       setOverrides(next);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* storage unavailable */
-      }
+      save(next);
     },
     [accounts, selected],
+  );
+
+  const forget = useCallback(
+    (id: string) => {
+      const next = forgetAccount(overrides, id);
+      setOverrides(next);
+      save(next);
+    },
+    [overrides],
   );
 
   const reset = useCallback(() => {
@@ -87,12 +98,16 @@ export function AccountFilterProvider({ children }: { children: React.ReactNode 
   const value = useMemo<AccountFilterValue>(
     () => ({
       selected,
+      inTotal,
+      inExpenses,
+      tiles,
       isDefault: overrides.add.length === 0 && overrides.remove.length === 0,
       setSelected,
       reset,
-      matches: (t) => selected.has(t.accountId) || (t.toAccountId != null && selected.has(t.toAccountId)),
+      forget,
+      matches: (t) => inExpenses.has(t.accountId) || (t.toAccountId != null && inExpenses.has(t.toAccountId)),
     }),
-    [selected, overrides, setSelected, reset],
+    [selected, inTotal, inExpenses, tiles, overrides, setSelected, reset, forget],
   );
 
   return <AccountFilterContext.Provider value={value}>{children}</AccountFilterContext.Provider>;
