@@ -6,7 +6,7 @@ import { useConverter, useMoney, useSettings } from '@/core/contexts/SettingsCon
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccounts, useBalances, useNames } from '@/core/db/hooks';
 import { addAmounts, currenciesOf, groupOf, linesOf, roundTo } from '@/core/utils/currency';
-import { splitMainAccounts } from '@/core/utils/defaultAccount';
+import { accountSections, splitMainAccounts } from '@/core/utils/defaultAccount';
 import { assetsAndDebts } from '@/core/utils/finances';
 import AppHeader from '@/shared/components/AppHeader';
 import Avatar from '@/shared/components/Avatar';
@@ -85,23 +85,45 @@ export default function AccountsPage() {
     );
   };
 
-  const group = (title: string, list: Account[], total: ReactNode, tone?: 'owed' | 'owe') =>
-    list.length > 0 && (
+  const card = (list: Account[], tone?: 'owed' | 'owe') => (
+    <div key={list[0].id} className="b-card" style={{ overflow: 'hidden' }}>
+      {list.map((a) => row(a, tone))}
+    </div>
+  );
+
+  /**
+   * A group of accounts under its title and total. Cash In and Cash Out get a card of their own on top;
+   * with `byType` the others follow in one titled section per account type, each with its own total.
+   */
+  const group = (title: string, list: Account[], total: ReactNode, tone?: 'owed' | 'owe', byType = false) => {
+    if (!list.length) return null;
+    const sections = accountSections(list);
+    return (
       <section className="b-group">
         <div className="b-group__head">
           <span>{title}</span>
           <span className={`b-num ${tone === 'owed' ? 'b-income' : tone === 'owe' ? 'b-expense' : ''}`}>{total}</span>
         </div>
-        {/* Cash In and Cash Out in a card of their own, above the other accounts. */}
-        {splitMainAccounts(list)
-          .filter((part) => part.length)
-          .map((part) => (
-            <div key={part[0].id} className="b-card" style={{ overflow: 'hidden' }}>
-              {part.map((a) => row(a, tone))}
-            </div>
-          ))}
+        {byType ? (
+          <>
+            {sections.main.length > 0 && card(sections.main, tone)}
+            {sections.byType.map(([type, accountsOfType]) => (
+              <div key={type}>
+                <div className="b-subhead">
+                  <span>{t(`accountTypes.${type}`)}</span>
+                  <span className="b-subhead__line" />
+                  <span className="b-num">{totalOf(amountsOf(accountsOfType))}</span>
+                </div>
+                {card(accountsOfType, tone)}
+              </div>
+            ))}
+          </>
+        ) : (
+          splitMainAccounts(list).filter((part) => part.length).map((part) => card(part, tone))
+        )}
       </section>
     );
+  };
 
   // ── Accounts tab ──
   const regular = inGroup('regular');
@@ -196,8 +218,8 @@ export default function AccountsPage() {
                   {t('accounts.empty')}
                 </div>
               )}
-              {group(t('filter.group.regular'), regular, totalOf(amountsOf(regular)))}
-              {group(t('accounts.savings'), savings, totalOf(amountsOf(savings)))}
+              {group(t('filter.group.regular'), regular, totalOf(amountsOf(regular)), undefined, true)}
+              {group(t('accounts.savings'), savings, totalOf(amountsOf(savings)), undefined, true)}
               <div className="b-archived">{group(t('accounts.archived'), archived, null)}</div>
             </>
           )}

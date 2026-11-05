@@ -1523,14 +1523,22 @@ ion-modal.b-sheet-modal {
 .b-acchip.is-on { background: var(--c); color: #fff; }
 .b-acchip.is-on .b-money__cur { color: inherit; opacity: 0.8; }
 
-/* Between Cash In / Cash Out and the other accounts */
-.b-chipgrid__sep {
-  grid-column: 1 / -1;
-  width: 100%;
-  margin: 2px 0;
-  border: none;
-  border-top: 1px solid var(--b-border);
+/* Every chip has room for a name and two currency lines, so one- and two-currency accounts match */
+.b-acchip__text { min-height: 3lh; justify-content: center; }
+
+/* An account type within a group: "Cards ——— EGP 1,200". Also separates them from Cash In / Cash Out. */
+.b-subhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--b-muted);
 }
+.b-subhead__line { flex: 1; height: 1px; background: var(--b-border); }
+.b-subhead .b-num { text-align: end; }
+.b-subhead .b-money__cur { color: inherit; }
 
 /* Archived accounts and categories are listed faded */
 .b-archived { opacity: 0.6; }
