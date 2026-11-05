@@ -10,3 +10,8 @@ export function defaultAccountFor(accounts: Account[], type: TxType, last: strin
   const open = accounts.filter((a) => !reservedForOther(a));
   return (open.find((a) => a.defaultFor === type) ?? open.find((a) => a.id === last) ?? open[0] ?? accounts[0])?.id;
 }
+
+/** Splits a list into the built-in Cash In and Cash Out accounts and the rest, each keeping its order. */
+export function splitMainAccounts(accounts: Account[]): [main: Account[], rest: Account[]] {
+  return [accounts.filter((a) => a.key), accounts.filter((a) => !a.key)];
+}

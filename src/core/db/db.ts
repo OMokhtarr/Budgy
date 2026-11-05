@@ -321,6 +321,34 @@ export async function keepOneDefault(id: string, flow: Flow, database: BudgyDB =
 }
 
 /**
+ * Puts the categories `ids` (one screen of them) in this order, keeping the others where they are.
+ * Usually the moved ones just swap their numbers, so nothing else is rewritten (and synced over another
+ * phone's edit). Only if two of them share a number does every category get a fresh one.
+ */
+export async function reorderCategories(ids: string[], database: BudgyDB = db): Promise<void> {
+  await database.transaction('rw', database.categories, async () => {
+    // Sorted by order, then id, as the screens show them.
+    const all = await database.categories.orderBy('order').filter(alive).toArray();
+    const moving = new Set(ids);
+    const moved = ids.filter((id) => all.some((c) => c.id === id));
+    const slots = all.filter((c) => moving.has(c.id!)).map((c) => c.order);
+    let orders: [string, number][];
+    if (slots.every((n, i) => i === 0 || n > slots[i - 1])) orders = moved.map((id, i) => [id, slots[i]]);
+    else {
+      let next = 0;
+      orders = all.map((c, i) => [moving.has(c.id!) ? moved[next++] : c.id!, i]);
+    }
+    const orderOf = new Map(all.map((c) => [c.id!, c.order]));
+    await Promise.all(orders.map(([id, n]) => (orderOf.get(id) === n ? undefined : database.categories.update(id, { order: n }))));
+  });
+}
+
+/** The order for a new category: after all the others. */
+export async function nextCategoryOrder(database: BudgyDB = db): Promise<number> {
+  return ((await database.categories.orderBy('order').last())?.order ?? -1) + 1;
+}
+
+/**
  * Moves unused accounts to another currency (see `unusedAccountsIn`). Untouched starting accounts keep
  * their 1970 stamp, so this doesn't override what another device already has for them.
  */

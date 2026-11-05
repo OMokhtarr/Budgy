@@ -6,6 +6,7 @@ import { useConverter, useMoney, useSettings } from '@/core/contexts/SettingsCon
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccounts, useBalances, useNames } from '@/core/db/hooks';
 import { addAmounts, currenciesOf, groupOf, linesOf, roundTo } from '@/core/utils/currency';
+import { splitMainAccounts } from '@/core/utils/defaultAccount';
 import { assetsAndDebts } from '@/core/utils/finances';
 import AppHeader from '@/shared/components/AppHeader';
 import Avatar from '@/shared/components/Avatar';
@@ -90,9 +91,14 @@ export default function AccountsPage() {
           <span>{title}</span>
           <span className={`b-num ${tone === 'owed' ? 'b-income' : tone === 'owe' ? 'b-expense' : ''}`}>{total}</span>
         </div>
-        <div className="b-card" style={{ overflow: 'hidden' }}>
-          {list.map((a) => row(a, tone))}
-        </div>
+        {/* Cash In and Cash Out in a card of their own, above the other accounts. */}
+        {splitMainAccounts(list)
+          .filter((part) => part.length)
+          .map((part) => (
+            <div key={part[0].id} className="b-card" style={{ overflow: 'hidden' }}>
+              {part.map((a) => row(a, tone))}
+            </div>
+          ))}
       </section>
     );
 

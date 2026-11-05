@@ -6,10 +6,12 @@ import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
+import { reorderCategories } from '@/core/db/db';
 import { totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import AppHeader from '@/shared/components/AppHeader';
 import PeriodBar from '@/shared/components/PeriodBar';
 import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
+import { useDragReorder } from '@/shared/hooks/useDragReorder';
 import Donut from '@/shared/components/Donut';
 import Bubble from '@/shared/components/Bubble';
 import MoneyText from '@/shared/components/MoneyText';
@@ -21,7 +23,8 @@ import type { Account, Amounts, Category, Flow } from '@/shared/models';
 /**
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
  * Tap a category to add a transaction to it. Debts and savings with "Display in expenses" on follow
- * as square tiles: tap one to send it money, which counts as spending.
+ * as square tiles: tap one to send it money, which counts as spending. In edit mode, hold a category
+ * and drag it to move it.
  */
 export default function CategoriesPage() {
   const { t } = useTranslation();
@@ -39,6 +42,14 @@ export default function CategoriesPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   const categories = useCategories(kind);
+  // While a category is dragged the grid shows the order it would drop into.
+  const { order, dragging, itemProps } = useDragReorder(
+    (categories ?? []).map((c) => c.id!),
+    (ids) => void reorderCategories(ids),
+    editMode,
+  );
+  const byId = new Map((categories ?? []).map((c) => [c.id!, c]));
+  const shown = order.map((id) => byId.get(id)).filter((c): c is Category => !!c);
   const archived = (useCategories(kind, true) ?? []).filter((c) => c.archived);
   const txs = useFilteredTransactionsInRange(range);
   const totals = useMemo(() => totalsOf(txs, conv, tiles), [txs, conv, tiles]);
@@ -89,7 +100,7 @@ export default function CategoriesPage() {
         <div className="b-page b-catpage">
           {editMode && <p className="b-muted" style={{ textAlign: 'center', fontSize: 13, margin: '10px 0 0' }}>{t('categories.editHint')}</p>}
 
-          <div className="b-catgrid">
+          <div className={`b-catgrid ${editMode ? 'b-catgrid--edit' : ''}`}>
             {/* Tapping the middle switches between expense and income categories. */}
             <button
               className="b-catgrid__center"
@@ -107,7 +118,7 @@ export default function CategoriesPage() {
               </Donut>
             </button>
 
-            {categories?.map((c) => {
+            {shown.map((c) => {
               const spent = totals.byCategory[kind].get(c.id!) ?? 0;
               const progress = isExpense && mode === 'month' && c.budget ? spent / c.budget : undefined;
               return (
@@ -120,6 +131,8 @@ export default function CategoriesPage() {
                   progress={progress}
                   muted={spent === 0 && !editMode}
                   onClick={() => tap(c)}
+                  dragging={dragging === c.id}
+                  {...itemProps(c.id!)}
                 />
               );
             })}

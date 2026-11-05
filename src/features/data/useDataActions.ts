@@ -5,7 +5,7 @@ import { useSettings } from '@/core/contexts/SettingsContext';
 import { useCloud } from '@/core/cloud/CloudContext';
 import { alive, db, eraseAll, exportBackup, importBackup } from '@/core/db/db';
 import { useNames } from '@/core/db/hooks';
-import { csvRows, planCsvImport, saveCsvImport, type CsvPlan } from '@/core/db/transactionsCsv';
+import { csvRows, hasUnused, planCsvImport, saveCsvImport, type CsvPlan } from '@/core/db/transactionsCsv';
 import { pickTextFile, saveTextFile, toCsv } from '@/core/utils/files';
 import { dayKey } from '@/core/utils/period';
 
@@ -16,7 +16,7 @@ export function useDataActions() {
   const { update } = settings;
   const { reset: resetFilter } = useAccountFilter();
   // Signed in, a restore or erase also replaces the data in the account (on every device).
-  const { user, localReplaced } = useCloud();
+  const { user, replaceLocal } = useCloud();
   const { accountName, categoryName } = useNames();
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
@@ -39,6 +39,8 @@ export function useDataActions() {
       plan.duplicates && t('settings.importDuplicates', { n: plan.duplicates }),
       plan.newAccounts.length && t('settings.importNewAccounts', { n: plan.newAccounts.length }),
       plan.newCategories.length && t('settings.importNewCategories', { n: plan.newCategories.length }),
+      plan.unusedCategories.length && t('settings.importUnusedCategories', { n: plan.unusedCategories.length }),
+      plan.unusedSubcategories.length && t('settings.importUnusedSubcategories', { n: plan.unusedSubcategories.reduce((n, x) => n + x.ids.length, 0) }),
       plan.badRows.length && t('settings.importBadRows', { n: plan.badRows.length, row: plan.badRows[0] }),
     ]
       .filter(Boolean)
@@ -56,21 +58,31 @@ export function useDataActions() {
         toast(t('settings.invalidCsv'), 'danger');
         return;
       }
-      if (!plan.transactions.length) {
+      const unused = hasUnused(plan);
+      if (!plan.transactions.length && !unused) {
         toast(`${t('settings.importNothing')} · ${importSummary(plan)}`, plan.badRows.length ? 'danger' : 'success');
         return;
       }
       presentAlert({
         header: t('settings.importTitle'),
         message: importSummary(plan),
+        inputs: unused ? [{ type: 'checkbox', label: t('settings.importRemoveUnused'), value: 'removeUnused', checked: true }] : [],
         buttons: [
           { text: t('common.cancel'), role: 'cancel' },
           {
             text: t('settings.importConfirm'),
-            handler: async () => {
+            handler: async (checked?: string[]) => {
+              const removeUnused = unused && !!checked?.includes('removeUnused');
               try {
-                await saveCsvImport(plan);
-                toast(t('settings.imported', { n: plan.transactions.length }));
+                await saveCsvImport(plan, { removeUnused });
+                toast(
+                  [
+                    plan.transactions.length ? t('settings.imported', { n: plan.transactions.length }) : t('settings.importNothing'),
+                    removeUnused && t('settings.removedUnused'),
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+                );
               } catch {
                 toast(t('settings.importFailed'), 'danger');
               }
@@ -107,9 +119,8 @@ export function useDataActions() {
             const text = await pickTextFile();
             if (!text) return;
             try {
-              update(await importBackup(JSON.parse(text)));
+              update(await replaceLocal(() => importBackup(JSON.parse(text))));
               resetFilter();
-              localReplaced();
               toast(t('settings.restored'));
             } catch {
               toast(t('settings.invalidBackup'), 'danger');
@@ -129,9 +140,8 @@ export function useDataActions() {
           text: t('settings.eraseConfirm'),
           role: 'destructive',
           handler: async () => {
-            await eraseAll();
+            await replaceLocal(eraseAll);
             resetFilter();
-            localReplaced();
             toast(t('settings.erased'));
           },
         },

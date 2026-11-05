@@ -425,6 +425,11 @@ ion-toolbar.b-toolbar {
 }
 .b-bubble--muted .b-bubble__amount { color: var(--b-faint); }
 
+/* Edit mode: categories can be held and dragged, so a long press mustn't select text or open a menu */
+.b-catgrid--edit .b-bubble { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.b-bubble.is-dragging { opacity: 0.85; }
+.b-bubble.is-dragging .b-bubble__ring { transform: scale(1.15); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
+
 .b-bubble--square .b-bubble__ring { border-radius: 14px; }
 .b-bubble--square .b-bubble__icon { border-radius: 10px; }
 
@@ -1199,6 +1204,14 @@ ion-searchbar.b-search {
 }
 
 .b-apphead__balance > span { font-size: 21px; font-weight: 500; }
+/* Two currencies on one line need a smaller size to fit beside the buttons */
+.b-apphead__balance > span.b-apphead__dual {
+  font-size: 17px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .b-apphead__balance .b-money__cur {
   color: inherit;
@@ -1328,6 +1341,8 @@ ion-searchbar.b-search {
 .b-group__head > span:first-child { color: var(--ion-color-primary); }
 .b-group__head > span:last-child { text-align: end; }
 .b-group__line { display: block; }
+/* Cash In and Cash Out sit in their own card above the other accounts */
+.b-group > .b-card + .b-card { margin-top: 10px; }
 
 .b-hint { font-size: 12.5px; line-height: 1.5; margin: 14px 4px 0; }
 
@@ -1497,6 +1512,15 @@ ion-modal.b-sheet-modal {
 .b-acchip__text strong { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .b-acchip.is-on { background: var(--c); color: #fff; }
 .b-acchip.is-on .b-money__cur { color: inherit; opacity: 0.8; }
+
+/* Between Cash In / Cash Out and the other accounts */
+.b-chipgrid__sep {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 2px 0;
+  border: none;
+  border-top: 1px solid var(--b-border);
+}
 
 /* Archived accounts and categories are listed faded */
 .b-archived { opacity: 0.6; }

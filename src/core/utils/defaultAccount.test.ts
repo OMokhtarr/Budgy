@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultAccountFor } from './defaultAccount';
+import { defaultAccountFor, splitMainAccounts } from './defaultAccount';
 import type { Account } from '@/shared/models';
 
 const account = (id: string, fields: Partial<Account> = {}): Account => ({
@@ -24,5 +24,13 @@ describe('defaultAccountFor', () => {
     ['no accounts means nothing to pick', [], 'expense', 'gone', undefined],
   ])('%s', (_name, accounts, type, last, want) => {
     expect(defaultAccountFor(accounts, type, last)).toBe(want);
+  });
+});
+
+describe('splitMainAccounts', () => {
+  it('puts Cash In and Cash Out apart from the rest, keeping the order of each', () => {
+    const cashIn = account('cashIn', { key: 'cashIn' });
+    const cashOut = account('cashOut', { key: 'cashOut', name: 'Spending' });
+    expect(splitMainAccounts([OTHER, cashOut, IN, cashIn])).toEqual([[cashOut, cashIn], [OTHER, IN]]);
   });
 });
