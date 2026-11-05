@@ -50,6 +50,18 @@ export function linesOf(a: Account, amounts: Amounts | undefined): [string, numb
 }
 
 /** Adds several per-currency amounts together. */
+/**
+ * The currencies a balance of these accounts is shown in, each unconverted; undefined when it's one total
+ * in the main currency. One account shows its own currencies. Several do too, once one of them holds two:
+ * every currency they hold, the main one first.
+ */
+export function headerCurrencies(accounts: Account[], base: string): string[] | undefined {
+  if (accounts.length === 1) return currenciesOf(accounts[0]);
+  if (!accounts.some((a) => currenciesOf(a).length > 1)) return undefined;
+  const held = [...new Set(accounts.flatMap(currenciesOf))];
+  return held.includes(base) ? [base, ...held.filter((c) => c !== base)] : held;
+}
+
 export function addAmounts(list: (Amounts | undefined)[]): Amounts {
   const out: Amounts = {};
   for (const m of list) for (const [c, n] of Object.entries(m ?? {})) out[c] = roundTo((out[c] ?? 0) + n, c);
