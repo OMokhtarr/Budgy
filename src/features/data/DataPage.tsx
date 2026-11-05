@@ -1,14 +1,14 @@
 import {
   IonBackButton, IonButtons, IonContent, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonPage, IonTitle, IonToolbar,
 } from '@ionic/react';
-import { cloudDownloadOutline, cloudUploadOutline, documentTextOutline, trashOutline } from 'ionicons/icons';
+import { cloudDownloadOutline, cloudUploadOutline, documentAttachOutline, documentTextOutline, trashOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useDataActions } from './useDataActions';
 import { useCloud } from '@/core/cloud/CloudContext';
 
 export default function DataPage() {
   const { t } = useTranslation();
-  const { exportCsv, backup, restore, erase } = useDataActions();
+  const { exportCsv, importCsv, backup, restore, erase } = useDataActions();
   const { user } = useCloud();
 
   return (
@@ -29,6 +29,13 @@ export default function DataPage() {
               <IonLabel>
                 {t('settings.exportCsv')}
                 <p>{t('settings.exportCsvHint')}</p>
+              </IonLabel>
+            </IonItem>
+            <IonItem button detail={false} onClick={importCsv}>
+              <IonIcon icon={documentAttachOutline} slot="start" color="primary" />
+              <IonLabel>
+                {t('settings.importCsv')}
+                <p>{t('settings.importCsvHint')}</p>
               </IonLabel>
             </IonItem>
             <IonItem button detail={false} onClick={backup}>

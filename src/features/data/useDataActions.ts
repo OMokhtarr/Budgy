@@ -5,13 +5,13 @@ import { useSettings } from '@/core/contexts/SettingsContext';
 import { useCloud } from '@/core/cloud/CloudContext';
 import { alive, db, eraseAll, exportBackup, importBackup } from '@/core/db/db';
 import { useNames } from '@/core/db/hooks';
+import { csvRows, planCsvImport, saveCsvImport, type CsvPlan } from '@/core/db/transactionsCsv';
 import { pickTextFile, saveTextFile, toCsv } from '@/core/utils/files';
 import { dayKey } from '@/core/utils/period';
-import { subcategoryName } from '@/core/utils/subcategories';
 
-/** Export, backup, restore and erase — used by the Data page and the Profile page's "Back up now". */
+/** Export, import, backup, restore and erase — used by the Data page and the Profile page's "Back up now". */
 export function useDataActions() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const settings = useSettings();
   const { update } = settings;
   const { reset: resetFilter } = useAccountFilter();
@@ -27,30 +27,59 @@ export function useDataActions() {
   const exportCsv = async () => {
     try {
       const [txs, accounts, categories] = await Promise.all([db.transactions.orderBy('date').filter(alive).toArray(), db.accounts.toArray(), db.categories.toArray()]);
-      const accMap = new Map(accounts.map((a) => [a.id, a]));
-      const catMap = new Map(categories.map((c) => [c.id, c]));
-      const rows: (string | number)[][] = [
-        ['Date', 'Type', 'Amount', 'Currency', 'Account', 'To account', 'Category', 'Subcategory', 'Note', 'Received', 'Received currency'],
-      ];
-      for (const x of txs) {
-        rows.push([
-          // Local day, as shown in the app; the stored ISO string is UTC.
-          dayKey(new Date(x.date)),
-          x.type,
-          x.amount,
-          x.currency,
-          accountName(accMap.get(x.accountId)),
-          x.toAccountId != null ? accountName(accMap.get(x.toAccountId)) : '',
-          x.categoryId != null ? categoryName(catMap.get(x.categoryId)) : '',
-          subcategoryName(catMap.get(x.categoryId!), x.subcategoryId),
-          x.note ?? '',
-          x.toAmount ?? '',
-          x.toCurrency ?? '',
-        ]);
-      }
-      await saveTextFile(`budgy-transactions-${stamp()}.csv`, toCsv(rows), 'text/csv');
+      await saveTextFile(`budgy-transactions-${stamp()}.csv`, toCsv(csvRows(txs, accounts, categories, { accountName, categoryName })), 'text/csv');
     } catch {
       toast(t('settings.exportFailed'), 'danger');
+    }
+  };
+
+  const importSummary = (plan: CsvPlan) =>
+    [
+      t('settings.importAdd', { n: plan.transactions.length }),
+      plan.duplicates && t('settings.importDuplicates', { n: plan.duplicates }),
+      plan.newAccounts.length && t('settings.importNewAccounts', { n: plan.newAccounts.length }),
+      plan.newCategories.length && t('settings.importNewCategories', { n: plan.newCategories.length }),
+      plan.badRows.length && t('settings.importBadRows', { n: plan.badRows.length, row: plan.badRows[0] }),
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+  const importCsv = async () => {
+    const text = await pickTextFile('.csv,text/csv,text/comma-separated-values');
+    if (!text) return;
+    try {
+      const [accounts, categories, transactions] = await Promise.all([db.accounts.toArray(), db.categories.toArray(), db.transactions.toArray()]);
+      // Built-in accounts and categories appear in a file in whichever language it was exported.
+      const labelsOf = (key: string) => ['en', 'ar'].map((lng) => i18n.t(key, { lng }));
+      const plan = planCsvImport(text, { accounts, categories, transactions }, labelsOf);
+      if (!plan) {
+        toast(t('settings.invalidCsv'), 'danger');
+        return;
+      }
+      if (!plan.transactions.length) {
+        toast(`${t('settings.importNothing')} · ${importSummary(plan)}`, plan.badRows.length ? 'danger' : 'success');
+        return;
+      }
+      presentAlert({
+        header: t('settings.importTitle'),
+        message: importSummary(plan),
+        buttons: [
+          { text: t('common.cancel'), role: 'cancel' },
+          {
+            text: t('settings.importConfirm'),
+            handler: async () => {
+              try {
+                await saveCsvImport(plan);
+                toast(t('settings.imported', { n: plan.transactions.length }));
+              } catch {
+                toast(t('settings.importFailed'), 'danger');
+              }
+            },
+          },
+        ],
+      });
+    } catch {
+      toast(t('settings.importFailed'), 'danger');
     }
   };
 
@@ -109,5 +138,5 @@ export function useDataActions() {
       ],
     });
 
-  return { exportCsv, backup, restore, erase };
+  return { exportCsv, importCsv, backup, restore, erase };
 }
