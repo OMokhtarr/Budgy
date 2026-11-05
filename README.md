@@ -21,7 +21,7 @@ offline-only and shows no sign-in at all.
 | **Header** | Total balance of the accounts in the accounts filter (tap it to change the filter). A warning appears when some currency has no exchange rate. |
 | **Side menu** | Profile (name, colour, account & sync), Settings, Data, Rate us, Support, About. |
 | **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week. |
-| **Data** | CSV export, backup / restore (a JSON file, version 5), erase all. |
+| **Data** | CSV export and import (adds to your data, skipping rows already there), backup / restore (a JSON file, version 5), erase all. |
 
 The add-transaction sheet has a calculator keypad (`250+120` → 370), From → To pickers, cross-currency
 transfers, a note and a date. The period bar (Day / Week / Month / Year / All / a custom range) is shared by
