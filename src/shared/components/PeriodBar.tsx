@@ -1,12 +1,12 @@
-import { IonIcon, useIonActionSheet } from '@ionic/react';
-import { chevronBackOutline, chevronForwardOutline } from 'ionicons/icons';
+import { useState } from 'react';
+import { IonIcon } from '@ionic/react';
+import { chevronDownOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useLocale } from '@/core/contexts/SettingsContext';
-import { addDays, isSameDay } from '@/core/utils/period';
-import type { PeriodMode } from '@/shared/models';
-
-const MODES: PeriodMode[] = ['day', 'week', 'month', 'year', 'all'];
+import { addDays, daysIn, formatRange, isSameDay } from '@/core/utils/period';
+import { doubleChevronBack, doubleChevronForward } from '@/shared/icons';
+import PeriodSheet from './PeriodSheet';
 
 export function usePeriodLabel(): string {
   const { t } = useTranslation();
@@ -20,10 +20,10 @@ export function usePeriodLabel(): string {
       if (isSameDay(anchor, addDays(today, -1))) return t('period.yesterday');
       return fmt({ weekday: 'short', day: 'numeric', month: 'long' }, anchor);
     }
-    case 'week': {
-      const last = addDays(range.end, -1);
-      return `${fmt({ day: 'numeric', month: 'short' }, range.start)} – ${fmt({ day: 'numeric', month: 'short' }, last)}`;
-    }
+    case 'week':
+      return formatRange(range, locale, { day: 'numeric', month: 'short' });
+    case 'range':
+      return formatRange(range, locale, { day: 'numeric', month: 'short', year: 'numeric' });
     case 'month':
       return fmt({ month: 'long', year: 'numeric' }, anchor);
     case 'year':
@@ -33,37 +33,27 @@ export function usePeriodLabel(): string {
   }
 }
 
-/** ‹  November 2026  › — tap the label to change Day / Week / Month / Year / All. */
+/** «  [30] NOVEMBER 2026 ⌄  » — tap the pill to choose another period. */
 export default function PeriodBar() {
   const { t } = useTranslation();
-  const { mode, setMode, prev, next } = usePeriod();
+  const { mode, range, prev, next } = usePeriod();
   const label = usePeriodLabel();
-  const [present] = useIonActionSheet();
-
-  const choose = () =>
-    present({
-      header: t('period.choose'),
-      buttons: [
-        ...MODES.map((m) => ({
-          text: t(`period.${m}`) + (m === mode ? '  ✓' : ''),
-          handler: () => setMode(m),
-        })),
-        { text: t('common.cancel'), role: 'cancel' },
-      ],
-    });
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
     <div className="b-period">
-      <button className="b-iconbtn" onClick={prev} disabled={mode === 'all'} aria-label={t('period.previous')}>
-        <IonIcon icon={chevronBackOutline} className="b-flip" />
+      <button className="b-period__nav" onClick={prev} disabled={mode === 'all'} aria-label={t('period.previous')}>
+        <IonIcon icon={doubleChevronBack} className="b-flip" />
       </button>
-      <button className="b-period__label" onClick={choose}>
-        <small>{t(`period.${mode}`)}</small>
+      <button className="b-period__label" onClick={() => setSheetOpen(true)} aria-label={`${t('period.choose')}: ${label}`}>
+        <span className="b-period__days">{mode === 'all' ? '∞' : daysIn(range)}</span>
         {label}
+        <IonIcon icon={chevronDownOutline} />
       </button>
-      <button className="b-iconbtn" onClick={next} disabled={mode === 'all'} aria-label={t('period.next')}>
-        <IonIcon icon={chevronForwardOutline} className="b-flip" />
+      <button className="b-period__nav" onClick={next} disabled={mode === 'all'} aria-label={t('period.next')}>
+        <IonIcon icon={doubleChevronForward} className="b-flip" />
       </button>
+      <PeriodSheet isOpen={sheetOpen} label={label} onClose={() => setSheetOpen(false)} />
     </div>
   );
 }

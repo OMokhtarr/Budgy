@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import {
-  IonButton, IonButtons, IonContent, IonHeader, IonModal, IonTitle, IonToolbar, useIonAlert,
+  IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonModal, IonTitle, IonToggle, IonToolbar, useIonAlert,
 } from '@ionic/react';
+import { cashOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
-import { alive, db, softDelete } from '@/core/db/db';
+import { alive, db, keepOneDefault, softDelete } from '@/core/db/db';
 import { useBalances, useNames } from '@/core/db/hooks';
+import { useAccountFilter } from '@/core/contexts/AccountFilterContext';
 import { CURRENCIES, useSettings } from '@/core/contexts/SettingsContext';
+import { useTxEditor } from '@/core/contexts/TxEditorContext';
+import { countsInExpenses, countsInTotal, switchesOnByDefault } from '@/core/utils/accountFilter';
 import { currenciesOf, openingOf, roundTo } from '@/core/utils/currency';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
 import RateInput from '@/shared/components/RateInput';
-import type { Account, AccountGroup, AccountType } from '@/shared/models';
+import type { Account, AccountGroup, AccountType, Flow } from '@/shared/models';
 
 /** The currency list, plus `current` if it isn't in it (e.g. from a restored backup). */
 function currencyOptions(current: string): string[] {
@@ -35,6 +39,11 @@ interface Props {
 }
 
 const GROUPS: AccountGroup[] = ['regular', 'savings', 'debt'];
+const DEFAULT_OPTIONS: { value?: Flow; label: string }[] = [
+  { label: 'accounts.none' },
+  { value: 'income', label: 'type.incomes' },
+  { value: 'expense', label: 'type.expenses' },
+];
 
 export default function AccountEditModal({ isOpen, account, newGroup, onClose }: Props) {
   const { t } = useTranslation();
@@ -42,6 +51,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const { accountName } = useNames();
   const balances = useBalances();
   const [presentAlert] = useIonAlert();
+  const { forget } = useAccountFilter();
+  const openEditor = useTxEditor();
 
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('cash');
@@ -53,6 +64,10 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const [balance, setBalance] = useState('');
   const [balance2, setBalance2] = useState('');
   const [group, setGroup] = useState<AccountGroup>('regular');
+  /** undefined = untouched, so the switch follows the group. */
+  const [includeInTotal, setIncludeInTotal] = useState<boolean>();
+  const [showInExpenses, setShowInExpenses] = useState<boolean>();
+  const [defaultFor, setDefaultFor] = useState<Flow>();
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -72,8 +87,14 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     setBalance(account ? String(balances.get(account.id!)?.[cur] ?? 0) : '');
     setBalance2(account && cur2 ? String(balances.get(account.id!)?.[cur2] ?? 0) : '');
     setGroup(account?.group ?? newGroup ?? 'regular');
+    setIncludeInTotal(account?.includeInTotal);
+    setShowInExpenses(account?.showInExpenses);
+    setDefaultFor(account?.defaultFor);
     setLoaded(true);
   }, [isOpen, account, newGroup, accountName, balances, loaded, base]);
+
+  const totalOn = includeInTotal ?? switchesOnByDefault(group);
+  const expensesOn = showInExpenses ?? switchesOnByDefault(group);
 
   const current = (account && balances?.get(account.id!)) || {};
   // Switching a currency shows the balance the account already has in it (0 for a new one).
@@ -129,10 +150,24 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
       initialBalance: openingFor(currency, balance),
       initialBalance2: currency2 ? openingFor(currency2, balance2) : undefined,
       group: group === 'regular' ? undefined : group,
+      includeInTotal: totalOn === switchesOnByDefault(group) ? undefined : totalOn,
+      showInExpenses: expensesOn === switchesOnByDefault(group) ? undefined : expensesOn,
+      defaultFor,
     };
-    if (account?.id != null) await db.accounts.update(account.id, patch);
-    else await db.accounts.add({ ...patch, order: await db.accounts.count(), createdAt: new Date().toISOString() });
+    let id = account?.id;
+    if (account && id != null) {
+      await db.accounts.update(id, patch);
+      // A switch just changed, so it should take effect even if the filter said otherwise before.
+      if (countsInTotal(account) !== totalOn || countsInExpenses(account) !== expensesOn) forget(id);
+    } else id = await db.accounts.add({ ...patch, order: await db.accounts.count(), createdAt: new Date().toISOString() });
+    if (defaultFor && id != null) await keepOneDefault(id, defaultFor);
     onClose();
+  };
+
+  // Closes this screen first: its balance fields would be stale after the exchange, and saving them would undo it.
+  const exchange = () => {
+    onClose();
+    openEditor({ type: 'transfer', accountId: account?.id, toAccountId: account?.id });
   };
 
   /** Archived accounts disappear from lists, pickers and the filter but keep their history. */
@@ -196,6 +231,12 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
               <Avatar icon={icon} color={color} square />
             </div>
           </div>
+          {account && !account.archived && currenciesOf(account).length > 1 && (
+            <button className="b-btn b-btn--muted" style={{ width: '100%', marginBottom: 14 }} onClick={exchange}>
+              <IonIcon icon={cashOutline} />
+              {t('accounts.exchange')}
+            </button>
+          )}
           <label className="b-field">
             <span>{t('editor.name')}</span>
             <input className="b-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} autoFocus={!account} />
@@ -227,6 +268,29 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
               ))}
             </div>
             <div className="b-muted" style={{ fontSize: 12.5, margin: '6px 4px 0' }}>{t(`accounts.groupHint.${group}`)}</div>
+          </div>
+          <div className="b-field">
+            <IonToggle justify="space-between" checked={totalOn} onIonChange={(e) => setIncludeInTotal(e.detail.checked)}>
+              {t('accounts.includeInTotal')}
+            </IonToggle>
+            <div className="b-muted" style={{ fontSize: 12.5, margin: '6px 4px 0' }}>{t('accounts.includeInTotalHint')}</div>
+          </div>
+          <div className="b-field">
+            <IonToggle justify="space-between" checked={expensesOn} onIonChange={(e) => setShowInExpenses(e.detail.checked)}>
+              {t('accounts.showInExpenses')}
+            </IonToggle>
+            <div className="b-muted" style={{ fontSize: 12.5, margin: '6px 4px 0' }}>{t('accounts.showInExpensesHint')}</div>
+          </div>
+          <div className="b-field">
+            <span>{t('accounts.defaultFor')}</span>
+            <div className="b-pills">
+              {DEFAULT_OPTIONS.map((o) => (
+                <button key={o.label} className={defaultFor === o.value ? 'is-active' : ''} onClick={() => setDefaultFor(o.value)}>
+                  {t(o.label)}
+                </button>
+              ))}
+            </div>
+            <div className="b-muted" style={{ fontSize: 12.5, margin: '6px 4px 0' }}>{t('accounts.defaultForHint')}</div>
           </div>
           <div className="b-field-row">
             <label className="b-field">

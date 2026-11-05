@@ -14,8 +14,8 @@ offline-only and shows no sign-in at all.
 
 | Where | What it does |
 |---|---|
-| **Accounts** | Three tabs:<br>• **Accounts:** everyday and Savings groups, live balances, transfers, and a Sum / Split view for multi-currency accounts.<br>• **Debts:** who owes you and whom you owe.<br>• **My finances:** assets and debts per currency, plus net worth.<br>Accounts can hold a second currency and can be archived. |
-| **Categories** (home) | Category bubbles around a donut of the period's spending. Tap one to add a transaction. In *Edit* mode you can add, rename, recolour or change the icon, choose expense / income / both, set a monthly budget, add subcategories, and archive. |
+| **Accounts** | Three tabs:<br>• **Accounts:** everyday and Savings groups, live balances, transfers, and a Sum / Split view for multi-currency accounts.<br>• **Debts:** who owes you and whom you owe.<br>• **My finances:** assets and debts per currency, plus net worth.<br>Accounts can hold a second currency, exchange between the two at the rate you actually got, and be archived. Each has its own *Include in total balance* and *Display in expenses* switches. New installs start with *Cash In* and *Cash Out*: income goes to the first and spending comes out of the second by default, and any account can take over either role. |
+| **Categories** (home) | Category bubbles around a donut of the period's spending. Tap one to add a transaction. Debts and savings with *Display in expenses* on follow as square tiles: tap one to send it money. Money sent to a tile, minus what comes back, counts as spending in Categories, Transactions and Overview. In *Edit* mode you can add, rename, recolour or change the icon, choose expense / income / both, set a monthly budget, add subcategories, and archive. |
 | **Transactions** | History grouped by day, with each day's net and search. Long-press to select several, then change their date, account or category, delete them, or filter by them. |
 | **Overview** | Income, expenses, net, average spend per day, trend bars, budget progress, and a breakdown by category and subcategory. |
 | **Header** | Total balance of the accounts in the accounts filter (tap it to change the filter). A warning appears when some currency has no exchange rate. |
@@ -24,8 +24,9 @@ offline-only and shows no sign-in at all.
 | **Data** | CSV export, backup / restore (a JSON file, version 5), erase all. |
 
 The add-transaction sheet has a calculator keypad (`250+120` → 370), From → To pickers, cross-currency
-transfers, a note and a date. The period bar (Day / Week / Month / Year / All) is shared by
-Categories, Transactions and Overview. A fresh install asks for the user's currency.
+transfers, a note and a date. The period bar (Day / Week / Month / Year / All / a custom range) is shared by
+Categories, Transactions and Overview: tap it to choose a period, or swipe the page to move to the
+previous or next one. Swiping on Accounts changes its tabs. A fresh install asks for the user's currency.
 
 ## Setup
 

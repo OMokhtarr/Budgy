@@ -1,52 +1,66 @@
 import { useMemo, useState } from 'react';
 import { IonButton, IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
-import { checkmarkOutline, createOutline, swapVerticalOutline } from 'ionicons/icons';
+import { checkmarkOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
-import { useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
-import { totalsOf, useCategories, useNames } from '@/core/db/hooks';
+import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
+import { totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import AppHeader from '@/shared/components/AppHeader';
 import PeriodBar from '@/shared/components/PeriodBar';
+import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
 import Donut from '@/shared/components/Donut';
 import Bubble from '@/shared/components/Bubble';
 import MoneyText from '@/shared/components/MoneyText';
+import { pencilUpright } from '@/shared/icons';
+import AccountEditModal from '@/features/accounts/AccountEditModal';
 import CategoryEditModal from './CategoryEditModal';
-import type { Category, Flow } from '@/shared/models';
+import type { Account, Amounts, Category, Flow } from '@/shared/models';
 
 /**
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
- * Tap a category to add a transaction to it.
+ * Tap a category to add a transaction to it. Debts and savings with "Display in expenses" on follow
+ * as square tiles: tap one to send it money, which counts as spending.
  */
 export default function CategoriesPage() {
   const { t } = useTranslation();
   const money = useMoney();
   const conv = useConverter();
   const openEditor = useTxEditor();
-  const { categoryName } = useNames();
+  const { accountName, categoryName } = useNames();
+  const { tiles } = useAccountFilter();
   const { range, mode } = usePeriod();
+  const contentRef = usePeriodSwipe();
 
   const [kind, setKind] = useState<Flow>('expense');
   const [editMode, setEditMode] = useState(false);
   const [editing, setEditing] = useState<Category | 'new' | null>(null);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   const categories = useCategories(kind);
   const archived = (useCategories(kind, true) ?? []).filter((c) => c.archived);
   const txs = useFilteredTransactionsInRange(range);
-  const totals = useMemo(() => totalsOf(txs, conv.toBase), [txs, conv]);
+  const totals = useMemo(() => totalsOf(txs, conv, tiles), [txs, conv, tiles]);
 
-  const slices = (categories ?? []).map((c) => ({ value: totals.byCategory[kind].get(c.id!) ?? 0, color: c.color }));
+  const accounts = useAccounts();
+  const tileAccounts = (accounts ?? []).filter((a) => tiles.tileIds.has(a.id!));
+  const sentTo = (a: Account) => totals.byTile.get(a.id!)?.value ?? 0;
+
   const isExpense = kind === 'expense';
+  const slices = [
+    ...(categories ?? []).map((c) => ({ value: totals.byCategory[kind].get(c.id!) ?? 0, color: c.color })),
+    ...(isExpense ? tileAccounts.map((a) => ({ value: sentTo(a), color: a.color })) : []),
+  ];
 
-  // A category's total in each currency it was used in (main currency first); "EGP 0" when unused.
-  const amountLines = (c: Category) => {
-    const lines = Object.entries(totals.byCategoryCur[kind].get(c.id!) ?? {})
+  // A total in each currency it was made in (main currency first); "EGP 0" when there is nothing yet.
+  const amountLines = (amounts: Amounts | undefined, emptyCurrency: string) => {
+    const lines = Object.entries(amounts ?? {})
       .filter(([, n]) => n !== 0)
       .sort(([a], [b]) => (a === conv.base ? -1 : b === conv.base ? 1 : a.localeCompare(b)));
-    return (lines.length ? lines : [[conv.base, 0] as [string, number]]).map(([cur, n]) => (
+    return (lines.length ? lines : [[emptyCurrency, 0] as [string, number]]).map(([cur, n]) => (
       <span key={cur} className="b-bubble__line">
-        <MoneyText currency={cur} text={money.compact(n)} />
+        <MoneyText currency={cur} text={money.plain(n, cur)} />
       </span>
     ));
   };
@@ -62,7 +76,7 @@ export default function CategoriesPage() {
         <AppHeader
           end={
             <IonButton onClick={() => setEditMode((v) => !v)} aria-label={editMode ? t('common.done') : t('common.edit')}>
-              <IonIcon slot="icon-only" icon={editMode ? checkmarkOutline : createOutline} />
+              <IonIcon slot="icon-only" icon={editMode ? checkmarkOutline : pencilUpright} />
             </IonButton>
           }
         />
@@ -71,7 +85,7 @@ export default function CategoriesPage() {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent>
+      <IonContent ref={contentRef}>
         <div className="b-page b-catpage">
           {editMode && <p className="b-muted" style={{ textAlign: 'center', fontSize: 13, margin: '10px 0 0' }}>{t('categories.editHint')}</p>}
 
@@ -82,15 +96,12 @@ export default function CategoriesPage() {
               onClick={() => setKind(isExpense ? 'income' : 'expense')}
               aria-label={t('categories.switchKind')}
             >
-              <Donut slices={slices}>
-                <div className="b-catgrid__label">
-                  {isExpense ? t('type.expenses') : t('type.incomes')}
-                  <IonIcon icon={swapVerticalOutline} />
-                </div>
-                <div className={`b-num ${isExpense ? 'b-expense' : 'b-income'}`} style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
+              <Donut slices={slices} size={200} thickness={11}>
+                <div className="b-catgrid__label">{isExpense ? t('type.expenses') : t('type.incomes')}</div>
+                <div className={`b-catgrid__main b-num ${isExpense ? 'b-expense' : 'b-income'}`}>
                   <MoneyText currency={conv.base} text={money.plain(isExpense ? totals.expense : totals.income)} />
                 </div>
-                <div className={`b-num ${isExpense ? 'b-income' : 'b-expense'}`} style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
+                <div className={`b-catgrid__sub b-num ${isExpense ? 'b-income' : 'b-expense'}`}>
                   <MoneyText currency={conv.base} text={money.plain(isExpense ? totals.income : totals.expense)} />
                 </div>
               </Donut>
@@ -105,7 +116,7 @@ export default function CategoriesPage() {
                   name={categoryName(c)}
                   icon={c.icon}
                   color={c.color}
-                  amount={amountLines(c)}
+                  amount={amountLines(totals.byCategoryCur[kind].get(c.id!), conv.base)}
                   progress={progress}
                   muted={spent === 0 && !editMode}
                   onClick={() => tap(c)}
@@ -116,6 +127,20 @@ export default function CategoriesPage() {
             {editMode && (
               <Bubble name={t('categories.add')} icon="other" color="" variant="add" amount="" onClick={() => setEditing('new')} />
             )}
+
+            {isExpense &&
+              tileAccounts.map((a) => (
+                <Bubble
+                  key={a.id}
+                  square
+                  name={accountName(a)}
+                  icon={a.icon}
+                  color={a.color}
+                  amount={amountLines(totals.byTile.get(a.id!)?.amounts, a.currency)}
+                  muted={sentTo(a) === 0 && !editMode}
+                  onClick={() => (editMode ? setEditingAccount(a) : openEditor({ type: 'transfer', toAccountId: a.id }))}
+                />
+              ))}
           </div>
 
           {editMode && archived.length > 0 && (
@@ -137,6 +162,7 @@ export default function CategoriesPage() {
         kind={kind}
         onClose={() => setEditing(null)}
       />
+      <AccountEditModal isOpen={editingAccount != null} account={editingAccount ?? undefined} onClose={() => setEditingAccount(null)} />
     </IonPage>
   );
 }

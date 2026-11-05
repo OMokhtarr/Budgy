@@ -6,10 +6,13 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { db, softDelete } from '@/core/db/db';
 import { useAccounts, useBalances, useCategories, useNames } from '@/core/db/hooks';
 import { evaluate, hasOperator, pressKey } from '@/core/utils/calc';
+import { defaultAccountFor } from '@/core/utils/defaultAccount';
 import { addDays, dayKey, isSameDay } from '@/core/utils/period';
 import { pickableSubcategories } from '@/core/utils/subcategories';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { currenciesOf, decimalsOf } from '@/core/utils/currency';
+import { cleanNumberInput, parseNumber } from '@/core/utils/number';
+import { formatRate, impliedRate, rateDirection, rateToSave, receivedAt } from '@/core/utils/txRate';
 import type { EditorInit } from '@/core/contexts/TxEditorContext';
 import type { Account, Category, TxType } from '@/shared/models';
 import Bubble from '@/shared/components/Bubble';
@@ -64,6 +67,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [expr2, setExpr2] = useState<string>(tx?.toAmount != null ? String(tx.toAmount) : '');
   const [touchedPair, setTouchedPair] = useState<string | null>(tx?.toAmount != null ? `${tx.currency}>${tx.toCurrency}` : null);
   const [active, setActive] = useState<Side>('from');
+  // Exchange rate the user typed, and the currency (or pair) it belongs to.
+  const [rateEdit, setRateEdit] = useState<{ key: string; text: string } | null>(null);
   const [note, setNote] = useState(tx?.note ?? '');
   const [date, setDate] = useState<string>(dayKey(tx ? new Date(tx.date) : new Date()));
   const [picking, setPicking] = useState<Side | null>(null);
@@ -73,12 +78,12 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const account = allAccounts?.find((a) => a.id === accountId);
   const toAccount = allAccounts?.find((a) => a.id === toAccountId);
 
-  // Pick a sensible default account once accounts load.
+  // Follows the transaction type until an account is chosen on purpose.
+  const accountChosen = useRef(tx?.accountId != null || init.accountId != null);
   useEffect(() => {
-    if (!accounts?.length || accountId != null) return;
-    const last = lastAccount();
-    setAccountId(accounts.find((a) => a.id === last)?.id ?? accounts[0].id);
-  }, [accounts, accountId]);
+    if (!accounts?.length || accountChosen.current) return;
+    setAccountId(defaultAccountFor(accounts, type, lastAccount()));
+  }, [accounts, type]);
 
   // Default destination for transfers: first account that isn't the source.
   // A two-currency account may transfer to itself (exchanging one currency for the other).
@@ -140,8 +145,34 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const amount = useMemo(() => evaluate(expr, decimals), [expr, decimals]);
   const typedTo = useMemo(() => evaluate(expr2, toDecimals), [expr2, toDecimals]);
   const toTouched = cross && touchedPair === pair;
-  const autoTo = cross ? conv.convert(amount, currency, toCurrency) ?? 0 : amount;
+
+  // ── exchange rate: each transaction's own, starting from the saved one ──
+  const foreignAmount = type !== 'transfer' && currency !== conv.base;
+  const ownRate = tx?.currency === currency ? tx : undefined;
+  const [rateUnit, rateQuote] = cross ? rateDirection(currency, toCurrency, conv.base) : [currency, ownRate?.rateCurrency ?? conv.base];
+  const unitRate = conv.rate(rateUnit);
+  const quoteRate = conv.rate(rateQuote);
+  const savedRate = unitRate && quoteRate ? unitRate / quoteRate : undefined;
+  const rateKey = cross ? pair : currency;
+  const rateText = rateEdit?.key === rateKey ? rateEdit.text : undefined;
+  const typedRate = (rateText && parseNumber(rateText)) || undefined;
+
+  const autoTo = !cross ? amount
+    : typedRate ? receivedAt(amount, typedRate, currency, toCurrency, rateUnit)
+    : conv.convert(amount, currency, toCurrency) ?? 0;
   const toAmount = toTouched ? typedTo : autoTo;
+  const received = toTouched ? impliedRate(amount, typedTo, currency, rateUnit) : undefined;
+  const shownRate = received ?? (rateText === undefined ? (!cross && ownRate?.rate) || savedRate : undefined);
+  const rateValue = shownRate ? formatRate(shownRate) : rateText ?? '';
+
+  /** The rate decides the received amount from here, until the user types one again. */
+  const typeRate = (text: string) => {
+    setRateEdit({ key: rateKey, text: cleanNumberInput(text) });
+    if (cross) {
+      setTouchedPair(null);
+      setActive('from');
+    }
+  };
   const editingTo = cross && active === 'to';
   const anyPending = hasOperator(expr) || (cross && hasOperator(expr2));
 
@@ -205,6 +236,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
       toCurrency: cross ? toCurrency : undefined,
       categoryId: type === 'transfer' ? undefined : categoryId,
       subcategoryId: subcategories.find((s) => s.id === subcategoryId)?.id,
+      ...(type === 'transfer' ? {} : rateToSave({ typed: typedRate, saved: conv.rate(currency), editing: tx, currency, base: conv.base })),
       date: iso,
       note: note.trim() || undefined,
       createdAt: tx?.createdAt ?? new Date().toISOString(),
@@ -284,7 +316,10 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
 
   const pickAccount = (id: string) => {
     if (type === 'transfer' && picking === 'to') setToAccountId(id);
-    else setAccountId(id);
+    else {
+      accountChosen.current = true;
+      setAccountId(id);
+    }
     setPicking(null);
   };
   const pickCategory = (id: string) => {
@@ -409,6 +444,20 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
             <button className="b-tocur" onClick={() => setToCurPick(nextOf(toCurs, toCurrency))}>
               {t('editor.receivedIn', { currency: toCurrency })}
             </button>
+          )}
+          {(cross || foreignAmount) && (
+            <label className="b-rate b-rate--tx" dir="ltr">
+              <span>1 {rateUnit} =</span>
+              <input
+                className="b-input b-num"
+                inputMode="decimal"
+                aria-label={t('accounts.rate')}
+                placeholder={savedRate ? formatRate(savedRate) : '0'}
+                value={rateValue}
+                onChange={(e) => typeRate(e.target.value)}
+              />
+              <span>{rateQuote}</span>
+            </label>
           )}
         </div>
 

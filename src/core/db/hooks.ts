@@ -2,6 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo } from 'react';
 import { alive, db } from './db';
+import { moveInBase, tileMoveOf, type TileScope } from '@/core/utils/accountTiles';
+import { txInBase, type BaseConverter } from '@/core/utils/txRate';
 import { openingOf, roundTo } from '@/core/utils/currency';
 import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
 
@@ -85,7 +87,7 @@ export function useCurrenciesInUse(): string[] | undefined {
 export function useNames() {
   const { t } = useTranslation();
   const accountName = useCallback(
-    (a?: Account) => (!a ? t('common.deleted') : a.name || t(`accountType.${a.type}`)),
+    (a?: Account) => (!a ? t('common.deleted') : a.name || t(a.key ? `accounts.starter.${a.key}` : `accountType.${a.type}`)),
     [t],
   );
   const categoryName = useCallback(
@@ -114,18 +116,36 @@ export interface PeriodTotals {
   byCategoryCur: Record<Flow, Map<string, Amounts>>;
   /** Per-subcategory totals. */
   bySubcategory: Record<Flow, Map<string, number>>;
+  /** Money sent to each account tile minus what came back: already part of `expense`. */
+  byTile: Map<string, { value: number; amounts: Amounts }>;
 }
 
-/** Income/expense totals in the main currency; `toBase` converts each transaction's amount. */
-export function totalsOf(txs: Transaction[] | undefined, toBase: (n: number, cur: string) => number): PeriodTotals {
+/**
+ * Income/expense totals in the main currency, each transaction at its own rate if it has one.
+ * With `tiles`, money moved to and from those accounts counts in the expenses too.
+ */
+export function totalsOf(txs: Transaction[] | undefined, conv: BaseConverter, tiles?: TileScope): PeriodTotals {
   const byCategory: Record<Flow, Map<string, number>> = { expense: new Map(), income: new Map() };
   const byCategoryCur: Record<Flow, Map<string, Amounts>> = { expense: new Map(), income: new Map() };
   const bySubcategory: Record<Flow, Map<string, number>> = { expense: new Map(), income: new Map() };
+  const byTile: PeriodTotals['byTile'] = new Map();
   let expense = 0;
   let income = 0;
   for (const t of txs ?? []) {
-    if (t.type === 'transfer') continue;
-    const v = toBase(t.amount, t.currency);
+    if (t.type === 'transfer') {
+      const move = tiles && tileMoveOf(t, tiles);
+      if (move) {
+        const value = moveInBase(move, conv);
+        const [amount, currency] = move.onTile;
+        const entry = byTile.get(move.tileId) ?? { value: 0, amounts: {} };
+        entry.value += value;
+        entry.amounts[currency] = roundTo((entry.amounts[currency] ?? 0) + move.sign * amount, currency);
+        byTile.set(move.tileId, entry);
+        expense += value;
+      }
+      continue;
+    }
+    const v = txInBase(t, conv);
     if (t.type === 'expense') expense += v;
     else income += v;
     if (t.categoryId == null) continue;
@@ -136,7 +156,7 @@ export function totalsOf(txs: Transaction[] | undefined, toBase: (n: number, cur
     byCategoryCur[t.type].set(t.categoryId, raw);
     if (t.subcategoryId != null) bySubcategory[t.type].set(t.subcategoryId, (bySubcategory[t.type].get(t.subcategoryId) ?? 0) + v);
   }
-  return { expense, income, byCategory, byCategoryCur, bySubcategory };
+  return { expense, income, byCategory, byCategoryCur, bySubcategory, byTile };
 }
 
 /**

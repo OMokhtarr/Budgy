@@ -1,14 +1,16 @@
 import { useState, type ReactNode } from 'react';
 import { IonButton, IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
-import { addOutline, calculatorOutline, swapHorizontalOutline, swapVerticalOutline, walletOutline } from 'ionicons/icons';
+import { addOutline, calculatorOutline, cashOutline, swapHorizontalOutline, swapVerticalOutline, walletOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccounts, useBalances, useNames } from '@/core/db/hooks';
-import { addAmounts, groupOf, linesOf, roundTo } from '@/core/utils/currency';
+import { addAmounts, currenciesOf, groupOf, linesOf, roundTo } from '@/core/utils/currency';
+import { assetsAndDebts } from '@/core/utils/finances';
 import AppHeader from '@/shared/components/AppHeader';
 import Avatar from '@/shared/components/Avatar';
 import MoneyText from '@/shared/components/MoneyText';
+import { useSwipe } from '@/shared/hooks/useSwipe';
 import AccountEditModal from './AccountEditModal';
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
 
@@ -98,6 +100,7 @@ export default function AccountsPage() {
   const regular = inGroup('regular');
   const savings = inGroup('savings');
   const multiCurrency = all.some((a) => a.currency !== conv.base || a.currency2);
+  const firstDual = all.find((a) => currenciesOf(a).length > 1);
   const amountsOf = (list: Account[]) => addAmounts(list.map((a) => balances?.get(a.id!)));
 
   // ── Debts tab: each debt account's balance in its own currency decides who owes whom ──
@@ -113,14 +116,7 @@ export default function AccountsPage() {
     money.plain(Math.abs(list.reduce((s, d) => s + conv.toBase(d.value, d.a.currency), 0)));
 
   // ── My finances: every positive balance is an asset, every negative one a debt ──
-  const assets: Amounts = {};
-  const liabilities: Amounts = {};
-  for (const a of all) {
-    for (const [c, n] of linesOf(a, balances?.get(a.id!))) {
-      if (n > 0) assets[c] = (assets[c] ?? 0) + n;
-      else if (n < 0) liabilities[c] = (liabilities[c] ?? 0) - n;
-    }
-  }
+  const { assets, debts: liabilities } = assetsAndDebts(all, balances);
   const finCurrencies = [...new Set([conv.base, ...Object.keys(assets), ...Object.keys(liabilities)])].sort((a, b) =>
     byBaseFirst([a, 0], [b, 0]),
   );
@@ -133,6 +129,11 @@ export default function AccountsPage() {
     { key: 'debts', icon: swapVerticalOutline },
     { key: 'finances', icon: calculatorOutline },
   ];
+  const tabIndex = tabs.findIndex((x) => x.key === tab);
+  const contentRef = useSwipe(
+    tabIndex > 0 ? () => setTab(tabs[tabIndex - 1].key) : undefined,
+    tabIndex < tabs.length - 1 ? () => setTab(tabs[tabIndex + 1].key) : undefined,
+  );
 
   return (
     <IonPage>
@@ -156,7 +157,7 @@ export default function AccountsPage() {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent>
+      <IonContent ref={contentRef}>
         <div className="b-page">
           {tab === 'accounts' && (
             <>
@@ -165,6 +166,12 @@ export default function AccountsPage() {
                   <IonIcon icon={swapHorizontalOutline} />
                   {t('accounts.transfer')}
                 </button>
+                {firstDual && (
+                  <button className="b-btn b-btn--muted" onClick={() => openEditor({ type: 'transfer', accountId: firstDual.id, toAccountId: firstDual.id })}>
+                    <IonIcon icon={cashOutline} />
+                    {t('accounts.exchangeShort')}
+                  </button>
+                )}
                 {multiCurrency && (
                   <div className="b-typeswitch" role="group" aria-label={t('accounts.view')}>
                     <button className={!split ? 'is-active' : ''} onClick={() => update({ balanceView: 'sum' })}>

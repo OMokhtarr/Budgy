@@ -79,3 +79,19 @@ export const COLORS = [
   '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#78716c',
   '#64748b', '#0f766e',
 ];
+
+/** Line icons ionicons doesn't have. Drawn in the current text colour, like the outline icons above. */
+const lineIcon = (body: string) =>
+  `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>${body}</svg>`;
+
+export const doubleChevronBack = lineIcon("<path d='M10 4l-7 8 7 8h3l-7-8 7-8zM17 4l-7 8 7 8h3l-7-8 7-8z'/>");
+export const doubleChevronForward = lineIcon("<path d='M14 4l7 8-7 8h-3l7-8-7-8zM7 4l7 8-7 8H4l7-8-7-8z'/>");
+export const pencilUpright = lineIcon(
+  "<path d='M5 21V10.5L12 2.5l7 8V21M9 6h6M5 12.5q3.5-3 7 0q3.5-3 7 0M8.5 11v10M15.5 11v10M12 12.5V21'/>",
+);
+export const receiptUpright = lineIcon(
+  "<path d='M5.5 3h13v18l-2.2-1.6-2.1 1.6-2.2-1.6-2.2 1.6-2.1-1.6-2.2 1.6zM8.5 8h4.5M8.5 12h4.5M15.5 8h.01M15.5 12h.01'/>",
+);
+export const barsAndTrend = lineIcon(
+  "<path d='M3 21h18M5.5 21v-6h3.5v6M10.5 21V11H14v10M15.5 21v-7H19v7M5 8l6-3 7 2'/><circle cx='5' cy='8' r='1.3'/><circle cx='11' cy='5' r='1.3'/><circle cx='18' cy='7' r='1.3'/>",
+);

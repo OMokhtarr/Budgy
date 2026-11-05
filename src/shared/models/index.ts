@@ -23,6 +23,8 @@ export interface Synced {
 }
 
 export interface Account extends Synced {
+  /** Built-in starting account. If set and `name` is empty, the translated label is shown. */
+  key?: 'cashIn' | 'cashOut';
   name: string;
   type: AccountType;
   icon: string;
@@ -35,8 +37,14 @@ export interface Account extends Synced {
   initialBalance: number;
   /** Opening balance in `currency2`. */
   initialBalance2?: number;
-  /** Undefined = 'regular'. Only regular accounts are selected in the accounts filter by default. */
+  /** Undefined = 'regular'. */
   group?: AccountGroup;
+  /** New transactions of this type start on this account. At most one account per type. */
+  defaultFor?: Flow;
+  /** Whether the balance counts in the total at the top. Undefined = on for regular accounts only. */
+  includeInTotal?: boolean;
+  /** Whether its expenses and income count in the app's lists and totals. Undefined = on for regular accounts only. */
+  showInExpenses?: boolean;
   archived?: boolean;
   order: number;
   createdAt: string;
@@ -77,6 +85,12 @@ export interface Transaction extends Synced {
   /** Transfers between currencies: what arrived in the destination, in `toCurrency`. */
   toAmount?: number;
   toCurrency?: string;
+  /**
+   * Expenses and income in a foreign currency: what one unit of `currency` was worth in `rateCurrency`
+   * when it happened, so totals don't move with the saved rates. Undefined = use today's saved rate.
+   */
+  rate?: number;
+  rateCurrency?: string;
   /** Expense or income category. Undefined for transfers. */
   categoryId?: string;
   /** Optional: one of the category's subcategories. */
@@ -90,7 +104,9 @@ export interface Transaction extends Synced {
 /** Amounts keyed by currency code, e.g. { EGP: 5000, USD: 200 }. */
 export type Amounts = Record<string, number>;
 
-export type PeriodMode = 'day' | 'week' | 'month' | 'year' | 'all';
+export type PeriodMode = 'day' | 'week' | 'month' | 'year' | 'all' | 'range';
+/** The modes worked out from a date; 'range' is two dates the user picked. */
+export type CalendarPeriodMode = Exclude<PeriodMode, 'range'>;
 
 export interface DateRange {
   start: Date;
