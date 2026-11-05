@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { IonButton, IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
-import { checkmarkOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
@@ -15,7 +14,7 @@ import { useDragReorder } from '@/shared/hooks/useDragReorder';
 import Donut from '@/shared/components/Donut';
 import Bubble from '@/shared/components/Bubble';
 import MoneyText from '@/shared/components/MoneyText';
-import { pencilUpright } from '@/shared/icons';
+import { doneIcon, editIcon } from '@/shared/icons';
 import AccountEditModal from '@/features/accounts/AccountEditModal';
 import CategoryEditModal from './CategoryEditModal';
 import type { Account, Amounts, Category, Flow } from '@/shared/models';
@@ -87,7 +86,7 @@ export default function CategoriesPage() {
         <AppHeader
           end={
             <IonButton onClick={() => setEditMode((v) => !v)} aria-label={editMode ? t('common.done') : t('common.edit')}>
-              <IonIcon slot="icon-only" icon={editMode ? checkmarkOutline : pencilUpright} />
+              <IonIcon slot="icon-only" icon={editMode ? doneIcon : editIcon} />
             </IonButton>
           }
         />
