@@ -13,7 +13,7 @@ export const switchesOnByDefault = (group: AccountGroup) => group === 'regular';
 export const countsInTotal = (a: Account) => a.includeInTotal ?? switchesOnByDefault(groupOf(a));
 export const countsInExpenses = (a: Account) => a.showInExpenses ?? switchesOnByDefault(groupOf(a));
 
-/** Whether money sent to the account's tile among the categories counts as spending: debts and savings. */
+/** Whether money sent to the account's tile among the categories counts as spending: savings, and for debts only lending. */
 export const tileIsSpending = (a: Account) => groupOf(a) !== 'regular';
 
 export const selectedByDefault = (a: Account) => countsInTotal(a) || countsInExpenses(a);

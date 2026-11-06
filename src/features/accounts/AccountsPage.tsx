@@ -63,15 +63,16 @@ export default function AccountsPage() {
   const row = (a: Account, tone?: 'owed' | 'owe') => {
     const [[cur, bal], ...rest] = accountLines(a);
     const color = tone === 'owed' ? 'b-income' : tone === 'owe' || bal < 0 ? 'b-expense' : '';
+    // A debt has no type to show: it's a person or a loan.
+    const sub = [groupOf(a) === 'debt' ? '' : t(`accountType.${a.type}`), a.currency2 ? `${a.currency} + ${a.currency2}` : '']
+      .filter(Boolean)
+      .join(' · ');
     return (
       <button key={a.id} className="b-row" onClick={() => setEditing(a)}>
         <Avatar icon={a.icon} color={a.color} square />
         <div className="b-row__main">
           <div className="b-row__title">{accountName(a)}</div>
-          <div className="b-row__sub">
-            {t(`accountType.${a.type}`)}
-            {a.currency2 && ` · ${a.currency} + ${a.currency2}`}
-          </div>
+          {sub && <div className="b-row__sub">{sub}</div>}
         </div>
         <div className={`b-row__amount b-num ${color}`}>
           <MoneyText currency={cur} text={money.plain(tone ? Math.abs(bal) : bal, cur)} />

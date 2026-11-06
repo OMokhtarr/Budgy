@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import {
   IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonModal, IonTitle, IonToggle, IonToolbar, useIonAlert,
 } from '@ionic/react';
@@ -11,6 +11,7 @@ import { CURRENCIES, useSettings } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { countsInExpenses, countsInTotal, switchesOnByDefault } from '@/core/utils/accountFilter';
 import { currenciesOf, openingOf, roundTo } from '@/core/utils/currency';
+import { debtSideOf, signedFor, unsigned, type DebtSide } from '@/core/utils/debtSide';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
@@ -39,6 +40,7 @@ interface Props {
 }
 
 const GROUPS: AccountGroup[] = ['regular', 'savings', 'debt'];
+const DEBT_SIDES: DebtSide[] = ['owed', 'owe'];
 const DEFAULT_OPTIONS: { value?: Flow; label: string }[] = [
   { label: 'accounts.none' },
   { value: 'income', label: 'type.incomes' },
@@ -68,6 +70,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const [includeInTotal, setIncludeInTotal] = useState<boolean>();
   const [showInExpenses, setShowInExpenses] = useState<boolean>();
   const [defaultFor, setDefaultFor] = useState<Flow>();
+  /** Who owes whom on a debt while nothing is owed yet; after that the amounts' signs say it. */
+  const [sideChoice, setSideChoice] = useState<DebtSide>('owed');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -78,7 +82,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     if (loaded || !balances) return;
     setName(account ? accountName(account) : '');
     setType(account?.type ?? 'cash');
-    setIcon(account?.icon ?? 'cash');
+    // A debt has no type to pick an icon from, so a new one starts with a person.
+    setIcon(account?.icon ?? (newGroup === 'debt' ? 'user' : 'cash'));
     setColor(account?.color ?? '#3b82f6');
     const cur = account?.currency ?? base;
     const cur2 = account?.currency2 ?? '';
@@ -90,11 +95,30 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     setIncludeInTotal(account?.includeInTotal);
     setShowInExpenses(account?.showInExpenses);
     setDefaultFor(account?.defaultFor);
+    setSideChoice('owed');
     setLoaded(true);
   }, [isOpen, account, newGroup, accountName, balances, loaded, base]);
 
   const totalOn = includeInTotal ?? switchesOnByDefault(group);
   const expensesOn = showInExpenses ?? switchesOnByDefault(group);
+
+  // A debt is typed as who owes whom plus plain amounts; the balances keep their signs underneath.
+  // If its two currencies owe opposite ways, the balances are typed with their signs instead.
+  const isDebt = group === 'debt';
+  const typedSide = debtSideOf(currency2 ? [balance, balance2] : [balance]);
+  const side: DebtSide = typedSide === 'owed' || typedSide === 'owe' ? typedSide : sideChoice;
+  const plainAmounts = isDebt && typedSide !== 'mixed';
+  const pickSide = (s: DebtSide) => {
+    setSideChoice(s);
+    setBalance((b) => signedFor(b, s));
+    setBalance2((b) => signedFor(b, s));
+  };
+  const balanceField = (value: string, onValue: (v: string) => void) => ({
+    value: plainAmounts ? unsigned(value) : value,
+    onChange: (e: ChangeEvent<HTMLInputElement>) =>
+      onValue(plainAmounts ? signedFor(cleanNumberInput(e.target.value), side) : cleanNumberInput(e.target.value, true)),
+  });
+  const balanceLabel = (c: string) => t(plainAmounts ? 'debts.amount' : 'accounts.currentBalance', { currency: c });
 
   const current = (account && balances?.get(account.id!)) || {};
   // Switching a currency shows the balance the account already has in it (0 for a new one).
@@ -152,7 +176,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
       group: group === 'regular' ? undefined : group,
       includeInTotal: totalOn === switchesOnByDefault(group) ? undefined : totalOn,
       showInExpenses: expensesOn === switchesOnByDefault(group) ? undefined : expensesOn,
-      defaultFor,
+      // A debt can't be where new income or expenses start.
+      defaultFor: isDebt ? undefined : defaultFor,
     };
     let id = account?.id;
     if (account && id != null) {
@@ -160,7 +185,7 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
       // A switch just changed, so it should take effect even if the filter said otherwise before.
       if (countsInTotal(account) !== totalOn || countsInExpenses(account) !== expensesOn) forget(id);
     } else id = await db.accounts.add({ ...patch, order: await db.accounts.count(), createdAt: new Date().toISOString() });
-    if (defaultFor && id != null) await keepOneDefault(id, defaultFor);
+    if (patch.defaultFor && id != null) await keepOneDefault(id, patch.defaultFor);
     onClose();
   };
 
@@ -241,23 +266,25 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
             <span>{t('editor.name')}</span>
             <input className="b-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} autoFocus={!account} />
           </label>
-          <div className="b-field">
-            <span>{t('accounts.type')}</span>
-            <div className="b-pills" style={{ flexWrap: 'wrap' }}>
-              {TYPES.map((x) => (
-                <button
-                  key={x.type}
-                  className={type === x.type ? 'is-active' : ''}
-                  onClick={() => {
-                    setType(x.type);
-                    setIcon(x.icon);
-                  }}
-                >
-                  {t(`accountType.${x.type}`)}
-                </button>
-              ))}
+          {!isDebt && (
+            <div className="b-field">
+              <span>{t('accounts.type')}</span>
+              <div className="b-pills" style={{ flexWrap: 'wrap' }}>
+                {TYPES.map((x) => (
+                  <button
+                    key={x.type}
+                    className={type === x.type ? 'is-active' : ''}
+                    onClick={() => {
+                      setType(x.type);
+                      setIcon(x.icon);
+                    }}
+                  >
+                    {t(`accountType.${x.type}`)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           <div className="b-field">
             <span>{t('accounts.group')}</span>
             <div className="b-pills">
@@ -281,17 +308,31 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
             </IonToggle>
             <div className="b-muted" style={{ fontSize: 12.5, margin: '6px 4px 0' }}>{t('accounts.showInExpensesHint')}</div>
           </div>
-          <div className="b-field">
-            <span>{t('accounts.defaultFor')}</span>
-            <div className="b-pills">
-              {DEFAULT_OPTIONS.map((o) => (
-                <button key={o.label} className={defaultFor === o.value ? 'is-active' : ''} onClick={() => setDefaultFor(o.value)}>
-                  {t(o.label)}
-                </button>
-              ))}
+          {!isDebt && (
+            <div className="b-field">
+              <span>{t('accounts.defaultFor')}</span>
+              <div className="b-pills">
+                {DEFAULT_OPTIONS.map((o) => (
+                  <button key={o.label} className={defaultFor === o.value ? 'is-active' : ''} onClick={() => setDefaultFor(o.value)}>
+                    {t(o.label)}
+                  </button>
+                ))}
+              </div>
+              <div className="b-muted" style={{ fontSize: 12.5, margin: '6px 4px 0' }}>{t('accounts.defaultForHint')}</div>
             </div>
-            <div className="b-muted" style={{ fontSize: 12.5, margin: '6px 4px 0' }}>{t('accounts.defaultForHint')}</div>
-          </div>
+          )}
+          {plainAmounts && (
+            <div className="b-field">
+              <span>{t('debts.side')}</span>
+              <div className="b-pills">
+                {DEBT_SIDES.map((s) => (
+                  <button key={s} className={side === s ? 'is-active' : ''} onClick={() => pickSide(s)}>
+                    {t(`debts.sides.${s}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="b-field-row">
             <label className="b-field">
               <span>{t('accounts.currency')}</span>
@@ -302,14 +343,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
               </select>
             </label>
             <label className="b-field">
-              <span>{t('accounts.currentBalance', { currency })}</span>
-              <input
-                className="b-input b-num"
-                inputMode="decimal"
-                placeholder="0"
-                value={balance}
-                onChange={(e) => setBalance(cleanNumberInput(e.target.value, true))}
-              />
+              <span>{balanceLabel(currency)}</span>
+              <input className="b-input b-num" inputMode="decimal" placeholder="0" {...balanceField(balance, setBalance)} />
             </label>
           </div>
           <div className="b-field-row">
@@ -324,14 +359,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
             </label>
             {currency2 && (
               <label className="b-field">
-                <span>{t('accounts.currentBalance', { currency: currency2 })}</span>
-                <input
-                  className="b-input b-num"
-                  inputMode="decimal"
-                  placeholder="0"
-                  value={balance2}
-                  onChange={(e) => setBalance2(cleanNumberInput(e.target.value, true))}
-                />
+                <span>{balanceLabel(currency2)}</span>
+                <input className="b-input b-num" inputMode="decimal" placeholder="0" {...balanceField(balance2, setBalance2)} />
               </label>
             )}
           </div>

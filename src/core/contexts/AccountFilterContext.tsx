@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { useAccounts, useTransactionsInRange } from '@/core/db/hooks';
+import { useAccounts, useLendingShares, useTransactionsInRange } from '@/core/db/hooks';
 import { countsInExpenses, forgetAccount, resolveFilter, selectedByDefault, tileIsSpending, type FilterOverrides } from '@/core/utils/accountFilter';
 import type { TileScope } from '@/core/utils/accountTiles';
+import { groupOf } from '@/core/utils/currency';
 import type { DateRange, Transaction } from '@/shared/models';
 
 /**
@@ -56,17 +57,20 @@ export function AccountFilterProvider({ children }: { children: React.ReactNode 
   const accounts = useAccounts(true);
   const [overrides, setOverrides] = useState<FilterOverrides>(load);
 
+  const lending = useLendingShares();
   const { selected, inTotal, inExpenses } = useMemo(() => resolveFilter(accounts ?? [], overrides), [accounts, overrides]);
   // An account has a tile while its "Display in expenses" switch is on, whatever the filter says. Money sent
-  // to a debt or savings tile counts when the account it comes from is shown.
+  // to a savings tile counts when the account it comes from is shown; for a debt tile only lending counts.
   const tiles = useMemo<TileScope>(() => {
     const all = (accounts ?? []).filter(countsInExpenses);
     return {
       tileIds: new Set(all.filter(tileIsSpending).map((a) => a.id!)),
+      // Every debt is listed, so until its history has loaded nothing counts rather than everything.
+      lending: new Map(all.filter((a) => groupOf(a) === 'debt').map((a) => [a.id!, lending?.get(a.id!) ?? new Map()])),
       everydayIds: new Set(all.filter((a) => !tileIsSpending(a)).map((a) => a.id!)),
       shownIds: inExpenses,
     };
-  }, [accounts, inExpenses]);
+  }, [accounts, inExpenses, lending]);
 
   const setSelected = useCallback(
     (ids: Set<string>) => {

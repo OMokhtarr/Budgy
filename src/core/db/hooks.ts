@@ -4,7 +4,8 @@ import { useCallback, useMemo } from 'react';
 import { alive, db } from './db';
 import { everydayShiftsOf, moveInBase, tileMoveOf, type Money, type TileScope } from '@/core/utils/accountTiles';
 import { txInBase, type BaseConverter } from '@/core/utils/txRate';
-import { openingOf, roundTo } from '@/core/utils/currency';
+import { groupOf, openingOf, roundTo } from '@/core/utils/currency';
+import { lendingShares, type LendingShares } from '@/core/utils/lending';
 import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
 
 export function useAccounts(includeArchived = false): Account[] | undefined {
@@ -63,6 +64,17 @@ export function useBalances(): Map<string, Amounts> | undefined {
       }
     }
     return map;
+  });
+}
+
+/** How much of each transfer to or from a debt was lending, over each debt's whole history. */
+export function useLendingShares(): LendingShares | undefined {
+  return useLiveQuery(async () => {
+    const debts = (await db.accounts.filter(alive).toArray()).filter((a) => groupOf(a) === 'debt');
+    if (!debts.length) return new Map();
+    const ids = debts.map((a) => a.id!);
+    const txs = await db.transactions.where('accountId').anyOf(ids).or('toAccountId').anyOf(ids).filter(alive).toArray();
+    return lendingShares(debts, txs);
   });
 }
 
