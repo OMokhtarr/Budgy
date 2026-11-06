@@ -5,9 +5,9 @@ import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
-import { reorderAccounts, reorderCategories } from '@/core/db/db';
+import { alive, db, reorderAccounts, reorderCategories } from '@/core/db/db';
 import { totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
-import { splitMainAccounts } from '@/core/utils/defaultAccount';
+import { filterAccountFor, splitMainAccounts } from '@/core/utils/defaultAccount';
 import AppHeader from '@/shared/components/AppHeader';
 import PeriodBar from '@/shared/components/PeriodBar';
 import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
@@ -33,7 +33,7 @@ export default function CategoriesPage() {
   const conv = useConverter();
   const openEditor = useTxEditor();
   const { accountName, categoryName } = useNames();
-  const { tiles } = useAccountFilter();
+  const { tiles, selected, isDefault } = useAccountFilter();
   const { range, mode } = usePeriod();
   const contentRef = usePeriodSwipe();
 
@@ -87,9 +87,14 @@ export default function CategoriesPage() {
     ));
   };
 
-  const tap = (c: Category) => {
-    if (editMode) setEditing(c);
-    else openEditor({ type: kind, categoryId: c.id });
+  // A new transaction starts on the account picked in the filter; with several picked, on the one last
+  // written from. With the filter untouched, the editor picks its usual default.
+  const tap = async (c: Category) => {
+    if (editMode) return setEditing(c);
+    const picked = isDefault ? [] : (accounts ?? []).filter((a) => selected.has(a.id!));
+    const ids = picked.map((a) => a.id!);
+    const txs = picked.length > 1 ? await db.transactions.where('accountId').anyOf(ids).filter(alive).toArray() : [];
+    openEditor({ type: kind, categoryId: c.id, accountId: filterAccountFor(picked, kind, txs) });
   };
 
   return (

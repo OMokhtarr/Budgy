@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accountSections, defaultAccountFor, splitMainAccounts } from './defaultAccount';
+import { accountSections, defaultAccountFor, filterAccountFor, splitMainAccounts } from './defaultAccount';
 import type { Account } from '@/shared/models';
 
 const account = (id: string, fields: Partial<Account> = {}): Account => ({
@@ -24,6 +24,30 @@ describe('defaultAccountFor', () => {
     ['no accounts means nothing to pick', [], 'expense', 'gone', undefined],
   ])('%s', (_name, accounts, type, last, want) => {
     expect(defaultAccountFor(accounts, type, last)).toBe(want);
+  });
+});
+
+describe('filterAccountFor', () => {
+  const B = account('b');
+  const C = account('c');
+  const written = (accountId: string, createdAt: string) => ({ accountId, createdAt });
+
+  it('leaves the choice to the editor when nothing is picked', () => {
+    expect(filterAccountFor([], 'expense', [written('b', '2026-01-01')])).toBeUndefined();
+  });
+
+  it('uses the one picked account, whatever was used last', () => {
+    expect(filterAccountFor([B], 'expense', [written('c', '2026-01-01')])).toBe('b');
+  });
+
+  it('uses the picked account a transaction was last written from', () => {
+    const txs = [written('b', '2026-01-02'), written('c', '2026-01-03'), written('other', '2026-01-04'), written('b', '2026-01-01')];
+    expect(filterAccountFor([B, C], 'expense', txs)).toBe('c');
+  });
+
+  it("falls back to the picked accounts' default when none of them was used yet", () => {
+    expect(filterAccountFor([B, OUT, C], 'expense', [written('other', '2026-01-01')])).toBe('out');
+    expect(filterAccountFor([B, C], 'expense', [])).toBe('b');
   });
 });
 
