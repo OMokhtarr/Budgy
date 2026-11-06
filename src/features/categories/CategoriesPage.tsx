@@ -24,7 +24,7 @@ import type { Account, Amounts, Category, Flow } from '@/shared/models';
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
  * Tap a category to add a transaction to it. Accounts with "Display in expenses" on (but Cash In and
  * Cash Out) follow as square tiles: tap one to send it money. Each tile shows the money moved to it in
- * the period; for a debt or savings that counts as spending, for an everyday account it doesn't. In
+ * the period; for savings that counts as spending, for a debt only what you lend, for an everyday account none. In
  * edit mode, hold a category or an account and drag it to move it.
  */
 export default function CategoriesPage() {
@@ -56,7 +56,7 @@ export default function CategoriesPage() {
   const totals = useMemo(() => totalsOf(txs, conv, tiles), [txs, conv, tiles]);
 
   const accounts = useAccounts();
-  // Accounts with "Display in expenses" on have a tile, except Cash In and Cash Out; only debts and savings are spending.
+  // Accounts with "Display in expenses" on have a tile, except Cash In and Cash Out; only savings and lending to debts are spending.
   const tileAccounts = splitMainAccounts(accounts ?? [])[1].filter((a) => tiles.tileIds.has(a.id!) || tiles.everydayIds.has(a.id!));
   // Account tiles are dragged among themselves, the same way as the categories.
   const { order: accountOrder, dragging: draggingAccount, itemProps: accountProps } = useDragReorder(

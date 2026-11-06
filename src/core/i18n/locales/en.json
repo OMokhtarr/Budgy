@@ -155,7 +155,7 @@
     "includeInTotal": "Include in total balance",
     "includeInTotalHint": "Adds this account's balance to the total at the top.",
     "showInExpenses": "Display in expenses",
-    "showInExpensesHint": "Counts this account's expenses and income in Categories, Transactions and Overview, and gives it a tile in Categories. Money sent to a debt or savings tile counts as spending, minus what comes back; moving money between everyday accounts doesn't.",
+    "showInExpensesHint": "Counts this account's expenses and income in Categories, Transactions and Overview, and gives it a tile in Categories. Money sent to a savings tile counts as spending, minus what comes back. For a debt only money you lend counts, minus what's paid back; borrowing and paying back a loan don't, as what you buy with the money already counts. Moving money between everyday accounts doesn't count.",
     "group": "Group",
     "groups": {
       "regular": "Everyday",
@@ -165,7 +165,7 @@
     "groupHint": {
       "regular": "Everyday money. Shown in the balance at the top by default.",
       "savings": "Money set aside. Listed separately and left out of totals unless you switch it on below or pick it in the accounts filter.",
-      "debt": "A person or loan. Positive balance: they owe you. Negative balance: you owe them."
+      "debt": "A person or loan you lend to or borrow from."
     },
     "archive": "Archive account",
     "restore": "Restore account",
@@ -337,7 +337,13 @@
     "settled": "Settled",
     "add": "Add debt",
     "empty": "No debts yet. Add a debt account for each person or loan you want to keep track of.",
-    "hint": "To lend money, make a transfer from your account to the debt. When you get paid back, transfer from the debt to your account. Borrowing works the other way round."
+    "hint": "To lend money, make a transfer from your account to the debt. When you get paid back, transfer from the debt to your account. Borrowing works the other way round.",
+    "side": "Who owes whom",
+    "sides": {
+      "owed": "They owe me",
+      "owe": "I owe them"
+    },
+    "amount": "Amount ({{currency}})"
   },
   "finances": {
     "assets": "Assets",

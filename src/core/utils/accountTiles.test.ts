@@ -70,6 +70,37 @@ describe('spentOnTile', () => {
   });
 });
 
+describe('spentOnTile for a debt', () => {
+  /** 'debt' is a debt account: of these transfers, t-lend was all lending, t-half half, t-loan none. */
+  const LENDING = { ...SCOPE, lending: new Map([['debt', new Map([['t-lend', 1], ['t-half', 0.5], ['t-loan', 0]])]]) };
+
+  it('counts all of a loan you give', () => {
+    expect(spent({ id: 't-lend' }, LENDING)).toBe(100);
+  });
+
+  it('counts only the part that was lending or getting it back', () => {
+    expect(spent({ id: 't-half', amount: 5000, toAmount: 100, toCurrency: 'USD' }, LENDING)).toBe(2500);
+    expect(spent({ id: 't-half', accountId: 'debt', toAccountId: 'cash' }, LENDING)).toBe(-50);
+  });
+
+  it('ignores borrowing and paying a loan back', () => {
+    expect(spent({ id: 't-loan', accountId: 'debt', toAccountId: 'cash' }, LENDING)).toBe(0);
+    expect(spent({ id: 't-loan' }, LENDING)).toBe(0);
+  });
+
+  it('ignores a debt transfer it knows nothing about yet', () => {
+    expect(spent({ id: 't-new' }, LENDING)).toBe(0);
+  });
+
+  it('still counts everything sent to savings', () => {
+    expect(spent({ id: 't-loan', toAccountId: 'savings' }, LENDING)).toBe(100);
+  });
+
+  it('shows only the lending part on the tile', () => {
+    expect(tileMoveOf(tx({ id: 't-half', amount: 5000, toAmount: 100, toCurrency: 'USD' }), LENDING)?.onTile).toEqual([50, 'USD']);
+  });
+});
+
 describe('tileMoveOf', () => {
   it('shows money sent in the currency that arrived on the tile', () => {
     expect(tileMoveOf(tx({ amount: 5000, toAmount: 100, toCurrency: 'USD' }), SCOPE)?.onTile).toEqual([100, 'USD']);
