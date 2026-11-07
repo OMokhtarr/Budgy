@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Table, type Transaction as DexieTx } from 'dexie';
-import type { Account, Category, Flow, Synced, Transaction } from '@/shared/models';
+import type { Account, Category, Flow, MerchantRule, SmsLink, SmsPending, SmsSeen, Synced, Transaction } from '@/shared/models';
 import { backupSettingsOf, savedCurrency, type BackupSettings } from '@/core/contexts/SettingsContext';
 import { newId } from '@/core/utils/id';
 import { stampAfter } from '@/core/utils/stamp';
@@ -16,6 +16,14 @@ export class BudgyDB extends Dexie {
   accounts!: EntityTable<Account, 'id'>;
   categories!: EntityTable<Category, 'id'>;
   transactions!: EntityTable<Transaction, 'id'>;
+  /** Learned from bank texts: which account a sender's texts belong to. Synced. */
+  smsLinks!: EntityTable<SmsLink, 'id'>;
+  /** Learned from bank texts: which category a merchant's texts go in. Synced. */
+  merchantRules!: EntityTable<MerchantRule, 'id'>;
+  /** Bank texts waiting for review. Local only: never synced or backed up (they hold the message text). */
+  smsPending!: Table<SmsPending, string>;
+  /** Bank texts the user dismissed or skipped as already added. Local only. */
+  smsSeen!: Table<SmsSeen, string>;
 
   /** `name` is only changed by tests (two "devices" in one process). */
   constructor(name = 'budgy2') {
@@ -27,11 +35,19 @@ export class BudgyDB extends Dexie {
       categories: 'id, updatedAt, dirty, kind, order, archived',
       transactions: 'id, updatedAt, dirty, date, type, accountId, toAccountId, categoryId, [type+date]',
     });
+    // v2: SMS import. Transactions remember the text they came from; the learned links and rules sync.
+    this.version(2).stores({
+      transactions: 'id, updatedAt, dirty, date, type, accountId, toAccountId, categoryId, [type+date], smsFingerprint',
+      smsLinks: 'id, updatedAt, dirty',
+      merchantRules: 'id, updatedAt, dirty',
+      smsPending: 'fingerprint, date',
+      smsSeen: 'fingerprint',
+    });
     for (const name of SYNCED_TABLES) stampWrites(this.table(name));
   }
 }
 
-export const SYNCED_TABLES = ['accounts', 'categories', 'transactions'] as const;
+export const SYNCED_TABLES = ['accounts', 'categories', 'transactions', 'smsLinks', 'merchantRules'] as const;
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 
 /** Transactions that apply changes downloaded by sync: they keep the cloud's stamps and aren't uploaded again. */
@@ -58,13 +74,20 @@ function stampWrites(table: Table<Synced, string>) {
 
 /** Runs `fn` in a transaction whose writes count as coming from the cloud (see `fromCloud`). */
 export function writeFromCloud<T>(database: BudgyDB, fn: () => Promise<T>): Promise<T> {
-  return database.transaction('rw', database.accounts, database.categories, database.transactions, (tx) => {
+  return database.transaction('rw', SYNCED_TABLES.map((t) => database.table(t)), (tx) => {
     fromCloud.add(tx as unknown as DexieTx);
     return fn();
   });
 }
 
 export const db = new BudgyDB();
+
+/** Empties the local-only SMS tables (texts waiting for review, and dismissed ones). */
+export async function clearSmsLocal(database: BudgyDB): Promise<void> {
+  await database.transaction('rw', database.smsPending, database.smsSeen, async () => {
+    await Promise.all([database.smsPending.clear(), database.smsSeen.clear()]);
+  });
+}
 
 /**
  * The starting accounts and categories get the same fixed ids on every install, and a 1970 stamp, so
@@ -401,29 +424,37 @@ export interface BackupFile {
   app: 'budgy';
   /**
    * 1 = before currencies were stored per account/transaction; 2 = before account groups;
-   * 3 = before settings (main currency, exchange rates…) were included; 4 = before UUID ids.
+   * 3 = before settings (main currency, exchange rates…) were included; 4 = before UUID ids;
+   * 5 = before learned SMS links and merchant rules.
    */
-  version: 1 | 2 | 3 | 4 | 5;
+  version: 1 | 2 | 3 | 4 | 5 | 6;
   exportedAt: string;
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
+  smsLinks?: SmsLink[];
+  merchantRules?: MerchantRule[];
   settings?: Partial<BackupSettings>;
 }
 
 export async function exportBackup(settings: BackupSettings): Promise<BackupFile> {
-  const [accounts, categories, transactions] = await Promise.all([
+  const [accounts, categories, transactions, smsLinks, merchantRules] = await Promise.all([
     db.accounts.filter(alive).toArray(),
     db.categories.filter(alive).toArray(),
     db.transactions.filter(alive).toArray(),
+    db.smsLinks.filter(alive).toArray(),
+    db.merchantRules.filter(alive).toArray(),
   ]);
+  // Texts waiting for review (and dismissed ones) are never in a backup: they hold the message text.
   return {
     app: 'budgy',
-    version: 5,
+    version: 6,
     exportedAt: now(),
     accounts: accounts.map(withoutDirty),
     categories: categories.map(withoutDirty),
     transactions: transactions.map(withoutDirty),
+    smsLinks: smsLinks.map(withoutDirty),
+    merchantRules: merchantRules.map(withoutDirty),
     settings: backupSettingsOf(settings),
   };
 }
@@ -450,20 +481,27 @@ export async function importBackup(data: unknown): Promise<Partial<BackupSetting
     const moved = withNewIds(accounts as Numbered<Account>[], categories as Numbered<Category>[], transactions as Numbered<Transaction>[]);
     ({ accounts, categories, transactions } = moved);
   }
-  // Restored records are marked "upload me" by the write hooks, like any local change.
-  await db.transaction('rw', db.accounts, db.categories, db.transactions, async () => {
-    await Promise.all([db.accounts.clear(), db.categories.clear(), db.transactions.clear()]);
+  // Before version 6 there were no learned links or rules.
+  const smsLinks = Array.isArray(b.smsLinks) ? b.smsLinks : [];
+  const merchantRules = Array.isArray(b.merchantRules) ? b.merchantRules : [];
+  // Restored records are marked "upload me" by the write hooks, like any local change. Texts waiting for
+  // review stay: the ones already imported are known by their transactions' fingerprints.
+  await db.transaction('rw', SYNCED_TABLES.map((t) => db.table(t)), async () => {
+    await Promise.all(SYNCED_TABLES.map((t) => db.table(t).clear()));
     await db.accounts.bulkAdd(accounts.map(withoutDirty));
     await db.categories.bulkAdd(categories.map(withoutDirty));
     await db.transactions.bulkAdd(transactions.map(withoutDirty));
+    await db.smsLinks.bulkAdd(smsLinks.map(withoutDirty));
+    await db.merchantRules.bulkAdd(merchantRules.map(withoutDirty));
   });
   return settings;
 }
 
 /** Wipes everything and seeds the defaults again. (With sync this will need to delete in the cloud too.) */
 export async function eraseAll(): Promise<void> {
-  await db.transaction('rw', db.accounts, db.categories, db.transactions, async () => {
-    await Promise.all([db.accounts.clear(), db.categories.clear(), db.transactions.clear()]);
+  await db.transaction('rw', SYNCED_TABLES.map((t) => db.table(t)), async () => {
+    await Promise.all(SYNCED_TABLES.map((t) => db.table(t).clear()));
   });
+  await clearSmsLocal(db);
   await seedIfEmpty();
 }

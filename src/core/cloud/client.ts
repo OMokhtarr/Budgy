@@ -43,6 +43,15 @@ if (supabase && Capacitor.isNativePlatform()) {
 
 const SELECT = 'id, data, updated_at, deleted_at, server_updated_at';
 
+/** The cloud's name for each synced table (see `supabase/migrations`). */
+const CLOUD_TABLE: Record<SyncedTable, string> = {
+  accounts: 'accounts',
+  categories: 'categories',
+  transactions: 'transactions',
+  smsLinks: 'sms_links',
+  merchantRules: 'merchant_rules',
+};
+
 /** Keeps the HTTP status with the error, so sync can tell a rejected session (401) from other failures. */
 const withStatus = <E extends object>(error: E, status: number) => Object.assign(error, { status });
 
@@ -55,13 +64,13 @@ export class SupabaseRemote implements Remote {
 
   async push(table: SyncedTable, rows: RemoteRow[]): Promise<void> {
     const { error, status } = await this.client
-      .from(table)
+      .from(CLOUD_TABLE[table])
       .upsert(rows.map((r) => ({ ...r, user_id: this.userId })), { onConflict: 'user_id,id' });
     if (error) throw withStatus(error, status);
   }
 
   async pull(table: SyncedTable, since: string | null, limit: number): Promise<RemoteRow[]> {
-    let q = this.client.from(table).select(SELECT).order('server_updated_at').limit(limit);
+    let q = this.client.from(CLOUD_TABLE[table]).select(SELECT).order('server_updated_at').limit(limit);
     if (since) q = q.gt('server_updated_at', since);
     const { data, error, status } = await q;
     if (error) throw withStatus(error, status);
@@ -71,7 +80,7 @@ export class SupabaseRemote implements Remote {
   async allStamps(table: SyncedTable): Promise<RemoteStamp[]> {
     const stamps: RemoteStamp[] = [];
     for (let from = 0; ; from += 1000) {
-      const { data, error, status } = await this.client.from(table).select('id, updated_at').order('id').range(from, from + 999);
+      const { data, error, status } = await this.client.from(CLOUD_TABLE[table]).select('id, updated_at').order('id').range(from, from + 999);
       if (error) throw withStatus(error, status);
       stamps.push(...((data ?? []) as RemoteStamp[]));
       if ((data?.length ?? 0) < 1000) return stamps;

@@ -1,3 +1,5 @@
+import type { SmsDirection } from '@/features/sms/parser/types';
+
 export type TxType = 'expense' | 'income' | 'transfer';
 /** Money going out or coming in (a transfer is neither). */
 export type Flow = 'expense' | 'income';
@@ -99,6 +101,46 @@ export interface Transaction extends Synced {
   date: string;
   note?: string;
   createdAt: string;
+  /** Fingerprint of the bank text it was imported from (see SMS import). Syncs; the text itself never does. */
+  smsFingerprint?: string;
+}
+
+/** Learned: texts from this sender with these masked digits belong to this account. Synced. */
+export interface SmsLink extends Synced {
+  address: string;
+  digits?: string;
+  accountId: string;
+}
+
+/** Learned: this merchant's texts of this flow go in this category. Synced. */
+export interface MerchantRule extends Synced {
+  merchant: string;
+  flow: Flow;
+  categoryId: string;
+  subcategoryId?: string;
+}
+
+/** A bank text waiting for review. Local only. `fingerprint` is the key. */
+export interface SmsPending {
+  fingerprint: string;
+  smsId: string;
+  address: string;
+  /** When the text arrived (ISO). */
+  date: string;
+  body: string;
+  status: 'understood' | 'unreadable';
+  amount?: number;
+  currency?: string;
+  direction?: SmsDirection;
+  merchant?: string;
+  digits?: string;
+}
+
+/** A text the user dismissed or skipped as already added. Local only. */
+export interface SmsSeen {
+  fingerprint: string;
+  outcome: 'dismissed' | 'duplicate';
+  at: string;
 }
 
 /** Amounts keyed by currency code, e.g. { EGP: 5000, USD: 200 }. */

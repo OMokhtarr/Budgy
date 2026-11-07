@@ -2,12 +2,19 @@ import '@/test/setup-db';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { BudgyDB, SEED_TIME, alive, eraseAll, exportBackup, importBackup, db, seedIfEmpty, softDelete, type SyncedTable } from '@/core/db/db';
 import { stampIfSynced, type Settings } from '@/core/contexts/SettingsContext';
-import { hasWorkToSync, syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
+import { idFromKey } from '@/core/utils/id';
+import { clearLocal, hasWorkToSync, syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
 
 /** An in-memory server with the same rules as the Supabase migration: last edit wins, equal stamps ignored. */
 function fakeServer() {
   let clock = Date.parse('2026-11-03T12:00:00Z');
-  const tables: Record<SyncedTable, Map<string, RemoteRow>> = { accounts: new Map(), categories: new Map(), transactions: new Map() };
+  const tables: Record<SyncedTable, Map<string, RemoteRow>> = {
+    accounts: new Map(),
+    categories: new Map(),
+    transactions: new Map(),
+    smsLinks: new Map(),
+    merchantRules: new Map(),
+  };
   const server = { tables, settings: null as RemoteSettings | null, writes: 0 };
   const remote: Remote = {
     async push(table, rows) {
@@ -242,6 +249,40 @@ describe('a phone whose clock is behind the cloud', () => {
     expect(server.settings?.data.currency).toBe('EUR');
     await A.sync();
     expect(A.settings.data.currency).toBe('EUR');
+  });
+});
+
+describe('learned SMS links', () => {
+  it('learned links sync between phones under the same id', async () => {
+    const { remote } = fakeServer();
+    const aDb = new BudgyDB('links-a');
+    const bDb = new BudgyDB('links-b');
+    const A = phone(aDb, remote, { data: {}, dirty: false });
+    const B = phone(bDb, remote, { data: {}, dirty: false });
+    const later = (ms: number) => new Date(Date.now() + ms).toISOString();
+
+    const cib = await idFromKey('CIB|4821');
+    await aDb.smsLinks.put({ id: cib, address: 'CIB', digits: '4821', accountId: 'acc-1' });
+    await A.sync();
+    await B.sync();
+    expect((await bDb.smsLinks.get(cib))?.accountId).toBe('acc-1');
+
+    // Both phones learn the same new link on their own, each for a different account.
+    const nbe = await idFromKey('NBE|1234');
+    await aDb.smsLinks.put({ id: nbe, address: 'NBE', digits: '1234', accountId: 'acc-a', updatedAt: later(1000) });
+    await bDb.smsLinks.put({ id: nbe, address: 'NBE', digits: '1234', accountId: 'acc-b', updatedAt: later(2000) });
+    await A.sync();
+    await B.sync();
+    await A.sync();
+    expect([(await aDb.smsLinks.get(nbe))?.accountId, (await bDb.smsLinks.get(nbe))?.accountId]).toEqual(['acc-b', 'acc-b']);
+  });
+
+  it('clearLocal removes pending and seen texts', async () => {
+    const d = new BudgyDB('clear-local');
+    await d.smsPending.put({ fingerprint: 'fp-1', smsId: '1', address: 'CIB', date: '2026-11-07T10:00:00.000Z', body: 'x', status: 'unreadable' });
+    await d.smsSeen.put({ fingerprint: 'fp-2', outcome: 'dismissed', at: '2026-11-07T10:00:00.000Z' });
+    await clearLocal(d);
+    expect([await d.smsPending.count(), await d.smsSeen.count()]).toEqual([0, 0]);
   });
 });
 

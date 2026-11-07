@@ -1,7 +1,7 @@
 import '@/test/setup-db';
 import Dexie from 'dexie';
 import { describe, expect, it, vi } from 'vitest';
-import { alive, db, exportBackup, importBackup, openData, softDelete } from './db';
+import { alive, db, eraseAll, exportBackup, importBackup, openData, softDelete } from './db';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SETTINGS = { currency: 'EGP', rates: {}, balanceView: 'sum' as const, weekStart: 6, profileName: '', profileColor: '#10b981' };
@@ -99,9 +99,8 @@ describe('writes', () => {
 });
 
 describe('backups', () => {
-  it('version 5: no deleted records and no upload marks; restores with the same ids', async () => {
+  it('no deleted records and no upload marks; restores with the same ids', async () => {
     const backup = await exportBackup(SETTINGS);
-    expect(backup.version).toBe(5);
     expect(backup.transactions.every((t) => !t.deletedAt && t.dirty === undefined)).toBe(true);
     const someId = backup.transactions[0].id;
     await importBackup(JSON.parse(JSON.stringify(backup)));
@@ -134,5 +133,42 @@ describe('backups', () => {
     const [tx] = await db.transactions.toArray();
     expect([wallet.id, fun.id, tx.id].every((id) => UUID.test(id!))).toBe(true);
     expect([tx.accountId, tx.categoryId]).toEqual([wallet.id, fun.id]);
+  });
+
+  it('version 6 backs up links and rules, never pending or seen texts', async () => {
+    const body = 'Your card **4821 was charged EGP 120.00 at Carrefour';
+    const linkId = await db.smsLinks.add({ address: 'CIB', digits: '4821', accountId: 'acc-1' });
+    const ruleId = await db.merchantRules.add({ merchant: 'carrefour', flow: 'expense', categoryId: 'cat-1' });
+    await db.smsPending.add({ fingerprint: 'fp-1', smsId: '1', address: 'CIB', date: '2026-11-07T10:00:00.000Z', body, status: 'understood', amount: 120, currency: 'EGP', direction: 'out', merchant: 'Carrefour', digits: '4821' });
+    await db.smsSeen.add({ fingerprint: 'fp-2', outcome: 'dismissed', at: '2026-11-07T10:00:00.000Z' });
+
+    const backup = JSON.parse(JSON.stringify(await exportBackup(SETTINGS)));
+    expect(backup.version).toBe(6);
+    expect([backup.smsLinks.length, backup.merchantRules.length]).toEqual([1, 1]);
+    const text = JSON.stringify(backup);
+    expect(text).not.toMatch(/"[^"]*(pending|seen|body)[^"]*":/i);
+    expect(text).not.toContain(body);
+
+    await db.smsLinks.clear();
+    await db.merchantRules.clear();
+    await importBackup(backup);
+    expect((await db.smsLinks.get(linkId))?.accountId).toBe('acc-1');
+    expect((await db.merchantRules.get(ruleId))?.categoryId).toBe('cat-1');
+    // Restores leave the texts waiting for review, and the dismissed ones, as they were.
+    expect([await db.smsPending.count(), await db.smsSeen.count()]).toEqual([1, 1]);
+
+    const { smsLinks: _links, merchantRules: _rules, ...v5 } = backup;
+    await importBackup({ ...v5, version: 5 });
+    expect([await db.smsLinks.count(), await db.merchantRules.count()]).toEqual([0, 0]);
+  });
+
+  it('eraseAll empties the SMS tables', async () => {
+    await db.smsLinks.add({ address: 'CIB', digits: '4821', accountId: 'acc-1' });
+    await db.merchantRules.add({ merchant: 'carrefour', flow: 'expense', categoryId: 'cat-1' });
+    await db.smsPending.put({ fingerprint: 'fp-3', smsId: '3', address: 'CIB', date: '2026-11-07T10:00:00.000Z', body: 'x', status: 'unreadable' });
+    await db.smsSeen.put({ fingerprint: 'fp-4', outcome: 'duplicate', at: '2026-11-07T10:00:00.000Z' });
+    await eraseAll();
+    const counts = await Promise.all([db.smsLinks.count(), db.merchantRules.count(), db.smsPending.count(), db.smsSeen.count()]);
+    expect(counts).toEqual([0, 0, 0, 0]);
   });
 });

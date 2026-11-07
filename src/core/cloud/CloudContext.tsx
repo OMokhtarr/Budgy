@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import type { User } from '@supabase/supabase-js';
 import { useSettings } from '@/core/contexts/SettingsContext';
-import { db, seedIfEmpty } from '@/core/db/db';
+import { SYNCED_TABLES, db, seedIfEmpty } from '@/core/db/db';
 import { SupabaseRemote, cloudEnabled, supabase } from './client';
 import {
   deleteAccount as deleteCloudAccount,
@@ -209,12 +209,10 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   }, [user, sync]);
 
   // A few seconds after local changes (records or synced settings) — batched.
-  const pending = useLiveQuery(
-    async () =>
-      (await db.accounts.where('dirty').equals(1).count()) +
-      (await db.categories.where('dirty').equals(1).count()) +
-      (await db.transactions.where('dirty').equals(1).count()),
-  );
+  const pending = useLiveQuery(async () => {
+    const counts = await Promise.all(SYNCED_TABLES.map((t) => db.table(t).where('dirty').equals(1).count()));
+    return counts.reduce((sum, n) => sum + n, 0);
+  });
   const settingsDirty = !!settings.syncedDirty;
   const unsent = useRef(false);
   unsent.current = !!pending || settingsDirty;
