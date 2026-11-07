@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { IonModal } from '@ionic/react';
 import type { Transaction, TxType } from '@/shared/models';
 import TransactionEditor from '@/features/transactions/TransactionEditor';
@@ -10,6 +10,19 @@ export interface EditorInit {
   toAccountId?: string;
   /** Pass an existing transaction to edit it. */
   tx?: Transaction;
+  amount?: number;
+  currency?: string;
+  /** Full ISO time; kept when the user doesn't change the day. */
+  date?: string;
+  note?: string;
+  /** Shown above the sheet, e.g. the bank text. */
+  header?: ReactNode;
+  /** Set when the editor opens from a bank text: saved on the transaction, offers all three types, runs the duplicate check. */
+  smsFingerprint?: string;
+  /** Called with the stored transaction (including its id) after a successful save. */
+  onSaved?: (tx: Transaction) => void;
+  /** The duplicate check's "Skip". */
+  onSkipped?: () => void;
 }
 
 const TxEditorContext = createContext<(init?: EditorInit) => void>(() => {});

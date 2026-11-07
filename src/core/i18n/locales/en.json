@@ -243,7 +243,8 @@
     "enterReceived": "Enter the amount received",
     "receivedIn": "Received in {{currency}}",
     "date": "Date",
-    "backspace": "Delete (hold to clear)"
+    "backspace": "Delete (hold to clear)",
+    "currencyNotHeld": "{{account}} holds {{held}}. To match your statement, switch to {{held}} and enter the amount charged."
   },
   "overview": {
     "noSubcategory": "No subcategory",
@@ -431,6 +432,10 @@
     "addSender": "Add",
     "addSenderTitle": "Add a bank sender",
     "addSenderPlaceholder": "e.g. CIB or Bank-AlAhly",
-    "sendersHint": "Only texts whose sender name contains one of these words are read."
+    "sendersHint": "Only texts whose sender name contains one of these words are read.",
+    "duplicateTitle": "Looks like you already added this",
+    "duplicateBody": "You have a transaction with the same amount, account and day that you entered yourself.",
+    "keepBoth": "Keep both",
+    "skip": "Skip"
   }
 }

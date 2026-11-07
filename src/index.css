@@ -779,6 +779,26 @@ ion-modal.b-date-modal .ion-page {
   border-radius: 18px 18px 0 0;
 }
 
+/* What the editor was opened from (e.g. the bank text), above the sheet. The bottom margin leaves
+   room for the icon badges that sit on the sheet's top edge. */
+.b-editor__header {
+  margin: 0 12px 32px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--b-surface);
+  color: var(--b-text);
+  font-size: 13.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* One line under the amount, e.g. the account doesn't hold this currency */
+.b-editor__hint {
+  margin: 6px 0 0;
+  color: var(--b-muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
 /* From / To halves */
 .b-fromto {
   display: grid;
