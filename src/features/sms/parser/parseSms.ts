@@ -23,8 +23,8 @@ const IN =
 const NOT_DONE = /\b(declined|rejected|failed|unsuccessful|insufficient|will be|due|reminder|pending|statement)\b|سيتم|رفض|لم تتم|لم يتم|مستحق|تذكير|كشف حساب/i;
 /** Words that make the next amount a balance or limit, not the transaction. */
 const BALANCE_WORD = /\b(balance|bal|avl|available|limit)\b|رصيد|المتاح/i;
-const MERCHANT = /(?:\bat|لدى|عند)\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|\s+(?:using|with|via|is|was|for|card|pending)\b|\s+(?:باستخدام|بواسطة|بطاق|عبر)|\s*[*xX•#]{2,}|[.,،]|$)/i;
-const MERCHANT_IN = /\bfrom\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|\s+(?:using|with|via|is|was|for|card|pending)\b|\s+(?:باستخدام|بواسطة|بطاق|عبر)|\s*[*xX•#]{2,}|[.,،]|$)/i;
+const MERCHANT = /(?:\bat|لدى|عند)\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|\s+(?:using|with|via|is|was|for|card|pending)\b|\s+(?:باستخدام|بواسطة|بطاق|عبر)|\s+[*xX•#]{2,}|[.,،]|$)/i;
+const MERCHANT_IN = /\bfrom\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|\s+(?:using|with|via|is|was|for|card|pending)\b|\s+(?:باستخدام|بواسطة|بطاق|عبر)|\s+[*xX•#]{2,}|[.,،]|$)/i;
 
 /** Drops undefined fields so results compare and store cleanly. */
 function result(r: ParsedSms): ParsedSms {

@@ -128,4 +128,10 @@ describe('parseSms common wording', () => {
     const tpl: BankTemplate = { id: 'x', sender: /^TB$/i, formats: [{ match: /^POS/, direction: 'out', amount: /AMT:([\d.,]+)/ }] };
     expect(parseSms('TB', 'POS AMT:99.5 EGP', [tpl])).toMatchObject({ amount: 99.5, currency: 'EGP' });
   });
+  it('keeps merchants that contain xx or # and still stops at a mask', () => {
+    expect(t('EGP 85.00 debited at Exxon Mobil using card **4821')).toMatchObject({ merchant: 'Exxon Mobil' });
+    expect(t('EGP 85.00 debited at Maxxi')).toMatchObject({ merchant: 'Maxxi' });
+    expect(t('EGP 85.00 debited at Shop#12 on 03/11')).toMatchObject({ merchant: 'Shop#12' });
+    expect(t('EGP 85.00 debited at UBER **4821')).toMatchObject({ merchant: 'UBER' });
+  });
 });
