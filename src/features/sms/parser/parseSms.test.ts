@@ -114,4 +114,18 @@ describe('parseSms common wording', () => {
   it.each(cases)('%s', (body, direction, amount) => {
     expect(t(body)).toMatchObject({ status: 'understood', direction, amount });
   });
+  it('stops the merchant before trailing words', () => {
+    expect(t('Card **4821 debited EGP 85.00 at UBER using card **4821')).toMatchObject({ merchant: 'UBER' });
+    expect(t('Purchase of EGP 85.00 at UBER is pending')).toMatchObject({ merchant: 'UBER' });
+    expect(t('EGP 120.00 paid at TALABAT via Apple Pay')).toMatchObject({ merchant: 'TALABAT' });
+    expect(t('تم خصم ١٢٠ ج.م لدى طلبات باستخدام بطاقتك ****4821')).toMatchObject({ merchant: 'طلبات' });
+  });
+  it('picks the masked digits on the right side of a transfer', () => {
+    expect(t('EGP 500.00 transferred from **9999 to **1234, debited')).toMatchObject({ direction: 'out', digits: '9999' });
+    expect(t('EGP 500.00 credited from **9999 to **1234')).toMatchObject({ direction: 'in', digits: '1234' });
+  });
+  it('falls back to the currency next to a template amount', () => {
+    const tpl: BankTemplate = { id: 'x', sender: /^TB$/i, formats: [{ match: /^POS/, direction: 'out', amount: /AMT:([\d.,]+)/ }] };
+    expect(parseSms('TB', 'POS AMT:99.5 EGP', [tpl])).toMatchObject({ amount: 99.5, currency: 'EGP' });
+  });
 });
