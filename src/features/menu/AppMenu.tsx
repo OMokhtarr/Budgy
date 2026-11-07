@@ -1,6 +1,6 @@
-import { IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuToggle, useIonAlert } from '@ionic/react';
+import { IonBadge, IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuToggle, useIonAlert } from '@ionic/react';
 import {
-  cloudOutline, headsetOutline, informationCircleOutline, personCircleOutline, serverOutline, settingsOutline, starOutline,
+  chatboxEllipsesOutline, cloudOutline, headsetOutline, informationCircleOutline, personCircleOutline, serverOutline, settingsOutline, starOutline,
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { version } from '../../../package.json';
@@ -9,6 +9,8 @@ import { useLocale, useSettings } from '@/core/contexts/SettingsContext';
 import { dayTimeLabel } from '@/core/utils/period';
 import ProfileAvatar from '@/shared/components/ProfileAvatar';
 import { useCloud } from '@/core/cloud/CloudContext';
+import { usePendingCount } from '@/features/sms/hooks';
+import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
 
 export const MENU_CONTENT_ID = 'main-content';
 
@@ -16,7 +18,9 @@ export const MENU_CONTENT_ID = 'main-content';
 export default function AppMenu() {
   const { t } = useTranslation();
   const locale = useLocale();
-  const { profileName, lastBackupAt } = useSettings();
+  const { profileName, lastBackupAt, smsImport } = useSettings();
+  const showBankTexts = useSmsAvailable() && smsImport.enabled;
+  const pending = usePendingCount();
   const { user, lastSyncedAt } = useCloud();
   const [presentAlert] = useIonAlert();
 
@@ -26,11 +30,12 @@ export default function AppMenu() {
     ? lastSyncedAt ? t('cloud.synced', { when: when(lastSyncedAt) }) : t('cloud.notSynced')
     : lastBackupAt ? when(lastBackupAt) : t('menu.noBackup');
 
-  const page = (path: string, icon: string, label: string) => (
+  const page = (path: string, icon: string, label: string, badge?: number) => (
     <IonMenuToggle key={path} autoHide={false}>
       <IonItem routerLink={path} routerDirection="forward" detail={false} lines="none" button>
         <IonIcon icon={icon} slot="start" />
         <IonLabel>{label}</IonLabel>
+        {badge ? <IonBadge slot="end">{badge}</IonBadge> : null}
       </IonItem>
     </IonMenuToggle>
   );
@@ -60,6 +65,7 @@ export default function AppMenu() {
           {page('/profile', personCircleOutline, t('menu.profile'))}
           {page('/settings', settingsOutline, t('menu.settings'))}
           {page('/data', serverOutline, t('menu.data'))}
+          {showBankTexts && page('/sms', chatboxEllipsesOutline, t('menu.bankTexts'), pending)}
           <IonMenuToggle autoHide={false}>
             <IonItem button detail={false} lines="none" href={PLAY_STORE_URL} target="_blank" rel="noopener">
               <IonIcon icon={starOutline} slot="start" />

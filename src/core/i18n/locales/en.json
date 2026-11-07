@@ -360,7 +360,8 @@
     "rate": "Rate us",
     "support": "Support",
     "about": "About",
-    "noBackup": "Not backed up yet"
+    "noBackup": "Not backed up yet",
+    "bankTexts": "Bank texts"
   },
   "profile": {
     "name": "Your name",
@@ -436,6 +437,34 @@
     "duplicateTitle": "Looks like you already added this",
     "duplicateBody": "You have a transaction with the same amount, account and day that you entered yourself.",
     "keepBoth": "Keep both",
-    "skip": "Skip"
+    "skip": "Skip",
+    "bankTexts": "Bank texts",
+    "scan": "Scan inbox",
+    "scanFrom": "Scan bank texts from…",
+    "period": {
+      "sinceLast": "Since last scan",
+      "3d": "Last 3 days",
+      "1w": "Last week",
+      "2w": "Last 2 weeks",
+      "1m": "Last month",
+      "3m": "Last 3 months",
+      "6m": "Last 6 months"
+    },
+    "scanHint": "Texts already imported or dismissed are skipped.",
+    "scanFound_one": "1 new text",
+    "scanFound_other": "{{count}} new texts",
+    "scanNothing": "Nothing new",
+    "scanNoPermission": "Budgy isn't allowed to read texts any more. To allow it again, go to Settings → Import from SMS.",
+    "scanFailed": "Budgy couldn't scan your texts. Try again.",
+    "pickAccount": "Pick account",
+    "pickCategory": "Pick category",
+    "confirm": "Confirm",
+    "dismiss": "Dismiss",
+    "fillIn": "Fill in…",
+    "couldntRead": "Couldn't read this one",
+    "savedInCurrency": "Saved in {{currency}}. {{account}} holds {{held}}; you can change it later.",
+    "emptyTitle": "No bank texts to review",
+    "emptyBody": "Scan your inbox to bring in new bank texts. Texts you've already imported or dismissed won't come back.",
+    "lastScan": "Last scan: {{when}}"
   }
 }

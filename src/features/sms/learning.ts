@@ -29,7 +29,8 @@ export interface Suggestion {
   subcategoryId?: string;
 }
 
-const flowOf = (item: SmsPending): Flow => (item.direction === 'in' ? 'income' : 'expense');
+/** Money in is income; out, or no direction, is an expense. */
+export const flowOf = (item: SmsPending): Flow => (item.direction === 'in' ? 'income' : 'expense');
 
 /** What to pre-fill for a pending text, from links and rules whose account / category still exist, aren't archived and fit. */
 export function suggestFor(item: SmsPending, links: SmsLink[], rules: MerchantRule[], accounts: Account[], categories: Category[]): Suggestion {

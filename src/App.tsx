@@ -13,6 +13,7 @@ import OverviewPage from '@/features/overview/OverviewPage';
 import SettingsPage from '@/features/settings/SettingsPage';
 import ProfilePage from '@/features/profile/ProfilePage';
 import DataPage from '@/features/data/DataPage';
+import SmsReviewPage from '@/features/sms/SmsReviewPage';
 import AppMenu, { MENU_CONTENT_ID } from '@/features/menu/AppMenu';
 import FirstRunCurrency from '@/features/onboarding/FirstRunCurrency';
 import BackupReminder from '@/features/data/BackupReminder';
@@ -39,6 +40,7 @@ export default function App() {
             <Route exact path="/settings" component={SettingsPage} />
             <Route exact path="/profile" component={ProfilePage} />
             <Route exact path="/data" component={DataPage} />
+            <Route exact path="/sms" component={SmsReviewPage} />
             <Route exact path="/">
               <Redirect to="/categories" />
             </Route>
