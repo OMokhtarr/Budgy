@@ -34,3 +34,8 @@ supabase/.temp/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Store screenshot pipeline: intermediate shots (store/ holds the finished assets)
+scripts/store-assets/raw/
+scripts/store-assets/recon/
+__pycache__/

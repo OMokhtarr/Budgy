@@ -50,6 +50,22 @@ export interface Account extends Synced {
   archived?: boolean;
   order: number;
   createdAt: string;
+  /** Set only on a 'card' account that is a credit card; a card without it is a debit card. */
+  credit?: CreditCard;
+}
+
+/** A credit card's limit, statement cycle and minimum payment. */
+export interface CreditCard {
+  /** Credit limit in the card's main currency. Undefined = not set. */
+  limit?: number;
+  /** Day of the month the statement is made (1–31; a shorter month uses its last day). */
+  statementDay: number;
+  /** Day of the month the payment is due: the first such day after the statement. */
+  dueDay: number;
+  /** Minimum payment as a percent of the statement balance. */
+  minPercent?: number;
+  /** The minimum payment is at least this much, in the main currency. */
+  minAmount?: number;
 }
 
 /** A part of a category that people add themselves. Stored inside its category, so it syncs with it. */

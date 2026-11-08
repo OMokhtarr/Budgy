@@ -9,6 +9,16 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Budgy</title>
+    <script>
+      // Apply the saved theme before the first paint (same rule as applyTheme in SettingsContext), so
+      // neither the splash nor the app shows the other theme first.
+      try {
+        var theme = JSON.parse(localStorage.getItem('budgy-settings') || '{}').theme || 'system';
+        if (theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('ion-palette-dark');
+        }
+      } catch (e) {}
+    </script>
     <style>
       #budgy-splash {
         position: fixed;
@@ -19,12 +29,11 @@
         align-items: center;
         justify-content: center;
         gap: 24px;
-        background: #ffffff;
-        transition: opacity 0.35s ease;
+        /* The app's background (--b-bg in src/index.css), so the splash fades straight into the app */
+        background: #f4f6f8;
+        transition: opacity 0.25s ease;
       }
-      @media (prefers-color-scheme: dark) {
-        #budgy-splash { background: #0b1220; }
-      }
+      .ion-palette-dark #budgy-splash { background: #131315; }
       #budgy-splash.budgy-splash--hidden {
         opacity: 0;
         pointer-events: none;

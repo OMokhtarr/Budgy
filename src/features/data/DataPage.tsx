@@ -5,11 +5,13 @@ import { cloudDownloadOutline, cloudUploadOutline, documentAttachOutline, docume
 import { useTranslation } from 'react-i18next';
 import { useDataActions } from './useDataActions';
 import { useCloud } from '@/core/cloud/CloudContext';
+import { useRevealWhen } from '@/shared/splash';
 
 export default function DataPage() {
   const { t } = useTranslation();
   const { exportCsv, importCsv, backup, restore, erase } = useDataActions();
   const { user } = useCloud();
+  useRevealWhen(true);
 
   return (
     <IonPage>

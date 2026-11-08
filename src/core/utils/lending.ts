@@ -5,7 +5,7 @@ import type { Account, Amounts, Transaction } from '@/shared/models';
 export type LendingShares = Map<string, Map<string, number>>;
 
 /** What a transaction moves on one account: [amount, currency], positive when money arrives. */
-function changeOn(t: Transaction, id: string): [number, string][] {
+export function changeOn(t: Transaction, id: string): [number, string][] {
   const changes: [number, string][] = [];
   if (t.accountId === id) changes.push([t.type === 'income' ? t.amount : -t.amount, t.currency]);
   if (t.type === 'transfer' && t.toAccountId === id) changes.push([t.toAmount ?? t.amount, t.toCurrency ?? t.currency]);

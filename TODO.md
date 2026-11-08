@@ -33,15 +33,11 @@
     - Privacy policy: the last card digits and merchant names Budgy learns are saved to the signed-in account
       (not the messages).
     - Short demo video.
-- [ ] **Credit cards (later phase):** today `'card'` is only an account type label, and a card's debt shows only
-      because its balance is negative. Start with a design pass. Missing:
-  - Credit limit and available credit.
-  - Statement cycle: closing day and payment due date.
-  - Statement balance versus current balance.
-  - Minimum payment and due-date reminders.
-  - Card payments from a bank account counted as transfers, not spending.
-  - Interest and fees.
-  - Credit cards told apart from debit cards.
+- [x] **Credit cards:** limit, statement cycle, statement vs current balance, minimum payment, in-app due
+      reminders, payments as transfers, interest and fees, credit vs debit
+      (`docs/superpowers/specs/2026-11-08-credit-cards-design.md`).
+  - [ ] Phone notifications for card due dates (needs `@capacitor/local-notifications`, the notification
+        permission, and store/privacy wording).
 
 ---
 
@@ -50,11 +46,15 @@
 1. [ ] **Privacy & store:**
    - The links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
      https://omokhtarr.github.io/Budgy/delete-account.html (Play's account deletion link).
-   - [ ] Changes to `docs/privacy-policy.md` must also go in those pages.
-   - Fill in Google Play's **Data safety** form to match the privacy policy.
+   - Changes to `docs/privacy-policy.md` must also go in those pages (`privacy.html`, `privacy-ar.html`,
+     and the `delete-account` pages if deletion changes) on the `gh-pages` branch. All four matched the
+     policy and the app on 2026-11-07. The next change is due with the SMS import update.
+   - Fill in Google Play's **Data safety** form to match the privacy policy. Every answer, plus the
+     listing text, graphics and release steps, is in `docs/play-store.md`. Keep that file in step with
+     Play Console.
 2. [ ] **Supabase migration:** deploy `supabase/migrations/20261107120000_sms_learning_tables.sql` to the Supabase
-   project **before** any build with stage 2 reaches users. Release builds sync the new tables too, and sync
-   fails without them.
+   project **before** any build with stage 2 reaches users. Until it's there, sync skips the new tables, so
+   learned card numbers and merchant rules stay on each phone.
 
 ---
 

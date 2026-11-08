@@ -19,6 +19,7 @@ import { doneIcon, editIcon } from '@/shared/icons';
 import AccountEditModal from '@/features/accounts/AccountEditModal';
 import CategoryEditModal from './CategoryEditModal';
 import type { Account, Amounts, Category, Flow } from '@/shared/models';
+import { useRevealWhen } from '@/shared/splash';
 
 /**
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
@@ -56,6 +57,7 @@ export default function CategoriesPage() {
   const totals = useMemo(() => totalsOf(txs, conv, tiles), [txs, conv, tiles]);
 
   const accounts = useAccounts();
+  useRevealWhen(!!categories && !!txs && !!accounts);
   // Accounts with "Display in expenses" on have a tile, except Cash In and Cash Out; only savings and lending to debts are spending.
   const tileAccounts = splitMainAccounts(accounts ?? [])[1].filter((a) => tiles.tileIds.has(a.id!) || tiles.everydayIds.has(a.id!));
   // Account tiles are dragged among themselves, the same way as the categories.

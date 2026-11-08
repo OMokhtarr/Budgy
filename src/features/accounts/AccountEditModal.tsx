@@ -16,7 +16,7 @@ import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
 import RateInput from '@/shared/components/RateInput';
-import type { Account, AccountGroup, AccountType, Flow } from '@/shared/models';
+import type { Account, AccountGroup, AccountType, CreditCard, Flow } from '@/shared/models';
 
 /** The currency list, plus `current` if it isn't in it (e.g. from a restored backup). */
 function currencyOptions(current: string): string[] {
@@ -40,6 +40,11 @@ interface Props {
 }
 
 const GROUPS: AccountGroup[] = ['regular', 'savings', 'debt'];
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+/** A new credit card starts with a statement on the 25th, due on the 20th of the next month. */
+const NEW_CREDIT: CreditCard = { statementDay: 25, dueDay: 20 };
+/** A typed amount, or undefined when it's empty or zero. */
+const optional = (typed: string) => parseNumber(typed) || undefined;
 const DEBT_SIDES: DebtSide[] = ['owed', 'owe'];
 const DEFAULT_OPTIONS: { value?: Flow; label: string }[] = [
   { label: 'accounts.none' },
@@ -72,6 +77,13 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const [defaultFor, setDefaultFor] = useState<Flow>();
   /** Who owes whom on a debt while nothing is owed yet; after that the amounts' signs say it. */
   const [sideChoice, setSideChoice] = useState<DebtSide>('owed');
+  /** A card is a debit card until it's marked as a credit card. */
+  const [isCredit, setIsCredit] = useState(false);
+  const [limit, setLimit] = useState('');
+  const [statementDay, setStatementDay] = useState(NEW_CREDIT.statementDay);
+  const [dueDay, setDueDay] = useState(NEW_CREDIT.dueDay);
+  const [minPercent, setMinPercent] = useState('');
+  const [minAmount, setMinAmount] = useState('');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -96,6 +108,13 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     setShowInExpenses(account?.showInExpenses);
     setDefaultFor(account?.defaultFor);
     setSideChoice('owed');
+    const credit = account?.credit;
+    setIsCredit(!!credit);
+    setLimit(credit?.limit ? String(credit.limit) : '');
+    setStatementDay(credit?.statementDay ?? NEW_CREDIT.statementDay);
+    setDueDay(credit?.dueDay ?? NEW_CREDIT.dueDay);
+    setMinPercent(credit?.minPercent ? String(credit.minPercent) : '');
+    setMinAmount(credit?.minAmount ? String(credit.minAmount) : '');
     setLoaded(true);
   }, [isOpen, account, newGroup, accountName, balances, loaded, base]);
 
@@ -108,17 +127,22 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const typedSide = debtSideOf(currency2 ? [balance, balance2] : [balance]);
   const side: DebtSide = typedSide === 'owed' || typedSide === 'owe' ? typedSide : sideChoice;
   const plainAmounts = isDebt && typedSide !== 'mixed';
+  // A credit card is typed as what you owe on it, unless it was overpaid.
+  const credit = !isDebt && type === 'card' && isCredit;
+  const owedOnCard = credit && typedSide !== 'owed' && typedSide !== 'mixed';
+  const plainSide: DebtSide | undefined = plainAmounts ? side : owedOnCard ? 'owe' : undefined;
   const pickSide = (s: DebtSide) => {
     setSideChoice(s);
     setBalance((b) => signedFor(b, s));
     setBalance2((b) => signedFor(b, s));
   };
   const balanceField = (value: string, onValue: (v: string) => void) => ({
-    value: plainAmounts ? unsigned(value) : value,
+    value: plainSide ? unsigned(value) : value,
     onChange: (e: ChangeEvent<HTMLInputElement>) =>
-      onValue(plainAmounts ? signedFor(cleanNumberInput(e.target.value), side) : cleanNumberInput(e.target.value, true)),
+      onValue(plainSide ? signedFor(cleanNumberInput(e.target.value), plainSide) : cleanNumberInput(e.target.value, true)),
   });
-  const balanceLabel = (c: string) => t(plainAmounts ? 'debts.amount' : 'accounts.currentBalance', { currency: c });
+  const balanceLabel = (c: string) =>
+    t(plainAmounts ? 'debts.amount' : owedOnCard ? 'cards.owedNow' : 'accounts.currentBalance', { currency: c });
 
   const current = (account && balances?.get(account.id!)) || {};
   // Switching a currency shows the balance the account already has in it (0 for a new one).
@@ -178,6 +202,15 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
       showInExpenses: expensesOn === switchesOnByDefault(group) ? undefined : expensesOn,
       // A debt can't be where new income or expenses start.
       defaultFor: isDebt ? undefined : defaultFor,
+      credit: credit
+        ? {
+            limit: optional(limit),
+            statementDay,
+            dueDay,
+            minPercent: optional(minPercent),
+            minAmount: optional(minAmount),
+          }
+        : undefined,
     };
     let id = account?.id;
     if (account && id != null) {
@@ -284,6 +317,75 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
                 ))}
               </div>
             </div>
+          )}
+          {!isDebt && type === 'card' && (
+            <div className="b-field">
+              <span>{t('cards.kind')}</span>
+              <div className="b-pills">
+                <button className={!isCredit ? 'is-active' : ''} onClick={() => setIsCredit(false)}>
+                  {t('cards.debit')}
+                </button>
+                <button className={isCredit ? 'is-active' : ''} onClick={() => setIsCredit(true)}>
+                  {t('cards.credit')}
+                </button>
+              </div>
+            </div>
+          )}
+          {credit && (
+            <>
+              <label className="b-field">
+                <span>{t('cards.limit', { currency })}</span>
+                <input
+                  className="b-input b-num"
+                  inputMode="decimal"
+                  placeholder={t('cards.noLimit')}
+                  value={limit}
+                  onChange={(e) => setLimit(cleanNumberInput(e.target.value))}
+                />
+              </label>
+              <div className="b-field-row b-field-row--even">
+                <label className="b-field">
+                  <span>{t('cards.statementDay')}</span>
+                  <select className="b-input" value={statementDay} onChange={(e) => setStatementDay(Number(e.target.value))}>
+                    {DAYS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="b-field">
+                  <span>{t('cards.dueDay')}</span>
+                  <select className="b-input" value={dueDay} onChange={(e) => setDueDay(Number(e.target.value))}>
+                    {DAYS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="b-field-hint">{t('cards.daysHint')}</div>
+              <div className="b-field-row b-field-row--even">
+                <label className="b-field">
+                  <span>{t('cards.minPercent')}</span>
+                  <input
+                    className="b-input b-num"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={minPercent}
+                    onChange={(e) => setMinPercent(cleanNumberInput(e.target.value))}
+                  />
+                </label>
+                <label className="b-field">
+                  <span>{t('cards.minAmount', { currency })}</span>
+                  <input
+                    className="b-input b-num"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={minAmount}
+                    onChange={(e) => setMinAmount(cleanNumberInput(e.target.value))}
+                  />
+                </label>
+              </div>
+              <div className="b-field-hint">{t('cards.minHint')}</div>
+            </>
           )}
           <div className="b-field">
             <span>{t('accounts.group')}</span>

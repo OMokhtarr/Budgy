@@ -27,6 +27,7 @@ import Avatar from '@/shared/components/Avatar';
 import MoneyText from '@/shared/components/MoneyText';
 import { deleteMany, moveToAccount, moveToCategory, moveToDay } from './bulk';
 import type { Transaction } from '@/shared/models';
+import { useRevealWhen } from '@/shared/splash';
 
 /** What the category filter matches on: a category, or all transfers. */
 const filterKey = (x: Transaction) => (x.type === 'transfer' ? 'transfer' : `c${x.categoryId}`);
@@ -48,7 +49,7 @@ export default function TransactionsPage() {
   const locale = useLocale();
   const openEditor = useTxEditor();
   const { range } = usePeriod();
-  const { accounts, categories } = useLookups();
+  const { accounts, categories, ready: lookupsReady } = useLookups();
   const activeAccounts = useAccounts();
   const activeCategories = useCategories();
   const { accountName, categoryName } = useNames();
@@ -67,6 +68,7 @@ export default function TransactionsPage() {
   const contentRef = usePeriodSwipe(!selecting);
 
   const txs = useFilteredTransactionsInRange(range);
+  useRevealWhen(!!txs && lookupsReady);
   const { tiles } = useAccountFilter();
 
   const filtered = useMemo(() => {

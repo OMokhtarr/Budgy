@@ -22,7 +22,8 @@ import { buildTxRecord, saveTx } from './txRecord';
 
 const LAST_ACCOUNT_KEY = 'budgy-last-account';
 
-function lastAccount(): string | undefined {
+/** The account the last transaction was written from, if any. */
+export function lastAccount(): string | undefined {
   try {
     const v = localStorage.getItem(LAST_ACCOUNT_KEY);
     return v || undefined;
@@ -61,7 +62,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [toAccountId, setToAccountId] = useState<string | undefined>(tx?.toAccountId ?? init.toAccountId);
   const [categoryId, setCategoryId] = useState<string | undefined>(tx?.categoryId ?? init.categoryId);
   const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId);
-  const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : init.amount != null ? String(init.amount) : '');
+  const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : init.amount ? String(init.amount) : '');
   // Currency the user picked for the amount, and for what arrives in a transfer.
   const [curPick, setCurPick] = useState<string | undefined>(tx?.currency ?? init.currency);
   const [toCurPick, setToCurPick] = useState<string | undefined>(tx?.toCurrency);

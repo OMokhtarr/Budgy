@@ -16,7 +16,12 @@
     </style>
 
 
+    <!-- One launch screen on every Android version (the SplashScreen API, via androidx core-splashscreen):
+         the app icon on the app's background. @capacitor/splash-screen keeps it up until the web app
+         has drawn its first screen (see src/shared/splash.ts). -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

@@ -8,13 +8,16 @@ export interface EditorInit {
   categoryId?: string;
   accountId?: string;
   toAccountId?: string;
+  /** Starting amount for a new transaction, e.g. what's left to pay on a credit card. */
+  amount?: number;
+  /** Starting note for a new transaction. */
+  note?: string;
   /** Pass an existing transaction to edit it. */
   tx?: Transaction;
-  amount?: number;
+  /** Starting currency for a new transaction, e.g. a bank text's; kept even when the account doesn't hold it. */
   currency?: string;
   /** Full ISO time; kept when the user doesn't change the day. */
   date?: string;
-  note?: string;
   /** Shown above the sheet, e.g. the bank text. */
   header?: ReactNode;
   /** Set when the editor opens from a bank text: saved on the transaction, offers all three types, runs the duplicate check. */
