@@ -5,9 +5,13 @@ import { parseSms } from './parser/parseSms';
 import { matchesSender } from './parser/senders';
 import type { SmsMessage } from './parser/types';
 
-/** SHA-256 hex of sender, received time and body. */
+/**
+ * SHA-256 hex of the sender and the received time (to the millisecond), which tell texts apart.
+ * The body is left out on purpose: the fingerprint syncs on the transaction, and a hash of the body
+ * would let anyone with the cloud copy confirm guesses about what the message said.
+ */
 export function fingerprintOf(msg: SmsMessage): Promise<string> {
-  return sha256Hex(`${msg.address}\n${msg.date}\n${msg.body}`);
+  return sha256Hex(`${msg.address}\n${msg.date}`);
 }
 
 export type ScanPeriod = 'sinceLast' | '3d' | '1w' | '2w' | '1m' | '3m' | '6m';

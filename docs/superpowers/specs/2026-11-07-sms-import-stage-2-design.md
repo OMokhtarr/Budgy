@@ -125,7 +125,11 @@ syncs and goes in backups. `smsSeen` holds only texts the user dismissed or skip
 The scan shows progress and ends with a short summary: "3 new texts", or "Nothing new". If the
 permission was revoked, it explains that and points to Settings.
 
-**Fingerprint:** SHA-256 (via `crypto.subtle`) of the sender, the received time and the body, as hex.
+**Fingerprint:** SHA-256 (via `crypto.subtle`) of the sender and the received time (to the millisecond),
+as hex. The body is deliberately left out: the fingerprint syncs on the transaction, and a hash of the
+body would let anyone holding the cloud copy confirm guesses about the message (e.g. its balance). The
+sender and time are already in the cloud (the link and the transaction's date), so this reveals nothing
+new. (Changed 2026-11-08 after a security review.)
 
 ### Review screen ("Bank texts")
 

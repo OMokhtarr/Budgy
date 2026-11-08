@@ -28,7 +28,7 @@ describe('scanInbox', () => {
   });
 
   it('skips texts already pending, dismissed or imported, even when deleted', async () => {
-    const texts = ['a', 'b', 'c', 'd'].map((x, i) => msg({ id: String(i), body: `${DEBIT} ${x}` }));
+    const texts = [0, 1, 2, 3].map((i) => msg({ id: String(i), date: msg().date + i * 60_000 }));
     const [fa, fb, fc] = await Promise.all(texts.slice(0, 3).map(fingerprintOf));
     await database.smsSeen.put({ fingerprint: fa, outcome: 'dismissed', at: 'x' });
     await database.transactions.add({ id: 't1', smsFingerprint: fb, deletedAt: 'x' } as unknown as Transaction);
@@ -39,7 +39,12 @@ describe('scanInbox', () => {
 
   it('skips by fingerprint, not by SMS id', async () => {
     await run([msg()]);
-    expect((await run([msg({ body: `${DEBIT} again` })])).added).toBe(1);
+    expect((await run([msg({ date: msg().date + 1 })])).added).toBe(1);
+  });
+
+  it('fingerprints a text without its message', async () => {
+    expect(await fingerprintOf(msg({ body: 'other words' }))).toBe(await fingerprintOf(msg()));
+    expect(await fingerprintOf(msg({ address: 'NBE' }))).not.toBe(await fingerprintOf(msg()));
   });
 
   it('adds each text once even when two scans overlap', async () => {
