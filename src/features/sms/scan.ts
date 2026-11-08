@@ -22,8 +22,15 @@ export function sinceOf(period: ScanPeriod, now: Date, lastScanAt?: string): num
     return Number.isNaN(last) ? sinceOf('1w', now) : last;
   }
   const d = new Date(now);
-  if (period in DAYS) d.setDate(d.getDate() - DAYS[period as keyof typeof DAYS]);
-  else d.setMonth(d.getMonth() - MONTHS[period as keyof typeof MONTHS]);
+  if (period in DAYS) {
+    d.setDate(d.getDate() - DAYS[period as keyof typeof DAYS]);
+  } else {
+    // Mar 31 back a month is Feb 28, not Mar 3: keep the day within the target month.
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - MONTHS[period as keyof typeof MONTHS]);
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  }
   return d.getTime();
 }
 

@@ -60,6 +60,11 @@ describe('sinceOf', () => {
     expect(sinceOf('1m', now)).toBe(new Date(2026, 3, 15, 10, 0).getTime());
     expect(sinceOf('3d', now)).toBe(new Date(2026, 4, 12, 10, 0).getTime());
   });
+  it("stops at the end of a shorter month instead of running into the next", () => {
+    expect(sinceOf('1m', new Date(2026, 2, 31, 10, 0))).toBe(new Date(2026, 1, 28, 10, 0).getTime());
+    expect(sinceOf('3m', new Date(2026, 4, 31, 10, 0))).toBe(new Date(2026, 1, 28, 10, 0).getTime());
+    expect(sinceOf('6m', new Date(2026, 7, 31, 10, 0))).toBe(new Date(2026, 1, 28, 10, 0).getTime());
+  });
   it('uses the last scan, or a week when there is none', () => {
     expect(sinceOf('sinceLast', now, '2026-05-14T08:00:00.000Z')).toBe(Date.parse('2026-05-14T08:00:00.000Z'));
     expect(sinceOf('sinceLast', now, undefined)).toBe(sinceOf('1w', now));
