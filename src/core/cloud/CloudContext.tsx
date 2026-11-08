@@ -111,6 +111,12 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  /** Empties this device's data (see `clearLocal`). Its bank texts go too, so the last scan is forgotten with them. */
+  const clearLocalData = useCallback(async () => {
+    await clearLocal(db);
+    settingsRef.current.forgetLastScan();
+  }, []);
+
   // ── Session ──
   const [redirectError, setRedirectError] = useState(() => (cloudEnabled ? takeRedirectError() : undefined));
   useEffect(() => {
@@ -176,7 +182,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         // "Use the account's data": empty this device first; the sync then downloads everything.
-        if (choice === 'cloud') await clearLocal(db);
+        if (choice === 'cloud') await clearLocalData();
       }
       state = { ...state, ...(await syncOnce(db, remote, port, state)) };
       const now = new Date().toISOString();
@@ -201,7 +207,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
         void sync();
       }
     }
-  }, [user, port, askHowToMerge]);
+  }, [user, port, askHowToMerge, clearLocalData]);
 
   // After sign-in, and on start with a saved session.
   useEffect(() => {
@@ -252,10 +258,10 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   );
 
   const removeLocalData = useCallback(async (userId: string) => {
-    await clearLocal(db);
+    await clearLocalData();
     await seedIfEmpty(db);
     forgetState(userId);
-  }, []);
+  }, [clearLocalData]);
 
   const signOut = useCallback(
     async (keepLocal: boolean) => {

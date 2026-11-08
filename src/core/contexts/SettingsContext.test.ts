@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { stampIfSynced, type Settings } from './SettingsContext';
+import { stampIfSynced, withoutLastScan, type Settings } from './SettingsContext';
 
 const settings = (s: Partial<Settings>) => ({ currency: 'USD', ...s }) as Settings;
 
@@ -29,5 +29,14 @@ describe('stampIfSynced', () => {
     const prev = settings({ syncedUpdatedAt: '2026-11-04T09:00:00.000Z' });
     const next = { ...prev, theme: 'dark' as const };
     expect(stampIfSynced(prev, next)).toBe(next);
+  });
+});
+
+describe('withoutLastScan', () => {
+  it('forgets the last scan and keeps the rest, without marking anything for upload', () => {
+    const prev = settings({ syncedUpdatedAt: '2026-11-04T09:00:00.000Z', smsImport: { enabled: true, senders: ['CIB'], lastScanAt: '2026-11-07T10:00:00.000Z' } });
+    const next = withoutLastScan(prev);
+    expect(next.smsImport).toEqual({ enabled: true, senders: ['CIB'] });
+    expect([next.currency, next.syncedUpdatedAt, next.syncedDirty]).toEqual(['USD', '2026-11-04T09:00:00.000Z', undefined]);
   });
 });

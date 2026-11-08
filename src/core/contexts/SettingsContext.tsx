@@ -48,6 +48,8 @@ interface SettingsContextValue extends Settings {
   applySynced: (data: Partial<BackupSettings>, updatedAt: string) => void;
   /** Sync uploaded the settings stamped `updatedAt`; clears the upload mark unless they changed since. */
   markSyncedClean: (updatedAt: string) => void;
+  /** Forgets the last inbox scan, for when the texts waiting for review were emptied (see `withoutLastScan`). */
+  forgetLastScan: () => void;
 }
 
 const STORAGE_KEY = 'budgy-settings';
@@ -107,7 +109,17 @@ const SettingsContext = createContext<SettingsContextValue>({
   setRate: () => {},
   applySynced: () => {},
   markSyncedClean: () => {},
+  forgetLastScan: () => {},
 });
+
+/**
+ * The settings without the last inbox scan. Used when this phone's bank texts (waiting and dismissed) are
+ * emptied, so the next scan can't start "since the last scan" and miss the texts that were removed.
+ */
+export function withoutLastScan(s: Settings): Settings {
+  const { lastScanAt: _lastScanAt, ...smsImport } = s.smsImport;
+  return { ...s, smsImport };
+}
 
 /** Stamps a change to any synced setting so sync uploads it. */
 export function stampIfSynced(prev: Settings, next: Settings): Settings {
@@ -187,9 +199,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     [change],
   );
 
+  const forgetLastScan = useCallback(() => change(withoutLastScan), [change]);
+
   const value = useMemo(
-    () => ({ ...settings, update, setRate, applySynced, markSyncedClean }),
-    [settings, update, setRate, applySynced, markSyncedClean],
+    () => ({ ...settings, update, setRate, applySynced, markSyncedClean, forgetLastScan }),
+    [settings, update, setRate, applySynced, markSyncedClean, forgetLastScan],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
