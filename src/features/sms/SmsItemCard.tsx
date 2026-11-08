@@ -1,5 +1,5 @@
 import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
-import { IonIcon } from '@ionic/react';
+import { IonIcon, useIonToast } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
@@ -39,6 +39,8 @@ export default function SmsItemCard({ item, choice, account, category, onPickAcc
   const askDuplicate = useDuplicatePrompt();
   const { accountName, categoryName } = useNames();
   const [busy, setBusy] = useState(false);
+  const [presentToast] = useIonToast();
+  const failed = () => void presentToast({ message: t('sms.actionFailed'), duration: 3000, position: 'top', color: 'danger' });
 
   const when = dayTimeLabel(new Date(item.date), locale, { today: t('period.today'), yesterday: t('period.yesterday') });
   const sender = item.digits ? `${item.address} · ••${item.digits}` : item.address;
@@ -48,12 +50,14 @@ export default function SmsItemCard({ item, choice, account, category, onPickAcc
   const held = account ? currenciesOf(account) : [];
   const notHeld = understood && account != null && item.currency != null && !held.includes(item.currency);
 
-  /** Runs one action at a time; the card goes away once the text is resolved. */
+  /** Runs one action at a time; the card goes away once the text is resolved, and stays (with a toast) if it fails. */
   const run = (fn: () => Promise<void>) => async () => {
     if (busy) return;
     setBusy(true);
     try {
       await fn();
+    } catch {
+      failed();
     } finally {
       setBusy(false);
     }
@@ -89,8 +93,9 @@ export default function SmsItemCard({ item, choice, account, category, onPickAcc
           <p dir="auto">{item.body}</p>
         </div>
       ),
-      onSaved: (tx) => void resolveImported(item, tx),
-      onSkipped: () => void resolveSkipped(item, 'duplicate'),
+      // The transaction is saved by then; trying again from the card won't save it twice.
+      onSaved: (tx) => void resolveImported(item, tx).catch(failed),
+      onSkipped: () => void resolveSkipped(item, 'duplicate').catch(failed),
     });
   };
 
