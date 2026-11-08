@@ -52,9 +52,6 @@
    - Fill in Google Play's **Data safety** form to match the privacy policy. Every answer, plus the
      listing text, graphics and release steps, is in `docs/play-store.md`. Keep that file in step with
      Play Console.
-2. [ ] **Supabase migration:** deploy `supabase/migrations/20261107120000_sms_learning_tables.sql` to the Supabase
-   project **before** any build with stage 2 reaches users. Until it's there, sync skips the new tables, so
-   learned card numbers and merchant rules stay on each phone.
 
 ---
 
