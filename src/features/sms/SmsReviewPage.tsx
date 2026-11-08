@@ -10,7 +10,7 @@ import type { SmsPending } from '@/shared/models';
 import { useLearned, usePendingSms } from './hooks';
 import { flowOf, suggestFor } from './learning';
 import PickerSheet, { type PickerItem } from './PickerSheet';
-import { choiceOf, type CardPick } from './review';
+import { choiceOf, usablePick, type CardPick } from './review';
 import ScanSheet from './ScanSheet';
 import SmsItemCard from './SmsItemCard';
 import { useSmsAvailability } from './useSmsAvailable';
@@ -43,7 +43,8 @@ export default function SmsReviewPage() {
     const map = new Map<string, ReturnType<typeof choiceOf>>();
     for (const item of items ?? []) {
       const s = suggestFor(item, learned?.links ?? [], learned?.rules ?? [], accounts ?? [], categories ?? []);
-      map.set(item.fingerprint, choiceOf(s, picks[item.fingerprint]));
+      const pick = usablePick(picks[item.fingerprint], flowOf(item), accounts ?? [], categories ?? []);
+      map.set(item.fingerprint, choiceOf(s, pick));
     }
     return map;
   }, [items, learned, accounts, categories, picks]);
