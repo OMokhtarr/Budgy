@@ -20,7 +20,8 @@ import { iconFor } from '@/shared/icons';
 
 const LAST_ACCOUNT_KEY = 'budgy-last-account';
 
-function lastAccount(): string | undefined {
+/** The account the last transaction was written from, if any. */
+export function lastAccount(): string | undefined {
   try {
     const v = localStorage.getItem(LAST_ACCOUNT_KEY);
     return v || undefined;
@@ -58,7 +59,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [toAccountId, setToAccountId] = useState<string | undefined>(tx?.toAccountId ?? init.toAccountId);
   const [categoryId, setCategoryId] = useState<string | undefined>(tx?.categoryId ?? init.categoryId);
   const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId);
-  const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : '');
+  const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : init.amount ? String(init.amount) : '');
   // Currency the user picked for the amount, and for what arrives in a transfer.
   const [curPick, setCurPick] = useState<string | undefined>(tx?.currency);
   const [toCurPick, setToCurPick] = useState<string | undefined>(tx?.toCurrency);
@@ -69,7 +70,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [active, setActive] = useState<Side>('from');
   // Exchange rate the user typed, and the currency (or pair) it belongs to.
   const [rateEdit, setRateEdit] = useState<{ key: string; text: string } | null>(null);
-  const [note, setNote] = useState(tx?.note ?? '');
+  const [note, setNote] = useState(tx?.note ?? init.note ?? '');
   const [date, setDate] = useState<string>(dayKey(tx ? new Date(tx.date) : new Date()));
   const [picking, setPicking] = useState<Side | null>(null);
   const [dateOpen, setDateOpen] = useState(false);

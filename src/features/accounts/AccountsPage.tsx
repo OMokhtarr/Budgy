@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { IonButton, IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
 import { addOutline, calculatorOutline, cashOutline, swapHorizontalOutline, swapVerticalOutline, walletOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
-import { useConverter, useMoney, useSettings } from '@/core/contexts/SettingsContext';
+import { useConverter, useLocale, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
-import { useAccounts, useBalances, useNames } from '@/core/db/hooks';
+import { useAccounts, useBalances, useCardStatuses, useNames } from '@/core/db/hooks';
+import { isCreditCard, type CardStatus } from '@/core/utils/creditCard';
 import { addAmounts, currenciesOf, groupOf, linesOf, roundTo } from '@/core/utils/currency';
 import { accountSections, splitMainAccounts } from '@/core/utils/defaultAccount';
 import { assetsAndDebts } from '@/core/utils/finances';
@@ -14,6 +15,8 @@ import MoneyText from '@/shared/components/MoneyText';
 import { useSwipe } from '@/shared/hooks/useSwipe';
 import { addIcon } from '@/shared/icons';
 import AccountEditModal from './AccountEditModal';
+import CardReminders from './CardReminders';
+import CreditCardSheet from './CreditCardSheet';
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
 
@@ -34,6 +37,19 @@ export default function AccountsPage() {
   useRevealWhen(!!accounts && !!balances);
   const [tab, setTab] = useState<Tab>('accounts');
   const [editing, setEditing] = useState<Editing | null>(null);
+  /** The credit card whose summary is open. */
+  const [viewing, setViewing] = useState<Account>();
+  const cardStatuses = useCardStatuses();
+  const locale = useLocale();
+
+  /** A credit card's line under its name: when its statement is due, or that it's paid. */
+  const cardNote = (s: CardStatus | undefined) => {
+    if (!s) return '';
+    if (s.state === 'overdue') return t('cards.rowOverdue');
+    if (s.state === 'paid') return t('cards.rowPaid');
+    if (s.state === 'clear') return '';
+    return t('cards.rowDue', { date: new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(s.cycle.dueOn) });
+  };
 
   const all = accounts ?? [];
   const inGroup = (g: AccountGroup) => all.filter((a) => groupOf(a) === g);
@@ -66,11 +82,12 @@ export default function AccountsPage() {
     const [[cur, bal], ...rest] = accountLines(a);
     const color = tone === 'owed' ? 'b-income' : tone === 'owe' || bal < 0 ? 'b-expense' : '';
     // A debt has no type to show: it's a person or a loan.
-    const sub = [groupOf(a) === 'debt' ? '' : t(`accountType.${a.type}`), a.currency2 ? `${a.currency} + ${a.currency2}` : '']
-      .filter(Boolean)
-      .join(' · ');
+    const credit = isCreditCard(a);
+    const status = credit ? cardStatuses?.get(a.id!) : undefined;
+    const kind = groupOf(a) === 'debt' ? '' : credit ? t('cards.credit') : t(`accountType.${a.type}`);
+    const sub = [kind, a.currency2 ? `${a.currency} + ${a.currency2}` : '', cardNote(status)].filter(Boolean).join(' · ');
     return (
-      <button key={a.id} className="b-row" onClick={() => setEditing(a)}>
+      <button key={a.id} className="b-row" onClick={() => (credit && !a.archived ? setViewing(a) : setEditing(a))}>
         <Avatar icon={a.icon} color={a.color} square />
         <div className="b-row__main">
           <div className="b-row__title">{accountName(a)}</div>
@@ -193,6 +210,7 @@ export default function AccountsPage() {
         <div className="b-page">
           {tab === 'accounts' && (
             <>
+              <CardReminders onOpen={setViewing} />
               <div className="b-actions">
                 <button className="b-btn b-btn--muted" onClick={() => openEditor({ type: 'transfer' })}>
                   <IonIcon icon={swapHorizontalOutline} />
@@ -279,6 +297,7 @@ export default function AccountsPage() {
         </div>
       </IonContent>
 
+      <CreditCardSheet account={viewing} onClose={() => setViewing(undefined)} onEdit={setEditing} />
       <AccountEditModal
         isOpen={editing != null}
         account={editing && 'id' in editing ? editing : undefined}

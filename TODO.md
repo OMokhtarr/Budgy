@@ -33,15 +33,11 @@
     - Play Permissions Declaration Form and Data safety form.
     - SMS wording in the privacy policy.
     - Short demo video.
-- [ ] **Credit cards (later phase):** today `'card'` is only an account type label, and a card's debt shows only
-      because its balance is negative. Start with a design pass. Missing:
-  - Credit limit and available credit.
-  - Statement cycle: closing day and payment due date.
-  - Statement balance versus current balance.
-  - Minimum payment and due-date reminders.
-  - Card payments from a bank account counted as transfers, not spending.
-  - Interest and fees.
-  - Credit cards told apart from debit cards.
+- [x] **Credit cards:** limit, statement cycle, statement vs current balance, minimum payment, in-app due
+      reminders, payments as transfers, interest and fees, credit vs debit
+      (`docs/superpowers/specs/2026-11-08-credit-cards-design.md`).
+  - [ ] Phone notifications for card due dates (needs `@capacitor/local-notifications`, the notification
+        permission, and store/privacy wording).
 
 ---
 
