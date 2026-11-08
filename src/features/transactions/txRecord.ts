@@ -50,13 +50,20 @@ export function buildTxRecord(d: TxDraft): Omit<Transaction, 'id'> {
   };
 }
 
-/** add() or, with an id, put(); returns the stored transaction with its id. */
+/**
+ * add() or, with an id, put(); returns the stored transaction with its id. A new transaction from a bank
+ * text is added only once: if one with its fingerprint exists (even deleted), that one is returned instead.
+ */
 export async function saveTx(record: Omit<Transaction, 'id'>, id?: string, database: BudgyDB = db): Promise<Transaction> {
   if (id != null) {
     const tx = { ...record, id };
     await database.transactions.put(tx);
     return tx;
   }
-  const newId = await database.transactions.add(record);
-  return { ...record, id: newId };
+  const fingerprint = record.smsFingerprint;
+  if (!fingerprint) return { ...record, id: await database.transactions.add(record) };
+  return database.transaction('rw', database.transactions, async () => {
+    const existing = await database.transactions.where('smsFingerprint').equals(fingerprint).first();
+    return existing ?? { ...record, id: await database.transactions.add(record) };
+  });
 }

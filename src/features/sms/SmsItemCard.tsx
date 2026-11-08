@@ -6,10 +6,10 @@ import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useNames } from '@/core/db/hooks';
 import { currenciesOf } from '@/core/utils/currency';
 import { dayTimeLabel } from '@/core/utils/period';
-import { buildTxRecord, saveTx } from '@/features/transactions/txRecord';
+import { buildTxRecord } from '@/features/transactions/txRecord';
 import { iconFor } from '@/shared/icons';
 import type { Account, Category, SmsPending } from '@/shared/models';
-import { flowOf, resolveImported, resolveSkipped, type Suggestion } from './learning';
+import { flowOf, importText, resolveImported, resolveSkipped, type Suggestion } from './learning';
 import { cardDraft } from './review';
 import { useDuplicatePrompt } from './useDuplicatePrompt';
 
@@ -64,8 +64,7 @@ export default function SmsItemCard({ item, choice, account, category, onPickAcc
     const answer = await askDuplicate(draft);
     if (answer === 'cancel') return;
     if (answer === 'skip') return resolveSkipped(item, 'duplicate');
-    const tx = await saveTx(buildTxRecord(draft));
-    await resolveImported(item, tx);
+    await importText(item, buildTxRecord(draft));
   });
 
   const dismiss = run(() => resolveSkipped(item, 'dismissed'));

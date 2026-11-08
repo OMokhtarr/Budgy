@@ -1,6 +1,8 @@
 import { alive, db, type BudgyDB } from '@/core/db/db';
 import { categoryFits } from '@/core/db/hooks';
 import { idFromKey } from '@/core/utils/id';
+import { stampAfter } from '@/core/utils/stamp';
+import { saveTx } from '@/features/transactions/txRecord';
 import type { Account, Category, Flow, MerchantRule, SmsLink, SmsPending, SmsSeen, Transaction } from '@/shared/models';
 
 /** Case-folded sender address; links and lookups use it. */
@@ -53,30 +55,66 @@ export function suggestFor(item: SmsPending, links: SmsLink[], rules: MerchantRu
   return out;
 }
 
-/** After a text's transaction is saved: learn its link (and rule, for expense/income with a category), then drop the pending item. */
-export async function resolveImported(item: SmsPending, tx: Transaction, database: BudgyDB = db): Promise<void> {
-  const updatedAt = new Date().toISOString();
-  const digits = item.digits || undefined;
-  const linkId = await linkIdOf(item.address, digits);
-  const link: SmsLink = { id: linkId, address: addressKey(item.address), accountId: tx.accountId, updatedAt, ...(digits ? { digits } : {}) };
+/** The ids of the link and rule a text's transaction teaches. Hashed up front: a Dexie transaction can't wait on crypto. */
+interface LessonIds {
+  linkId: string;
+  rule?: { id: string; flow: Flow };
+}
 
-  let rule: MerchantRule | undefined;
-  if (tx.type !== 'transfer' && tx.categoryId && item.merchant) {
-    const id = await ruleIdOf(item.merchant, tx.type);
-    rule = {
-      id,
+async function lessonIdsOf(item: SmsPending, tx: Omit<Transaction, 'id'>): Promise<LessonIds> {
+  const linkId = await linkIdOf(item.address, item.digits || undefined);
+  if (tx.type === 'transfer' || !tx.categoryId || !item.merchant) return { linkId };
+  return { linkId, rule: { id: await ruleIdOf(item.merchant, tx.type), flow: tx.type } };
+}
+
+/**
+ * Learns the link (and rule, for expense/income with a category), then drops the pending item. Runs inside a
+ * rw transaction on smsLinks, merchantRules and smsPending. Stamps come after the stored ones, so a phone
+ * whose clock is behind still counts as the latest edit.
+ */
+async function learn(database: BudgyDB, item: SmsPending, tx: Transaction, ids: LessonIds): Promise<void> {
+  const digits = item.digits || undefined;
+  const oldLink = await database.smsLinks.get(ids.linkId);
+  await database.smsLinks.put({
+    id: ids.linkId,
+    address: addressKey(item.address),
+    accountId: tx.accountId,
+    updatedAt: stampAfter(oldLink?.updatedAt),
+    ...(digits ? { digits } : {}),
+  });
+
+  // The ids were worked out for the record; a transaction already saved for this text may differ.
+  if (ids.rule && tx.type === ids.rule.flow && tx.categoryId && item.merchant) {
+    const oldRule = await database.merchantRules.get(ids.rule.id);
+    const rule: MerchantRule = {
+      id: ids.rule.id,
       merchant: merchantKey(item.merchant),
       flow: tx.type,
       categoryId: tx.categoryId,
-      updatedAt,
+      updatedAt: stampAfter(oldRule?.updatedAt),
       ...(tx.subcategoryId ? { subcategoryId: tx.subcategoryId } : {}),
     };
+    await database.merchantRules.put(rule);
   }
+  await database.smsPending.delete(item.fingerprint);
+}
 
-  await database.transaction('rw', database.smsLinks, database.merchantRules, database.smsPending, async () => {
-    await database.smsLinks.put(link);
-    if (rule) await database.merchantRules.put(rule);
-    await database.smsPending.delete(item.fingerprint);
+/** After a text's transaction is saved (by the editor): learn its link and rule, then drop the pending item. */
+export async function resolveImported(item: SmsPending, tx: Transaction, database: BudgyDB = db): Promise<void> {
+  const ids = await lessonIdsOf(item, tx);
+  await database.transaction('rw', database.smsLinks, database.merchantRules, database.smsPending, () => learn(database, item, tx, ids));
+}
+
+/**
+ * A card's Confirm: saves the text's transaction, learns from it and drops the pending item, all or nothing.
+ * Returns the transaction (the one already saved for this text, if there is one).
+ */
+export async function importText(item: SmsPending, record: Omit<Transaction, 'id'>, database: BudgyDB = db): Promise<Transaction> {
+  const ids = await lessonIdsOf(item, record);
+  return database.transaction('rw', database.transactions, database.smsLinks, database.merchantRules, database.smsPending, async () => {
+    const tx = await saveTx(record, undefined, database);
+    await learn(database, item, tx, ids);
+    return tx;
   });
 }
 

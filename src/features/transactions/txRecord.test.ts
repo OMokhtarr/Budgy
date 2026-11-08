@@ -1,6 +1,6 @@
 import '@/test/setup-db';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { BudgyDB } from '@/core/db/db';
+import { BudgyDB, softDelete } from '@/core/db/db';
 import { buildTxRecord, saveTx, type TxDraft } from './txRecord';
 
 const database = new BudgyDB('t-tx-record');
@@ -60,5 +60,21 @@ describe('buildTxRecord', () => {
     const saved = await saveTx(buildTxRecord(draft({ amount: 20, currency: 'USD' })), undefined, database);
     expect(saved.id).toBeTruthy();
     expect(await database.transactions.get(saved.id!)).toMatchObject({ amount: 20, currency: 'USD', accountId: 'acc' });
+  });
+
+  it('saves a bank text once: saving it again returns the transaction already there', async () => {
+    const first = await saveTx(buildTxRecord(draft({ smsFingerprint: 'fp-once' })), undefined, database);
+    const again = await saveTx(buildTxRecord(draft({ smsFingerprint: 'fp-once', amount: 999 })), undefined, database);
+    expect(again.id).toBe(first.id);
+    expect(again.amount).toBe(450);
+    expect(await database.transactions.where('smsFingerprint').equals('fp-once').count()).toBe(1);
+  });
+
+  it("doesn't save a bank text again after its transaction was deleted", async () => {
+    const first = await saveTx(buildTxRecord(draft({ smsFingerprint: 'fp-gone' })), undefined, database);
+    await softDelete(database.transactions, [first.id!]);
+    const again = await saveTx(buildTxRecord(draft({ smsFingerprint: 'fp-gone' })), undefined, database);
+    expect(again.id).toBe(first.id);
+    expect(await database.transactions.where('smsFingerprint').equals('fp-gone').count()).toBe(1);
   });
 });

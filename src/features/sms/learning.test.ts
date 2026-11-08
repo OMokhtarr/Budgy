@@ -1,8 +1,9 @@
 import '@/test/setup-db';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
+import { buildTxRecord, saveTx } from '@/features/transactions/txRecord';
 import type { Account, Category, MerchantRule, SmsLink, SmsPending, Transaction } from '@/shared/models';
-import { addressKey, linkIdOf, merchantKey, resolveImported, resolveSkipped, ruleIdOf, suggestFor } from './learning';
+import { addressKey, importText, linkIdOf, merchantKey, resolveImported, resolveSkipped, ruleIdOf, suggestFor } from './learning';
 
 const database = new BudgyDB('t-learning');
 
@@ -84,10 +85,53 @@ describe('resolve', () => {
     expect(await database.smsLinks.count()).toBe(1);
   });
 
+  it('re-learning a link stamps it later than a stamp from a phone whose clock runs ahead', async () => {
+    const id = await linkIdOf('CIB', '4821');
+    const ahead = '2099-01-01T00:00:00.000Z';
+    await database.smsLinks.update(id, { updatedAt: ahead });
+    await resolveImported(item(), tx({ accountId: 'a7' }), database);
+    const l = await database.smsLinks.get(id);
+    expect(l?.accountId).toBe('a7');
+    expect(Date.parse(l!.updatedAt!)).toBeGreaterThan(Date.parse(ahead));
+  });
+
   it('resolveSkipped remembers the text and deletes its body', async () => {
     await database.smsPending.put(item({ fingerprint: 'fp3' }));
     await resolveSkipped(item({ fingerprint: 'fp3' }), 'dismissed', database);
     expect(await database.smsPending.get('fp3')).toBeUndefined();
     expect(await database.smsSeen.get('fp3')).toMatchObject({ outcome: 'dismissed' });
+  });
+});
+
+describe('importing a text is never done twice', () => {
+  const record = (fingerprint: string) => buildTxRecord({ type: 'expense', amount: 50, currency: 'EGP', accountId: 'a1', categoryId: 'c1', date: '2026-11-01T10:00:00.000Z', smsFingerprint: fingerprint });
+  const saved = (fingerprint: string) => database.transactions.where('smsFingerprint').equals(fingerprint).count();
+  const failOnce = () => vi.spyOn(database.smsPending, 'delete').mockImplementationOnce(() => { throw new Error('boom'); });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('a Confirm that fails saves nothing, and trying again saves one transaction and drops the pending item', async () => {
+    const text = item({ fingerprint: 'fp-confirm' });
+    await database.smsPending.put(text);
+    failOnce();
+    await expect(importText(text, record('fp-confirm'), database)).rejects.toThrow('boom');
+    expect(await saved('fp-confirm')).toBe(0);
+    expect(await database.smsPending.get('fp-confirm')).toBeTruthy();
+
+    const tx = await importText(text, record('fp-confirm'), database);
+    expect(tx.id).toBeTruthy();
+    expect(await saved('fp-confirm')).toBe(1);
+    expect(await database.smsPending.get('fp-confirm')).toBeUndefined();
+  });
+
+  it('a save from the editor whose learning fails, done again, ends with one transaction and no pending item', async () => {
+    const text = item({ fingerprint: 'fp-editor' });
+    await database.smsPending.put(text);
+    failOnce();
+    await expect(resolveImported(text, await saveTx(record('fp-editor'), undefined, database), database)).rejects.toThrow('boom');
+    expect(await database.smsPending.get('fp-editor')).toBeTruthy();
+
+    await resolveImported(text, await saveTx(record('fp-editor'), undefined, database), database);
+    expect(await saved('fp-editor')).toBe(1);
+    expect(await database.smsPending.get('fp-editor')).toBeUndefined();
   });
 });
