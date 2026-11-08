@@ -6,6 +6,7 @@ import { App as CapApp } from '@capacitor/app';
 import type { PermissionState } from '@capacitor/core';
 import { useSettings, type SmsImportSettings } from '@/core/contexts/SettingsContext';
 import { SmsInbox } from './native';
+import { useLearned } from './hooks';
 import { addSender, removeSender } from './senderList';
 
 /** Settings → Import from SMS: the switch (with disclosure and permission) and the bank sender keywords. */
@@ -13,6 +14,7 @@ export default function SmsSettingsSection() {
   const { t } = useTranslation();
   const { smsImport, update } = useSettings();
   const [presentAlert] = useIonAlert();
+  const linkCount = useLearned()?.links.length ?? 0;
   const [permission, setPermission] = useState<PermissionState>();
   // Set after a refused request, so the note explains how to allow it in Android settings.
   const [refused, setRefused] = useState(false);
@@ -141,6 +143,10 @@ export default function SmsSettingsSection() {
       </IonItem>
       <IonItem lines="none">
         <IonNote style={{ fontSize: 12.5, padding: '8px 0' }}>{t('sms.sendersHint')}</IonNote>
+      </IonItem>
+      <IonItem button routerLink="/sms/links" detail>
+        <IonLabel>{t('sms.linkedNumbers')}</IonLabel>
+        <IonNote slot="end">{linkCount}</IonNote>
       </IonItem>
     </IonList>
   );
