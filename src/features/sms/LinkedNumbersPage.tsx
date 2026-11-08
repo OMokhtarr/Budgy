@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { alive, db, softDelete } from '@/core/db/db';
 import { useAccounts, useNames } from '@/core/db/hooks';
+import { stampAfter } from '@/core/utils/stamp';
 import type { SmsLink } from '@/shared/models';
 import { useLearned } from './hooks';
 import { linkCardLabel } from './linkLabel';
@@ -45,7 +46,8 @@ export default function LinkedNumbersPage() {
     // Re-read, so a sync that changed or removed the link meanwhile isn't overwritten.
     const current = await db.smsLinks.get(editing.id!);
     if (!current || !alive(current)) return;
-    await db.smsLinks.put({ ...current, accountId, updatedAt: new Date().toISOString() });
+    // Later than the stored stamp, so an edit on a phone whose clock is behind isn't reverted by sync.
+    await db.smsLinks.put({ ...current, accountId, updatedAt: stampAfter(current.updatedAt) });
   };
 
   return (
