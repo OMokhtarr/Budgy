@@ -33,6 +33,7 @@
   --b-expense: #ef4444;
   --b-income: #10b981;
   --b-transfer: #3b82f6;
+  --b-warn: #d97706;
   --b-track: #e5e9ee;
   --b-backdrop: #dfe4ea;
   --b-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 8px rgba(15, 23, 42, 0.04);
@@ -69,6 +70,7 @@
   --b-expense: #d96c92;
   --b-income: #4fa594;
   --b-transfer: #60a5fa;
+  --b-warn: #f2b45a;
   --b-track: #2b2a30;
   --b-backdrop: #08080a;
   --b-shadow: none;
@@ -1084,6 +1086,9 @@ ion-modal.b-date-modal {
   grid-template-columns: minmax(96px, 1fr) 2fr;
   gap: 10px;
 }
+.b-field-row--even { grid-template-columns: 1fr 1fr; }
+/* A note under a field row; the row's own fields keep their bottom margin. */
+.b-field-hint { font-size: 12.5px; color: var(--b-muted); margin: -6px 4px 14px; }
 
 .b-rate {
   display: flex;
@@ -1658,3 +1663,55 @@ ion-fab-button.b-fab {
 .b-filtersum > span:first-child { font-style: italic; color: var(--b-muted); }
 
 ion-popover.b-popmenu { --width: 230px; }
+
+/* ─── Credit cards ─────────────────────────────────────────────────────────── */
+.b-warn { color: var(--b-warn); }
+
+.b-card-sheet__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.b-cc { padding: 14px; }
+.b-cc__label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--b-muted); }
+.b-cc__big { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; margin-top: 4px; }
+.b-cc__big .b-money__cur { color: inherit; opacity: 0.75; }
+.b-cc__split { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; font-weight: 600; }
+
+.b-cc__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 14.5px;
+}
+.b-cc__row > span:last-child { text-align: end; }
+.b-cc__row.is-strong { font-weight: 800; font-size: 16px; }
+.b-cc__due { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--b-border); font-weight: 700; }
+.b-cc__next { font-size: 13px; margin-top: 4px; }
+
+.b-cc__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.b-cc__actions .b-btn { flex: 1 1 auto; height: 40px; font-size: 13.5px; }
+
+/* Card payments due soon or overdue, at the top of Overview and Accounts */
+.b-remind { display: grid; gap: 8px; margin-bottom: 12px; }
+.b-remind__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 14px;
+  border-inline-start: 4px solid var(--b-warn);
+  background: var(--b-surface);
+  box-shadow: var(--b-shadow);
+  color: var(--b-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: start;
+}
+.b-remind__item > ion-icon:first-child { font-size: 20px; color: var(--b-warn); flex-shrink: 0; }
+.b-remind__item > span { flex: 1; min-width: 0; }
+.b-remind__item.is-overdue { border-inline-start-color: var(--b-expense); }
+.b-remind__item.is-overdue > ion-icon:first-child { color: var(--b-expense); }
+.b-remind__go { color: var(--b-faint); flex-shrink: 0; }

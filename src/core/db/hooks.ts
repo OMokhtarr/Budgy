@@ -6,6 +6,7 @@ import { everydayShiftsOf, moveInBase, tileMoveOf, type Money, type TileScope } 
 import { txInBase, type BaseConverter } from '@/core/utils/txRate';
 import { groupOf, openingOf, roundTo } from '@/core/utils/currency';
 import { lendingShares, type LendingShares } from '@/core/utils/lending';
+import { cardStatus, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
 import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
 
 export function useAccounts(includeArchived = false): Account[] | undefined {
@@ -75,6 +76,18 @@ export function useLendingShares(): LendingShares | undefined {
     const ids = debts.map((a) => a.id!);
     const txs = await db.transactions.where('accountId').anyOf(ids).or('toAccountId').anyOf(ids).filter(alive).toArray();
     return lendingShares(debts, txs);
+  });
+}
+
+/** Where each credit card stands in its statement cycle today, by account id. */
+export function useCardStatuses(): Map<string, CardStatus> | undefined {
+  return useLiveQuery(async () => {
+    const cards = (await db.accounts.filter(alive).toArray()).filter(isCreditCard);
+    if (!cards.length) return new Map();
+    const ids = cards.map((a) => a.id!);
+    const txs = await db.transactions.where('accountId').anyOf(ids).or('toAccountId').anyOf(ids).filter(alive).toArray();
+    const today = new Date();
+    return new Map(cards.map((a) => [a.id!, cardStatus(a, txs, today)]));
   });
 }
 

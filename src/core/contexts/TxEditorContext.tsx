@@ -8,6 +8,10 @@ export interface EditorInit {
   categoryId?: string;
   accountId?: string;
   toAccountId?: string;
+  /** Starting amount for a new transaction, e.g. what's left to pay on a credit card. */
+  amount?: number;
+  /** Starting note for a new transaction. */
+  note?: string;
   /** Pass an existing transaction to edit it. */
   tx?: Transaction;
 }
