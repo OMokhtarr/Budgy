@@ -781,6 +781,26 @@ ion-modal.b-date-modal .ion-page {
   border-radius: 18px 18px 0 0;
 }
 
+/* What the editor was opened from (e.g. the bank text), above the sheet. The bottom margin leaves
+   room for the icon badges that sit on the sheet's top edge. */
+.b-editor__header {
+  margin: 0 12px 32px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--b-surface);
+  color: var(--b-text);
+  font-size: 13.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+/* One line under the amount, e.g. the account doesn't hold this currency */
+.b-editor__hint {
+  margin: 6px 0 0;
+  color: var(--b-muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
 /* From / To halves */
 .b-fromto {
   display: grid;
@@ -1663,6 +1683,116 @@ ion-fab-button.b-fab {
 .b-filtersum > span:first-child { font-style: italic; color: var(--b-muted); }
 
 ion-popover.b-popmenu { --width: 230px; }
+
+/* ─── Bank texts (SMS review) ──────────────────────────────────────────────── */
+.b-scanbtn { height: 34px; padding: 0 14px; font-size: 13.5px; margin-inline-end: 8px; }
+.b-scanbtn ion-icon { font-size: 16px; }
+
+.b-smslast { font-size: 12.5px; margin: 0 4px 10px; }
+
+.b-smsempty strong { display: block; color: var(--b-text); font-size: 16px; margin-bottom: 6px; }
+.b-smsempty p { margin: 0 auto 18px; max-width: 320px; line-height: 1.5; }
+
+.b-smscard { padding: 12px 14px; margin-bottom: 10px; }
+.b-smscard.is-busy { opacity: 0.6; }
+
+/* The summary at the top of a card; tapping it (or the card) opens the editor. */
+.b-smscard__main {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.b-smscard__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--b-muted);
+}
+
+.b-smscard__amt { display: block; font-size: 20px; font-weight: 700; margin: 4px 0 2px; text-align: start; }
+[dir='rtl'] .b-smscard__amt { text-align: end; }
+.b-smscard__merchant { display: block; font-size: 13.5px; }
+
+.b-smscard__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+
+.b-smschip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--b-border);
+  background: var(--b-surface);
+  color: var(--b-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.b-smschip.is-set {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 12%, var(--b-surface));
+}
+
+.b-smschip.is-set ion-icon { color: var(--c); font-size: 15px; }
+.b-smschip.is-empty { border-style: dashed; color: var(--b-muted); font-weight: 500; }
+
+.b-smscard__note { margin: 6px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--b-muted); }
+
+.b-smscard__warn { margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #d97706; }
+
+.b-smscard__raw,
+.b-smshead p {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #facc15 16%, var(--b-surface));
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The message above the editor, when it opens from a text */
+.b-smshead p { max-height: 22vh; overflow-y: auto; }
+
+.b-smscard__btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.b-smscard__btns .b-btn { height: 38px; font-size: 13.5px; }
+
+/* Scan period options */
+.b-scanopt {
+  display: block;
+  width: 100%;
+  margin: 6px 0;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--b-surface);
+  color: var(--b-text);
+  font: inherit;
+  font-size: 14.5px;
+  text-align: start;
+}
+
+.b-scanopt.is-on {
+  border-color: var(--ion-color-primary);
+  background: color-mix(in srgb, var(--ion-color-primary) 12%, var(--b-surface));
+  font-weight: 600;
+}
+
+.b-sheet__foot--one { grid-template-columns: 1fr; }
+.b-sheet__foot .b-btn ion-spinner { width: 18px; height: 18px; color: currentColor; }
+
+/* Account / category picker sheet: the selection ring in the app colour */
+.b-pickersheet { --accent: var(--ion-color-primary); }
+.b-pickersheet .b-sheet__body { padding-top: 10px; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
 
 /* ─── Credit cards ─────────────────────────────────────────────────────────── */
 .b-warn { color: var(--b-warn); }

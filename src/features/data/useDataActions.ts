@@ -13,7 +13,7 @@ import { dayKey } from '@/core/utils/period';
 export function useDataActions() {
   const { t, i18n } = useTranslation();
   const settings = useSettings();
-  const { update } = settings;
+  const { update, forgetLastScan } = settings;
   const { reset: resetFilter } = useAccountFilter();
   // Signed in, a restore or erase also replaces the data in the account (on every device).
   const { user, replaceLocal } = useCloud();
@@ -141,6 +141,8 @@ export function useDataActions() {
           role: 'destructive',
           handler: async () => {
             await replaceLocal(eraseAll);
+            // The bank texts were erased too; a restore keeps them, and with them the last scan.
+            forgetLastScan();
             resetFilter();
             toast(t('settings.erased'));
           },

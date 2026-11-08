@@ -2,12 +2,19 @@ import '@/test/setup-db';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { BudgyDB, SEED_TIME, alive, eraseAll, exportBackup, importBackup, db, seedIfEmpty, softDelete, type SyncedTable } from '@/core/db/db';
 import { stampIfSynced, type Settings } from '@/core/contexts/SettingsContext';
-import { hasWorkToSync, syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
+import { idFromKey } from '@/core/utils/id';
+import { clearLocal, hasWorkToSync, isMissingTable, syncOnce, type Remote, type RemoteRow, type RemoteSettings, type SettingsPort, type SyncState } from './sync';
 
 /** An in-memory server with the same rules as the Supabase migration: last edit wins, equal stamps ignored. */
 function fakeServer() {
   let clock = Date.parse('2026-11-03T12:00:00Z');
-  const tables: Record<SyncedTable, Map<string, RemoteRow>> = { accounts: new Map(), categories: new Map(), transactions: new Map() };
+  const tables: Record<SyncedTable, Map<string, RemoteRow>> = {
+    accounts: new Map(),
+    categories: new Map(),
+    transactions: new Map(),
+    smsLinks: new Map(),
+    merchantRules: new Map(),
+  };
   const server = { tables, settings: null as RemoteSettings | null, writes: 0 };
   const remote: Remote = {
     async push(table, rows) {
@@ -242,6 +249,104 @@ describe('a phone whose clock is behind the cloud', () => {
     expect(server.settings?.data.currency).toBe('EUR');
     await A.sync();
     expect(A.settings.data.currency).toBe('EUR');
+  });
+});
+
+describe('learned SMS links', () => {
+  it('learned links sync between phones under the same id', async () => {
+    const { remote } = fakeServer();
+    const aDb = new BudgyDB('links-a');
+    const bDb = new BudgyDB('links-b');
+    const A = phone(aDb, remote, { data: {}, dirty: false });
+    const B = phone(bDb, remote, { data: {}, dirty: false });
+    const later = (ms: number) => new Date(Date.now() + ms).toISOString();
+
+    const cib = await idFromKey('CIB|4821');
+    await aDb.smsLinks.put({ id: cib, address: 'CIB', digits: '4821', accountId: 'acc-1' });
+    await A.sync();
+    await B.sync();
+    expect((await bDb.smsLinks.get(cib))?.accountId).toBe('acc-1');
+
+    // Both phones learn the same new link on their own, each for a different account.
+    const nbe = await idFromKey('NBE|1234');
+    await aDb.smsLinks.put({ id: nbe, address: 'NBE', digits: '1234', accountId: 'acc-a', updatedAt: later(1000) });
+    await bDb.smsLinks.put({ id: nbe, address: 'NBE', digits: '1234', accountId: 'acc-b', updatedAt: later(2000) });
+    await A.sync();
+    await B.sync();
+    await A.sync();
+    expect([(await aDb.smsLinks.get(nbe))?.accountId, (await bDb.smsLinks.get(nbe))?.accountId]).toEqual(['acc-b', 'acc-b']);
+  });
+
+  it('clearLocal removes pending and seen texts', async () => {
+    const d = new BudgyDB('clear-local');
+    await d.smsPending.put({ fingerprint: 'fp-1', smsId: '1', address: 'CIB', date: '2026-11-07T10:00:00.000Z', body: 'x', status: 'unreadable' });
+    await d.smsSeen.put({ fingerprint: 'fp-2', outcome: 'dismissed', at: '2026-11-07T10:00:00.000Z' });
+    await clearLocal(d);
+    expect([await d.smsPending.count(), await d.smsSeen.count()]).toEqual([0, 0]);
+  });
+});
+
+describe('a cloud without the learning tables yet', () => {
+  /** The fake server, but sms_links and merchant_rules fail the way Supabase does before their migration is deployed. */
+  function withoutLearningTables() {
+    const { server, remote } = fakeServer();
+    const gate = { deployed: false };
+    const missing = (table: SyncedTable) => !gate.deployed && (table === 'smsLinks' || table === 'merchantRules');
+    const notFound = () => Object.assign(new Error("Could not find the table 'public.sms_links' in the schema cache"), { code: 'PGRST205', status: 404 });
+    const gated: Remote = {
+      ...remote,
+      push: async (table, rows) => (missing(table) ? Promise.reject(notFound()) : remote.push(table, rows)),
+      pull: async (table, since, limit) => (missing(table) ? Promise.reject(notFound()) : remote.pull(table, since, limit)),
+      allStamps: async (table) => (missing(table) ? Promise.reject(notFound()) : remote.allStamps(table)),
+    };
+    return { server, gate, remote: gated };
+  }
+
+  it('still syncs the other tables and settings, and the learned link uploads once the table exists', async () => {
+    const { server, gate, remote } = withoutLearningTables();
+    const d = new BudgyDB('no-learning-tables');
+    await seedIfEmpty(d);
+    await d.transactions.add({ type: 'expense', amount: 5, currency: 'USD', accountId: CASH, categoryId: GROCERIES, date: 'x', createdAt: 'x' });
+    const linkId = await idFromKey('CIB|4821');
+    await d.smsLinks.put({ id: linkId, address: 'cib', digits: '4821', accountId: CASH });
+    const P = phone(d, remote, { data: { currency: 'USD' }, updatedAt: '2026-11-04T09:00:00.000Z', dirty: true });
+
+    await P.sync();
+    expect([server.tables.accounts.size, server.tables.categories.size, server.tables.transactions.size]).toEqual([2, 16, 1]);
+    expect(server.settings?.data.currency).toBe('USD');
+    expect((await d.smsLinks.get(linkId))?.dirty).toBe(1);
+
+    // A restore or erase can still replace the cloud's copy of the other tables.
+    P.replaceCloud();
+    await P.sync();
+    expect((await d.smsLinks.get(linkId))?.dirty).toBe(1);
+
+    gate.deployed = true;
+    await P.sync();
+    expect(server.tables.smsLinks.get(linkId)?.data).toMatchObject({ accountId: CASH });
+    expect((await d.smsLinks.get(linkId))?.dirty).toBeUndefined();
+  });
+
+  it('still fails on a missing table it has always had', async () => {
+    const { remote } = fakeServer();
+    const notFound = Object.assign(new Error('Could not find the table'), { code: 'PGRST205', status: 404 });
+    const broken: Remote = { ...remote, pull: async (table, since, limit) => (table === 'accounts' ? Promise.reject(notFound) : remote.pull(table, since, limit)) };
+    const P = phone(new BudgyDB('no-accounts-table'), broken, { data: {}, dirty: false });
+    await expect(P.sync()).rejects.toThrow('Could not find the table');
+  });
+});
+
+describe('isMissingTable', () => {
+  it('knows the errors for a table the cloud does not have', () => {
+    expect(isMissingTable({ code: 'PGRST205', status: 404 })).toBe(true);
+    expect(isMissingTable({ code: '42P01', status: 400 })).toBe(true);
+    expect(isMissingTable({ status: 404 })).toBe(true);
+  });
+
+  it('leaves other failures alone', () => {
+    expect(isMissingTable({ code: 'PGRST301', status: 401 })).toBe(false);
+    expect(isMissingTable(new TypeError('Failed to fetch'))).toBe(false);
+    expect(isMissingTable(undefined)).toBe(false);
   });
 });
 

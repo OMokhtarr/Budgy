@@ -14,9 +14,11 @@ import { currenciesOf, decimalsOf } from '@/core/utils/currency';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import { formatRate, impliedRate, rateDirection, rateToSave, receivedAt } from '@/core/utils/txRate';
 import type { EditorInit } from '@/core/contexts/TxEditorContext';
-import type { Account, Category, TxType } from '@/shared/models';
+import type { Account, Category, Transaction, TxType } from '@/shared/models';
 import Bubble from '@/shared/components/Bubble';
 import { iconFor } from '@/shared/icons';
+import { useDuplicatePrompt } from '@/features/sms/useDuplicatePrompt';
+import { buildTxRecord, saveTx } from './txRecord';
 
 const LAST_ACCOUNT_KEY = 'budgy-last-account';
 
@@ -45,6 +47,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const { accountName, categoryName } = useNames();
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
+  const askDuplicate = useDuplicatePrompt();
 
   const accounts = useAccounts();
   const allAccounts = useAccounts(true);
@@ -61,7 +64,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId);
   const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : init.amount ? String(init.amount) : '');
   // Currency the user picked for the amount, and for what arrives in a transfer.
-  const [curPick, setCurPick] = useState<string | undefined>(tx?.currency);
+  const [curPick, setCurPick] = useState<string | undefined>(tx?.currency ?? init.currency);
   const [toCurPick, setToCurPick] = useState<string | undefined>(tx?.toCurrency);
   // Received amount of a cross-currency transfer. Follows the exchange rate until the user types it,
   // and `touchedPair` remembers which currency pair the typed value belongs to.
@@ -71,7 +74,9 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   // Exchange rate the user typed, and the currency (or pair) it belongs to.
   const [rateEdit, setRateEdit] = useState<{ key: string; text: string } | null>(null);
   const [note, setNote] = useState(tx?.note ?? init.note ?? '');
-  const [date, setDate] = useState<string>(dayKey(tx ? new Date(tx.date) : new Date()));
+  // The transaction's own time (or the bank text's), kept on save while the day isn't changed.
+  const keptDate = tx?.date ?? init.date;
+  const [date, setDate] = useState<string>(dayKey(keptDate ? new Date(keptDate) : new Date()));
   const [picking, setPicking] = useState<Side | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
   const saving = useRef(false);
@@ -99,9 +104,10 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const category = allCats?.find((c) => c.id === categoryId);
   const subcategories = type === 'transfer' ? [] : pickableSubcategories(category, subcategoryId);
 
-  // All three types only for a brand-new transaction from the + button. A transfer stays a transfer;
-  // an expense/income (new from a category, or being edited) offers just the types its category accepts.
-  const byCategory = tx ? tx.type !== 'transfer' : init.categoryId != null;
+  // All three types for a brand-new transaction from the + button or a bank text. A transfer stays a
+  // transfer; an expense/income (new from a category, or being edited) offers just the types its category accepts.
+  const fromBankText = !tx && init.smsFingerprint != null;
+  const byCategory = tx ? tx.type !== 'transfer' : init.categoryId != null && !fromBankText;
   const types: TxType[] =
     tx?.type === 'transfer' ? ['transfer']
     : !byCategory ? ['expense', 'income', 'transfer']
@@ -112,8 +118,11 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   // ── currencies ──
   // When editing, the transaction's own currency stays on offer even if its account no longer
   // holds it (e.g. the account's currency was changed), so saving doesn't relabel the amount.
+  // A pre-filled currency (a bank text's) stays on offer on whichever account is picked, for the same reason.
   const keep = (list: string[], cur?: string) => (cur && !list.includes(cur) ? [...list, cur] : list);
-  const fromCurs = account ? keep(currenciesOf(account), tx && tx.accountId === account.id ? tx.currency : undefined) : [];
+  const fromCurs = account
+    ? keep(keep(currenciesOf(account), tx && tx.accountId === account.id ? tx.currency : undefined), init.currency)
+    : [];
   const currency = curPick && fromCurs.includes(curPick) ? curPick : account?.currency ?? conv.base;
   const sameAccount = type === 'transfer' && toAccountId === accountId;
   const keptTo = tx?.type === 'transfer' && tx.toAccountId === toAccount?.id ? tx.toCurrency ?? tx.currency : undefined;
@@ -124,6 +133,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     : toCurs.includes(currency) ? currency
     : toCurs[0] ?? currency;
   const cross = type === 'transfer' && toCurrency !== currency;
+  // An expense/income in a currency its account doesn't hold (e.g. a USD text on an EGP card).
+  const notHeld = type !== 'transfer' && account != null && !currenciesOf(account).includes(currency);
   const pair = `${currency}>${toCurrency}`;
 
   const pickCurrency = (c: string) => {
@@ -215,8 +226,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     }
 
     let iso: string;
-    if (tx && dayKey(new Date(tx.date)) === date) {
-      iso = tx.date;
+    if (keptDate && dayKey(new Date(keptDate)) === date) {
+      iso = keptDate;
     } else {
       const [y, m, d] = date.split('-').map(Number);
       const now = new Date();
@@ -227,26 +238,40 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     if (saving.current) return;
     saving.current = true;
 
-    const record = {
-      type,
-      amount,
-      currency,
-      accountId,
-      toAccountId: type === 'transfer' ? toAccountId : undefined,
-      toAmount: cross ? toAmount : undefined,
-      toCurrency: cross ? toCurrency : undefined,
-      categoryId: type === 'transfer' ? undefined : categoryId,
-      subcategoryId: subcategories.find((s) => s.id === subcategoryId)?.id,
-      ...(type === 'transfer' ? {} : rateToSave({ typed: typedRate, saved: conv.rate(currency), editing: tx, currency, base: conv.base })),
-      date: iso,
-      note: note.trim() || undefined,
-      createdAt: tx?.createdAt ?? new Date().toISOString(),
-      // put() replaces the whole record, so set this here rather than relying on the update hook.
-      updatedAt: new Date().toISOString(),
-    };
+    let saved: Transaction;
     try {
-      if (tx?.id != null) await db.transactions.put({ ...record, id: tx.id });
-      else await db.transactions.add(record);
+      if (fromBankText) {
+        const choice = await askDuplicate({ type, amount, currency, accountId, date: iso });
+        if (choice === 'cancel') {
+          saving.current = false;
+          return;
+        }
+        if (choice === 'skip') {
+          onClose();
+          init.onSkipped?.();
+          return;
+        }
+      }
+      const record = buildTxRecord({
+        type,
+        amount,
+        currency,
+        accountId,
+        toAccountId,
+        toAmount: cross ? toAmount : undefined,
+        toCurrency: cross ? toCurrency : undefined,
+        categoryId,
+        subcategoryId: subcategories.find((s) => s.id === subcategoryId)?.id,
+        rate:
+          type === 'transfer'
+            ? undefined
+            : rateToSave({ typed: typedRate, saved: conv.rate(currency), editing: tx, currency, base: conv.base }),
+        date: iso,
+        note,
+        smsFingerprint: tx?.smsFingerprint ?? init.smsFingerprint,
+        createdAt: tx?.createdAt,
+      });
+      saved = await saveTx(record, tx?.id);
     } catch (err) {
       saving.current = false;
       throw err;
@@ -259,6 +284,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     }
     Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
     onClose();
+    init.onSaved?.(saved);
   };
 
   const remove = () =>
@@ -382,6 +408,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
 
   return (
     <div className="b-editor" style={{ '--accent': accent } as CSSProperties}>
+      {init.header != null && <div className="b-editor__header">{init.header}</div>}
       <div className="b-editor__sheet">
         <div className="b-fromto">
           {fromBox}
@@ -459,6 +486,11 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
               />
               <span>{rateQuote}</span>
             </label>
+          )}
+          {notHeld && account && (
+            <p className="b-editor__hint">
+              {t('editor.currencyNotHeld', { account: accountName(account), held: currenciesOf(account).join(' / ') })}
+            </p>
           )}
         </div>
 

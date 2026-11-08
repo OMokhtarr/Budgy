@@ -1,6 +1,6 @@
 import { parseNumber } from '@/core/utils/number';
 import { BANK_TEMPLATES } from './templates';
-import { currencyOf, findAmounts, findDigits, toLatinDigits, type FoundAmount } from './text';
+import { currencyNear, currencyOf, findAmounts, findDigits, toLatinDigits, type FoundAmount } from './text';
 import type { BankTemplate, IgnoreReason, ParsedSms, SmsDirection } from './types';
 
 /** An Arabic word on its own, not inside a longer one ("عرض" but not "معرض"). */
@@ -23,8 +23,8 @@ const IN =
 const NOT_DONE = /\b(declined|rejected|failed|unsuccessful|insufficient|will be|due|reminder|pending|statement)\b|سيتم|رفض|لم تتم|لم يتم|مستحق|تذكير|كشف حساب/i;
 /** Words that make the next amount a balance or limit, not the transaction. */
 const BALANCE_WORD = /\b(balance|bal|avl|available|limit)\b|رصيد|المتاح/i;
-const MERCHANT = /(?:\bat|لدى|عند)\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|[.,،]|$)/i;
-const MERCHANT_IN = /\bfrom\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|[.,،]|$)/i;
+const MERCHANT = /(?:\bat|لدى|عند)\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|\s+(?:using|with|via|is|was|for|card|pending)\b|\s+(?:باستخدام|بواسطة|بطاق|عبر)|\s+[*xX•#]{2,}|[.,،]|$)/i;
+const MERCHANT_IN = /\bfrom\s+(.+?)(?=\s+on\s|\s+\d{1,2}[/-]\d{1,2}|\s+(?:using|with|via|is|was|for|card|pending)\b|\s+(?:باستخدام|بواسطة|بطاق|عبر)|\s+[*xX•#]{2,}|[.,،]|$)/i;
 
 /** Drops undefined fields so results compare and store cleanly. */
 function result(r: ParsedSms): ParsedSms {
@@ -58,19 +58,26 @@ function transactionAmount(text: string): FoundAmount | undefined {
   return undefined;
 }
 
+/** The currency written next to the template's amount, for formats that don't capture one. */
+function templateCurrency(text: string, found: RegExpExecArray): string | undefined {
+  const index = found.index + found[0].lastIndexOf(found[1]);
+  return currencyNear(text, index, index + found[1].length);
+}
+
 function fromTemplate(sender: string, body: string, templates: BankTemplate[]): ParsedSms | undefined {
   const text = toLatinDigits(body);
   for (const tpl of templates) {
     if (!tpl.sender.test(sender)) continue;
     const f = tpl.formats.find((x) => x.match.test(text));
     if (!f) continue;
-    const amount = parseNumber(f.amount.exec(text)?.[1] ?? '');
-    if (!(amount > 0)) return undefined;
+    const found = f.amount.exec(text);
+    const amount = parseNumber(found?.[1] ?? '');
+    if (!found || !(amount > 0)) return undefined;
     const cur = f.currency?.exec(text)?.[1];
     return result({
       status: 'understood',
       amount,
-      currency: cur ? currencyOf(cur) : undefined,
+      currency: (cur ? currencyOf(cur) : undefined) ?? templateCurrency(text, found),
       direction: f.direction,
       merchant: f.merchant?.exec(text)?.[1]?.trim(),
       digits: f.digits?.exec(text)?.[1],
@@ -101,6 +108,6 @@ export function parseSms(sender: string, body: string, templates: BankTemplate[]
     currency: money?.currency,
     direction,
     merchant: merchant || undefined,
-    digits: findDigits(text),
+    digits: findDigits(text, direction),
   });
 }

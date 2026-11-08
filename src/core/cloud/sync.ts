@@ -1,4 +1,4 @@
-import { SEED_TIME, SYNCED_TABLES, writeFromCloud, type BudgyDB, type SyncedTable } from '@/core/db/db';
+import { SEED_TIME, SYNCED_TABLES, clearSmsLocal, writeFromCloud, type BudgyDB, type SyncedTable } from '@/core/db/db';
 import type { Synced } from '@/shared/models';
 import type { BackupSettings } from '@/core/contexts/SettingsContext';
 
@@ -90,11 +90,38 @@ export async function hasLocalTransactions(database: BudgyDB): Promise<boolean> 
   return (await database.transactions.filter((t) => !t.deletedAt).count()) > 0;
 }
 
-/** Empties the local tables without marking anything for upload (e.g. "use the cloud's data"). */
+/**
+ * Empties the local tables without marking anything for upload (e.g. "use the cloud's data", or signing
+ * out and removing the data), and the local-only bank texts, so no message text is left behind.
+ */
 export async function clearLocal(database: BudgyDB): Promise<void> {
   await writeFromCloud(database, async () => {
     await Promise.all(SYNCED_TABLES.map((t) => database.table(t).clear()));
   });
+  await clearSmsLocal(database);
+}
+
+/** Tables added after the first cloud release: until their migration is deployed, sync goes on without them. */
+const LATER_TABLES: ReadonlySet<SyncedTable> = new Set<SyncedTable>(['smsLinks', 'merchantRules']);
+
+/** Whether a cloud error means the table isn't there: PostgREST's PGRST205, Postgres's 42P01, or HTTP 404. */
+export function isMissingTable(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const { code, status } = error as { code?: unknown; status?: unknown };
+  return code === 'PGRST205' || code === '42P01' || status === 404;
+}
+
+/**
+ * Runs one table's step. If the cloud doesn't have that table yet (one of `LATER_TABLES`), gives `fallback`
+ * instead: nothing is pulled, and unsent records stay marked, so they upload once the table exists.
+ */
+async function unlessMissing<T>(table: SyncedTable, step: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await step();
+  } catch (err) {
+    if (LATER_TABLES.has(table) && isMissingTable(err)) return fallback;
+    throw err;
+  }
 }
 
 async function pullTable(database: BudgyDB, remote: Remote, table: SyncedTable, state: SyncState) {
@@ -143,7 +170,7 @@ async function pushTable(database: BudgyDB, remote: Remote, table: SyncedTable) 
  * records for upload; what's no longer here is soft-deleted in the cloud.
  */
 async function replaceCloud(database: BudgyDB, remote: Remote, settings: SettingsPort) {
-  const cloud = await Promise.all(SYNCED_TABLES.map((table) => remote.allStamps(table)));
+  const cloud = await Promise.all(SYNCED_TABLES.map((table) => unlessMissing(table, () => remote.allStamps(table), [])));
   const cloudSettings = await remote.getSettings();
   const latest = [...cloud.flat(), ...(cloudSettings ? [cloudSettings] : [])].reduce(
     (max, r) => Math.max(max, Date.parse(r.updated_at) + 1),
@@ -198,9 +225,9 @@ export async function syncOnce(database: BudgyDB, remote: Remote, settings: Sett
     await replaceCloud(database, remote, settings);
     next.replaceCloud = false;
   } else {
-    for (const table of SYNCED_TABLES) await pullTable(database, remote, table, next);
+    for (const table of SYNCED_TABLES) await unlessMissing(table, () => pullTable(database, remote, table, next), undefined);
   }
-  for (const table of SYNCED_TABLES) await pushTable(database, remote, table);
+  for (const table of SYNCED_TABLES) await unlessMissing(table, () => pushTable(database, remote, table), undefined);
   await syncSettings(remote, settings, !state.synced);
   next.synced = true;
   return next;

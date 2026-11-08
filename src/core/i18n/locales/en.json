@@ -243,7 +243,8 @@
     "enterReceived": "Enter the amount received",
     "receivedIn": "Received in {{currency}}",
     "date": "Date",
-    "backspace": "Delete (hold to clear)"
+    "backspace": "Delete (hold to clear)",
+    "currencyNotHeld": "{{account}} holds {{held}}. To match your statement, switch to {{held}} and enter the amount charged."
   },
   "overview": {
     "noSubcategory": "No subcategory",
@@ -406,7 +407,8 @@
     "rate": "Rate us",
     "support": "Support",
     "about": "About",
-    "noBackup": "Not backed up yet"
+    "noBackup": "Not backed up yet",
+    "bankTexts": "Bank texts"
   },
   "profile": {
     "name": "Your name",
@@ -471,12 +473,50 @@
     "permissionNotAllowed": "Not allowed",
     "permissionDenied": "Budgy can't read texts. To allow it, open Android Settings → Apps → Budgy → Permissions → SMS.",
     "disclosureTitle": "Read your bank texts?",
-    "disclosureBody": "Budgy reads texts only from the bank senders you list below, on this phone only. It keeps the amount, date, merchant and last digits of each one, never the full message, and nothing is sent anywhere.",
+    "disclosureBody": "Budgy reads texts on this phone only, and only from the senders you list below. While a text waits for your review, its message is kept on this phone, and it is deleted once you confirm or dismiss it. Budgy keeps the amount, date, merchant and last digits. When you are signed in, the last card digits and merchant names Budgy learns are saved to your account, so your other phones can use them.",
+    "permissionError": "Budgy couldn't check the SMS permission. Try again.",
     "continue": "Continue",
     "senders": "Bank senders",
     "addSender": "Add",
     "addSenderTitle": "Add a bank sender",
     "addSenderPlaceholder": "e.g. CIB or Bank-AlAhly",
-    "sendersHint": "Only texts whose sender name contains one of these words are read."
+    "linkedNumbers": "Linked numbers",
+    "noNumber": "{{sender}} · no number",
+    "accountRemoved": "Account removed — tap to pick another",
+    "noLinks": "Budgy learns these when you confirm bank texts.",
+    "sendersHint": "Only texts whose sender name contains one of these words are read.",
+    "duplicateTitle": "Looks like you already added this",
+    "duplicateBody": "You have a transaction with the same amount, account and day that you entered yourself.",
+    "keepBoth": "Keep both",
+    "skip": "Skip",
+    "bankTexts": "Bank texts",
+    "scan": "Scan inbox",
+    "scanFrom": "Scan bank texts from…",
+    "period": {
+      "sinceLast": "Since last scan",
+      "3d": "Last 3 days",
+      "1w": "Last week",
+      "2w": "Last 2 weeks",
+      "1m": "Last month",
+      "3m": "Last 3 months",
+      "6m": "Last 6 months"
+    },
+    "scanHint": "Texts already imported or dismissed are skipped.",
+    "scanFound_one": "1 new text",
+    "scanFound_other": "{{count}} new texts",
+    "scanNothing": "Nothing new",
+    "scanNoPermission": "Budgy isn't allowed to read texts any more. To allow it again, go to Settings → Import from SMS.",
+    "scanFailed": "Budgy couldn't scan your texts. Try again.",
+    "actionFailed": "Something went wrong. Try again.",
+    "pickAccount": "Pick account",
+    "pickCategory": "Pick category",
+    "confirm": "Confirm",
+    "dismiss": "Dismiss",
+    "fillIn": "Fill in…",
+    "couldntRead": "Couldn't read this one",
+    "savedInCurrency": "Saved in {{currency}}. {{account}} holds {{held}}; you can change it later.",
+    "emptyTitle": "No bank texts to review",
+    "emptyBody": "Scan your inbox to bring in new bank texts. Texts you've already imported or dismissed won't come back.",
+    "lastScan": "Last scan: {{when}}"
   }
 }

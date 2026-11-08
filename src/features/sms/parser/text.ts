@@ -1,5 +1,6 @@
 import { CURRENCIES } from '@/core/contexts/SettingsContext';
 import { parseNumber } from '@/core/utils/number';
+import type { SmsDirection } from './types';
 
 /** Arabic-Indic and Persian digits → 0-9, Arabic decimal and thousands marks → '.' and ','. Keeps the length. */
 export function toLatinDigits(s: string): string {
@@ -68,9 +69,7 @@ export function findAmounts(body: string): FoundAmount[] {
     const index = m.index!;
     const end = index + m[0].length;
     if (index > 0 && NOT_MONEY_BEFORE.test(text[index - 1])) continue;
-    const before = CUR_BEFORE.exec(text.slice(Math.max(0, index - 12), index));
-    const after = CUR_AFTER.exec(text.slice(end));
-    const token = before?.[1] ?? after?.[1];
+    const token = currencyTokenAround(text, index, end);
     if (!token) continue;
     const amount = parseAmount(m[0]);
     if (amount > 0) found.push({ amount, currency: currencyOf(token), index, end });
@@ -78,15 +77,38 @@ export function findAmounts(body: string): FoundAmount[] {
   return found;
 }
 
+/** The currency word written right before or after the number at [index, end) of a Latin-digit text. */
+function currencyTokenAround(text: string, index: number, end: number): string | undefined {
+  const before = CUR_BEFORE.exec(text.slice(Math.max(0, index - 12), index));
+  const after = CUR_AFTER.exec(text.slice(end));
+  return before?.[1] ?? after?.[1];
+}
+
+/** ISO code of the currency written next to the number at [index, end) of the text, or undefined. */
+export function currencyNear(body: string, index: number, end: number): string | undefined {
+  const token = currencyTokenAround(toLatinDigits(body), index, end);
+  return token ? currencyOf(token) : undefined;
+}
+
 const DIGIT_PATTERNS = [
   /[*xX•#]{2,}\s?(\d{3,4})(?!\d)/,
   /ending(?:\s+(?:with|in))?\s*(\d{3,4})(?!\d)/i,
   /المنته(?:ي|ية)\s*(?:ب|بـ|في)\s*(\d{3,4})(?!\d)/,
 ];
+/** The masked number right after "from"/"من" (money left it) and after "to"/"إلى" (money arrived). */
+const DIGITS_AFTER: Record<SmsDirection, RegExp> = {
+  out: /(?:\bfrom|من)\s+(?:\w+\s+)?[*xX•#]{2,}\s?(\d{3,4})(?!\d)/i,
+  in: /(?:\bto|إلى|الى)\s+(?:\w+\s+)?[*xX•#]{2,}\s?(\d{3,4})(?!\d)/i,
+};
 
-/** Masked card or account digits ("**4821", "xx1234", "ending with 7781"), or undefined. */
-export function findDigits(body: string): string | undefined {
+/**
+ * Masked card or account digits ("**4821", "xx1234", "ending with 7781"), or undefined. In a transfer
+ * ("from **9999 to **1234") the direction picks the side: the sender for 'out', the receiver for 'in'.
+ */
+export function findDigits(body: string, direction?: SmsDirection): string | undefined {
   const text = toLatinDigits(body);
+  const side = direction && DIGITS_AFTER[direction].exec(text);
+  if (side) return side[1];
   for (const re of DIGIT_PATTERNS) {
     const m = re.exec(text);
     if (m) return m[1];

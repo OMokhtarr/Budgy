@@ -98,12 +98,24 @@ describe('last edit wins', () => {
   });
 });
 
+describe('learned SMS links and merchant rules', () => {
+  it.each(['sms_links', 'merchant_rules'])('%s keeps rows private and the newest edit', async (t) => {
+    const put = `insert into public.${t} (id, data, updated_at) values ($1, $2, $3)
+      on conflict (user_id, id) do update set data = excluded.data, updated_at = excluded.updated_at`;
+    await as(A, put, [R1, { accountId: 'new' }, '2026-11-07T10:00:00Z']);
+    expect((await as(B, `select id from public.${t}`)).rows).toHaveLength(0);
+    await as(A, put, [R1, { accountId: 'old' }, '2026-11-01T10:00:00Z']);
+    expect((await as(A, `select data from public.${t} where id = $1`, [R1])).rows[0].data.accountId).toBe('new');
+  });
+});
+
 describe('account deletion', () => {
   it("removes all of the user's rows and nobody else's", async () => {
     await pg.exec(`delete from auth.users where id = '${A}'`);
     const n = await pg.query<{ n: number }>(
       `select (select count(*) from public.accounts where user_id = $1) + (select count(*) from public.categories where user_id = $1)
-        + (select count(*) from public.transactions where user_id = $1) + (select count(*) from public.settings where user_id = $1) as n`,
+        + (select count(*) from public.transactions where user_id = $1) + (select count(*) from public.settings where user_id = $1)
+        + (select count(*) from public.sms_links where user_id = $1) + (select count(*) from public.merchant_rules where user_id = $1) as n`,
       [A],
     );
     expect(Number(n.rows[0].n)).toBe(0);

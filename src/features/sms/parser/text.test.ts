@@ -26,6 +26,8 @@ describe('findDigits', () => {
     expect(findDigits('card ending with 7781')).toBe('7781');
     expect(findDigits('من حسابكم رقم ****٧٧٨١')).toBe('7781');
     expect(findDigits('no digits here')).toBeUndefined();
+    expect(findDigits('from **9999 to **1234', 'in')).toBe('1234');
+    expect(findDigits('from **9999 to **1234', 'out')).toBe('9999');
   });
 });
 
