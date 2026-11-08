@@ -14,12 +14,14 @@ import RateInput from '@/shared/components/RateInput';
 import { useCloud } from '@/core/cloud/CloudContext';
 import SmsSettingsSection from '@/features/sms/SmsSettingsSection';
 import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
+import { useRevealWhen } from '@/shared/splash';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const settings = useSettings();
   const { user } = useCloud();
   const smsAvailable = useSmsAvailable();
+  useRevealWhen(true);
   const accounts = useAccounts(true);
   const categories = useCategories(undefined, true);
   const inUse = useCurrenciesInUse();

@@ -7,6 +7,7 @@ import { PeriodProvider } from '@/core/contexts/PeriodContext';
 import { AccountFilterProvider } from '@/core/contexts/AccountFilterContext';
 import { openData } from '@/core/db/db';
 import DbError from '@/shared/components/DbError';
+import { revealApp } from '@/shared/splash';
 import { markFirstRun } from '@/features/onboarding/FirstRunCurrency';
 import App from './App';
 // Fonts ship with the app (no Google Fonts request): works offline and keeps "your data stays on this device" true.
@@ -22,16 +23,6 @@ if (!Capacitor.isNativePlatform()) {
   // All data lives in IndexedDB; ask the browser not to evict it under storage pressure
   // (Safari otherwise clears it after 7 days without a visit).
   navigator.storage?.persist?.().catch(() => {});
-}
-
-function hideSplash() {
-  requestAnimationFrame(() => {
-    const splash = document.getElementById('budgy-splash');
-    if (!splash) return;
-    splash.classList.add('budgy-splash--hidden');
-    splash.addEventListener('transitionend', () => splash.remove(), { once: true });
-    setTimeout(() => splash.remove(), 600);
-  });
 }
 
 openData()
@@ -60,5 +51,8 @@ openData()
         )}
       </StrictMode>,
     );
-    hideSplash();
+    // The opening screen reveals the app once its data is in (useRevealWhen), so the splash goes straight
+    // to a filled screen. Without the database there's nothing to wait for; the timer is a safety net.
+    if (dbOk) setTimeout(revealApp, 3000);
+    else revealApp();
   });

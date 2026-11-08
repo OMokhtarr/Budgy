@@ -9,11 +9,13 @@ import { useDataActions } from '@/features/data/useDataActions';
 import { COLORS } from '@/shared/icons';
 import ProfileAvatar from '@/shared/components/ProfileAvatar';
 import AccountSyncSection from './AccountSyncSection';
+import { useRevealWhen } from '@/shared/splash';
 
 export default function ProfilePage() {
   const { t } = useTranslation();
   const locale = useLocale();
   const { profileName, profileColor, lastBackupAt, update } = useSettings();
+  useRevealWhen(true);
   const { backup } = useDataActions();
   const { user } = useCloud();
   const [choosingColor, setChoosingColor] = useState(false);

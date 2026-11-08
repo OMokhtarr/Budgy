@@ -8,6 +8,12 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   plugins: {
+    // The launch splash stays up until the opening screen has its data (revealApp in src/shared/splash.ts),
+    // then fades straight into it.
+    SplashScreen: {
+      launchAutoHide: false,
+      launchFadeOutDuration: 250,
+    },
     Keyboard: {
       resize: 'body',
     },
