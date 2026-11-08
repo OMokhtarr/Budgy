@@ -15,7 +15,7 @@
 | 4 | Keystore and passwords backed up off this machine | Done |
 | 5 | Store listing: text and graphics | Ready below, not entered yet |
 | 6 | App content forms: Data safety and declarations | Ready below, not entered yet |
-| 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | To do |
+| 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | Testers group ready; publish a build to the closed track for it |
 
 Before every upload:
 - Raise `versionCode` in `android/app/build.gradle`, because Play refuses a number it has already seen.
