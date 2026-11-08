@@ -29,9 +29,6 @@
     - Recheck Play's live SMS policy.
     - Add `READ_SMS` to the main manifest.
     - Play Permissions Declaration Form and Data safety form.
-    - SMS wording in the privacy policy.
-    - Privacy policy: the last card digits and merchant names Budgy learns are saved to the signed-in account
-      (not the messages).
     - Short demo video.
 - [x] **Credit cards:** limit, statement cycle, statement vs current balance, minimum payment, in-app due
       reminders, payments as transfers, interest and fees, credit vs debit
@@ -48,10 +45,12 @@
      https://omokhtarr.github.io/Budgy/delete-account.html (Play's account deletion link).
    - Changes to `docs/privacy-policy.md` must also go in those pages (`privacy.html`, `privacy-ar.html`,
      and the `delete-account` pages if deletion changes) on the `gh-pages` branch. All four matched the
-     policy and the app on 2026-11-07. The next change is due with the SMS import update.
+     policy and the app on 2026-11-08, SMS import included.
    - Fill in Google Play's **Data safety** form to match the privacy policy. Every answer, plus the
      listing text, graphics and release steps, is in `docs/play-store.md`. Keep that file in step with
      Play Console.
+   - **Closed test:** the testers group exists. Next, publish a build to the closed testing track for that
+     group, then keep 12+ testers opted in for 14 days in a row before applying for production.
 
 ---
 
