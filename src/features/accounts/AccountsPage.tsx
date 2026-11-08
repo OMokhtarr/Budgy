@@ -15,6 +15,7 @@ import { useSwipe } from '@/shared/hooks/useSwipe';
 import { addIcon } from '@/shared/icons';
 import AccountEditModal from './AccountEditModal';
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
+import { useRevealWhen } from '@/shared/splash';
 
 type Tab = 'accounts' | 'debts' | 'finances';
 /** An account being edited, or a new one to create in the given group. */
@@ -30,6 +31,7 @@ export default function AccountsPage() {
   const accounts = useAccounts();
   const archived = (useAccounts(true) ?? []).filter((a) => a.archived);
   const balances = useBalances();
+  useRevealWhen(!!accounts && !!balances);
   const [tab, setTab] = useState<Tab>('accounts');
   const [editing, setEditing] = useState<Editing | null>(null);
 

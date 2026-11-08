@@ -70,6 +70,9 @@ The `public/` icons are generated from an SVG in `scripts/generate-icons.mjs`
 `npx @capacitor/assets generate` after `cap add`. It reads from an `assets/` folder, so copy
 `public/icon.png` to `assets/icon.png` first.
 
+The Google Play icon, feature graphic and screenshots are in `store/`. To regenerate them, see
+[scripts/store-assets/README.md](scripts/store-assets/README.md).
+
 ## Cloud sync (Supabase)
 
 - **Schema:** `supabase/migrations/`.

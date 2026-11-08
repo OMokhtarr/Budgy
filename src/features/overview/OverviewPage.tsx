@@ -17,6 +17,7 @@ import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
 import Avatar from '@/shared/components/Avatar';
 import Donut from '@/shared/components/Donut';
 import type { Category, Flow, PeriodMode } from '@/shared/models';
+import { useRevealWhen } from '@/shared/splash';
 
 const BUCKETS: Record<PeriodMode, number> = { day: 7, week: 6, month: 6, year: 5, all: 5, range: 6 };
 
@@ -66,6 +67,7 @@ export default function OverviewPage() {
       return { inc, exp };
     });
   }, [buckets, conv, matches, tiles]);
+  useRevealWhen(!!txs && !!accounts && !!categories && !!trend);
 
   const bucketLabel = (d: Date) => {
     const o: Intl.DateTimeFormatOptions =

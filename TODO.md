@@ -50,8 +50,12 @@
 1. [ ] **Privacy & store:**
    - The links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
      https://omokhtarr.github.io/Budgy/delete-account.html (Play's account deletion link).
-   - [ ] Changes to `docs/privacy-policy.md` must also go in those pages.
-   - Fill in Google Play's **Data safety** form to match the privacy policy.
+   - Changes to `docs/privacy-policy.md` must also go in those pages (`privacy.html`, `privacy-ar.html`,
+     and the `delete-account` pages if deletion changes) on the `gh-pages` branch. All four matched the
+     policy and the app on 2026-11-07. The next change is due with the SMS import update.
+   - Fill in Google Play's **Data safety** form to match the privacy policy. Every answer, plus the
+     listing text, graphics and release steps, is in `docs/play-store.md`. Keep that file in step with
+     Play Console.
 
 ---
 

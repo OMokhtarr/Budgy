@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's background (the b-bg colour in src/index.css), so the launch splash fades straight into the app. -->
+    <color name="splash_background">#F4F6F8</color>
+</resources>
