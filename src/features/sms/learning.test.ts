@@ -75,6 +75,12 @@ describe('resolve', () => {
     expect(await database.merchantRules.count()).toBe(0);
   });
 
+  it("links the sender to the account the money arrived in when someone pays you back", async () => {
+    const t = tx({ type: 'transfer', accountId: 'p1', toAccountId: 'a5', categoryId: undefined, subcategoryId: undefined });
+    await resolveImported(item({ fingerprint: 'fp4', direction: 'in' }), t, database);
+    expect((await database.smsLinks.get(await linkIdOf('CIB', '4821')))?.accountId).toBe('a5');
+  });
+
   it('re-learning a link points it at the new account', async () => {
     const id = await linkIdOf('CIB', '4821');
     await database.smsLinks.update(id, { deletedAt: '2026-11-02T00:00:00.000Z' });

@@ -55,6 +55,13 @@ export function suggestFor(item: SmsPending, links: SmsLink[], rules: MerchantRu
   return out;
 }
 
+/**
+ * The account the bank text is about. For a transfer from a text of money coming in (someone paying you back)
+ * that's where the money arrived; otherwise it's where the money left from.
+ */
+const bankSideOf = (item: SmsPending, tx: Transaction) =>
+  tx.type === 'transfer' && item.direction === 'in' && tx.toAccountId ? tx.toAccountId : tx.accountId;
+
 /** The ids of the link and rule a text's transaction teaches. Hashed up front: a Dexie transaction can't wait on crypto. */
 interface LessonIds {
   linkId: string;
@@ -78,7 +85,7 @@ async function learn(database: BudgyDB, item: SmsPending, tx: Transaction, ids: 
   await database.smsLinks.put({
     id: ids.linkId,
     address: addressKey(item.address),
-    accountId: tx.accountId,
+    accountId: bankSideOf(item, tx),
     updatedAt: stampAfter(oldLink?.updatedAt),
     ...(digits ? { digits } : {}),
   });

@@ -9,16 +9,18 @@ import { dayTimeLabel } from '@/core/utils/period';
 import { buildTxRecord } from '@/features/transactions/txRecord';
 import { iconFor } from '@/shared/icons';
 import type { Account, Category, SmsPending } from '@/shared/models';
-import { flowOf, importText, resolveImported, resolveSkipped, type Suggestion } from './learning';
-import { cardDraft } from './review';
+import { flowOf, importText, resolveImported, resolveSkipped } from './learning';
+import { cardDraft, type CardChoice } from './review';
 import { useDuplicatePrompt } from './useDuplicatePrompt';
 
 interface Props {
   item: SmsPending;
   /** The suggestion with the user's picks on top. */
-  choice: Suggestion;
+  choice: CardChoice;
   account?: Account;
   category?: Category;
+  /** The debt account picked in the category's place: the text is money lent to them, or paid back by them. */
+  person?: Account;
   onPickAccount(): void;
   onPickCategory(): void;
 }
@@ -30,7 +32,7 @@ const only = (fn: () => void) => (e: MouseEvent) => {
 };
 
 /** One bank text on the review screen: confirm or dismiss it here, or tap it to open the editor pre-filled. */
-export default function SmsItemCard({ item, choice, account, category, onPickAccount, onPickCategory }: Props) {
+export default function SmsItemCard({ item, choice, account, category, person, onPickAccount, onPickCategory }: Props) {
   const { t } = useTranslation();
   const locale = useLocale();
   const money = useMoney();
@@ -45,10 +47,14 @@ export default function SmsItemCard({ item, choice, account, category, onPickAcc
   const when = dayTimeLabel(new Date(item.date), locale, { today: t('period.today'), yesterday: t('period.yesterday') });
   const sender = item.digits ? `${item.address} · ••${item.digits}` : item.address;
   const understood = item.status === 'understood';
-  const draft = cardDraft(item, choice, conv);
+  const draft = cardDraft(item, choice, conv, person);
+  const lent = flowOf(item) === 'expense';
   // A USD text on an EGP card still saves in USD; the card says so before Confirm.
   const held = account ? currenciesOf(account) : [];
   const notHeld = understood && account != null && item.currency != null && !held.includes(item.currency);
+  // A debt kept in another currency needs both amounts, so Confirm waits and the editor asks.
+  const personHeld = person ? currenciesOf(person) : [];
+  const personNotHeld = understood && person != null && item.currency != null && !personHeld.includes(item.currency);
 
   /** Runs one action at a time; the card goes away once the text is resolved, and stays (with a toast) if it fails. */
   const run = (fn: () => Promise<void>) => async () => {
@@ -75,14 +81,16 @@ export default function SmsItemCard({ item, choice, account, category, onPickAcc
 
   const edit = () => {
     if (busy) return;
+    // With a person picked it opens as the transfer Confirm would save: account → person, or person → account.
+    const fromTo = person
+      ? { type: 'transfer' as const, accountId: lent ? choice.accountId : person.id, toAccountId: lent ? person.id : choice.accountId }
+      : { type: flowOf(item), accountId: choice.accountId, categoryId: choice.categoryId };
     openEditor({
-      type: flowOf(item),
+      ...fromTo,
       amount: item.amount,
       currency: item.currency,
       date: item.date,
       note: item.merchant,
-      accountId: choice.accountId,
-      categoryId: choice.categoryId,
       smsFingerprint: item.fingerprint,
       header: (
         <div className="b-smshead">
@@ -133,8 +141,17 @@ export default function SmsItemCard({ item, choice, account, category, onPickAcc
         <>
           <div className="b-smscard__chips">
             {chip(t('sms.pickAccount'), account && { name: accountName(account), icon: account.icon, color: account.color }, onPickAccount)}
-            {chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
+            {person
+              ? chip(t('sms.pickCategory'), { name: accountName(person), icon: person.icon, color: person.color }, onPickCategory)
+              : chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
           </div>
+          {person && (
+            <p className="b-smscard__note">
+              {personNotHeld
+                ? t('sms.personCurrency', { name: accountName(person), currency: item.currency, held: personHeld.join(' / ') })
+                : t(lent ? 'sms.lentNote' : 'sms.paidBackNote', { name: accountName(person) })}
+            </p>
+          )}
           {notHeld && (
             <p className="b-smscard__note">
               {t('sms.savedInCurrency', { currency: item.currency, account: accountName(account), held: held.join(' / ') })}
