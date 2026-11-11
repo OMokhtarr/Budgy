@@ -1809,6 +1809,14 @@ ion-popover.b-popmenu { --width: 230px; }
 
 /* Account / category picker sheet: the selection ring in the app colour */
 .b-pickersheet { --accent: var(--ion-color-primary); }
+.b-pickersheet__section {
+  margin: 18px 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--b-muted);
+}
 .b-pickersheet .b-sheet__body { padding-top: 10px; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
 
 /* ─── Credit cards ─────────────────────────────────────────────────────────── */

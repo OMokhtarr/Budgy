@@ -1,6 +1,8 @@
+import '@/test/setup-db';
 import { describe, expect, it } from 'vitest';
+import { BudgyDB } from '@/core/db/db';
 import type { Account, Category, SmsPending } from '@/shared/models';
-import { cardDraft, choiceOf, usablePick } from './review';
+import { addPerson, cardDraft, choiceOf, isPerson, usablePick } from './review';
 
 const conv = { base: 'EGP', rate: (c: string) => (c === 'EGP' ? 1 : c === 'USD' ? 50 : undefined) };
 
@@ -98,5 +100,54 @@ describe('cardDraft', () => {
   it("keeps a foreign currency and saves today's rate with it", () => {
     const d = cardDraft(item({ amount: 20, currency: 'USD' }), choice, conv);
     expect(d).toMatchObject({ amount: 20, currency: 'USD', rate: { rate: 50, rateCurrency: 'EGP' } });
+  });
+});
+
+describe('lending from a card', () => {
+  const ahmed = account('p1', { name: 'Ahmed', group: 'debt', icon: 'user' });
+  const accounts = [account('a1'), ahmed, account('p2', { group: 'debt', archived: true })];
+  const choice = { accountId: 'a1', personId: 'p1' };
+
+  it('keeps a picked person only while they are a live, unarchived debt', () => {
+    expect(usablePick({ personId: 'p1' }, 'expense', accounts, [])).toEqual({ personId: 'p1' });
+    expect(usablePick({ personId: 'p2' }, 'expense', accounts, [])).toEqual({});
+    expect(usablePick({ personId: 'a1' }, 'expense', accounts, [])).toEqual({});
+  });
+
+  it('a picked person replaces the category, and the suggested account stays', () => {
+    expect(choiceOf({ accountId: 'a1', categoryId: 'c1', subcategoryId: 's1' }, { personId: 'p1' })).toEqual(choice);
+  });
+
+  it('money out is lent: a transfer from the account to the person', () => {
+    expect(cardDraft(item(), choice, conv, ahmed)).toEqual({
+      type: 'transfer',
+      amount: 450,
+      currency: 'EGP',
+      accountId: 'a1',
+      toAccountId: 'p1',
+      date: '2026-11-06T09:15:00.000Z',
+      note: 'CARREFOUR MAADI',
+      smsFingerprint: 'fp1',
+    });
+  });
+
+  it('money in is paid back: a transfer from the person to the account', () => {
+    expect(cardDraft(item({ direction: 'in' }), choice, conv, ahmed)).toMatchObject({ type: 'transfer', accountId: 'p1', toAccountId: 'a1' });
+  });
+
+  it("is undefined while the person's debt isn't kept in the text's currency, or the person is the account itself", () => {
+    expect(cardDraft(item({ currency: 'USD', amount: 20 }), choice, conv, ahmed)).toBeUndefined();
+    expect(cardDraft(item(), { accountId: 'p1', personId: 'p1' }, conv, ahmed)).toBeUndefined();
+    expect(cardDraft(item(), choice, conv, undefined)).toBeUndefined();
+  });
+});
+
+describe('addPerson', () => {
+  it('adds a debt with just a name, in the given currency, with nothing owed yet', async () => {
+    const database = new BudgyDB('t-review');
+    const id = await addPerson('  Ahmed ', 'USD', database);
+    const added = await database.accounts.get(id);
+    expect(added).toMatchObject({ name: 'Ahmed', group: 'debt', icon: 'user', currency: 'USD', initialBalance: 0 });
+    expect(isPerson(added!)).toBe(true);
   });
 });

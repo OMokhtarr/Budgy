@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar, useIonRouter } from '@ionic/react';
+import { IonBackButton, IonButtons, IonContent, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar, useIonAlert, useIonRouter, useIonToast } from '@ionic/react';
 import { chatboxEllipsesOutline, searchOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import { useLocale, useSettings } from '@/core/contexts/SettingsContext';
+import { useConverter, useLocale, useSettings } from '@/core/contexts/SettingsContext';
 import { categoryFits, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import { dayTimeLabel } from '@/core/utils/period';
 import type { SmsPending } from '@/shared/models';
 import { useLearned, usePendingSms } from './hooks';
 import { flowOf, suggestFor } from './learning';
-import PickerSheet, { type PickerItem } from './PickerSheet';
-import { choiceOf, usablePick, type CardPick } from './review';
+import PickerSheet, { type PickerItem, type PickerSection } from './PickerSheet';
+import { addPerson, choiceOf, isPerson, usablePick, type CardChoice, type CardPick } from './review';
 import ScanSheet from './ScanSheet';
 import SmsItemCard from './SmsItemCard';
 import { useSmsAvailability } from './useSmsAvailable';
@@ -18,6 +18,8 @@ import { useSmsAvailability } from './useSmsAvailable';
 const PATH = '/sms';
 
 type Picking = { item: SmsPending; kind: 'account' | 'category' };
+
+const toItem = (x: { id?: string; icon: string; color: string }, name: string): PickerItem => ({ id: x.id!, name, icon: x.icon, color: x.color });
 
 /** "Bank texts": the scanned texts waiting for review, newest first. */
 export default function SmsReviewPage() {
@@ -38,9 +40,12 @@ export default function SmsReviewPage() {
   const [picking, setPicking] = useState<Picking | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [presentAlert] = useIonAlert();
+  const [presentToast] = useIonToast();
+  const conv = useConverter();
 
   const choices = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof choiceOf>>();
+    const map = new Map<string, CardChoice>();
     for (const item of items ?? []) {
       const s = suggestFor(item, learned?.links ?? [], learned?.rules ?? [], accounts ?? [], categories ?? []);
       const pick = usablePick(picks[item.fingerprint], flowOf(item), accounts ?? [], categories ?? []);
@@ -51,14 +56,12 @@ export default function SmsReviewPage() {
 
   const pickerItems = useMemo((): PickerItem[] => {
     if (!picking) return [];
-    if (picking.kind === 'account') {
-      return (accounts ?? []).filter((a) => !a.archived).map((a) => ({ id: a.id!, name: accountName(a), icon: a.icon, color: a.color }));
-    }
+    if (picking.kind === 'account') return (accounts ?? []).filter((a) => !a.archived).map((a) => toItem(a, accountName(a)));
     const flow = flowOf(picking.item);
-    return (categories ?? [])
-      .filter((c) => !c.archived && categoryFits(c, flow))
-      .map((c) => ({ id: c.id!, name: categoryName(c), icon: c.icon, color: c.color }));
+    return (categories ?? []).filter((c) => !c.archived && categoryFits(c, flow)).map((c) => toItem(c, categoryName(c)));
   }, [picking, accounts, categories, accountName, categoryName]);
+
+  const people = useMemo(() => (accounts ?? []).filter(isPerson).map((a) => toItem(a, accountName(a))), [accounts, accountName]);
 
   // Waits for the availability check; and since hidden pages stay mounted in Ionic's stack, only
   // leaves while this page is the one showing.
@@ -72,12 +75,45 @@ export default function SmsReviewPage() {
     setPicking({ item, kind });
     setPickerOpen(true);
   };
+  const setPick = (fp: string, patch: CardPick) => setPicks((p) => ({ ...p, [fp]: { ...p[fp], ...patch } }));
+  // A category and a person take the same place on the card: picking one clears the other.
   const pick = (id: string) => {
     if (!picking) return;
-    const key = picking.kind === 'account' ? 'accountId' : 'categoryId';
     const fp = picking.item.fingerprint;
-    setPicks((p) => ({ ...p, [fp]: { ...p[fp], [key]: id } }));
+    if (picking.kind === 'account') setPick(fp, { accountId: id });
+    else if (people.some((p) => p.id === id)) setPick(fp, { personId: id, categoryId: undefined });
+    else setPick(fp, { categoryId: id, personId: undefined });
   };
+
+  /** Asks for a name, adds them as a debt and picks them for the card. */
+  const askNewPerson = (item: SmsPending) =>
+    void presentAlert({
+      header: t('sms.newPersonTitle'),
+      inputs: [{ name: 'name', type: 'text', placeholder: t('sms.newPersonPlaceholder') }],
+      buttons: [
+        { text: t('common.cancel'), role: 'cancel' },
+        {
+          text: t('sms.addSender'),
+          handler: (data: { name?: string }) => {
+            const name = data.name?.trim();
+            if (!name) return false;
+            addPerson(name, item.currency ?? conv.base)
+              .then((id) => setPick(item.fingerprint, { personId: id, categoryId: undefined }))
+              .catch(() => void presentToast({ message: t('sms.actionFailed'), duration: 3000, position: 'top', color: 'danger' }));
+          },
+        },
+      ],
+    });
+
+  const section: PickerSection | undefined =
+    picking?.kind === 'category'
+      ? {
+          title: t(flowOf(picking.item) === 'expense' ? 'sms.lentTo' : 'sms.paidBackBy'),
+          items: people,
+          addLabel: t('sms.newPerson'),
+          onAdd: () => askNewPerson(picking.item),
+        }
+      : undefined;
 
   const scanButton = (
     <button className="b-btn b-btn--primary b-scanbtn" onClick={() => setScanOpen(true)}>
@@ -126,6 +162,7 @@ export default function SmsReviewPage() {
                     choice={choice}
                     account={accounts?.find((a) => a.id === choice.accountId)}
                     category={categories?.find((c) => c.id === choice.categoryId)}
+                    person={choice.personId ? accounts?.find((a) => a.id === choice.personId) : undefined}
                     onPickAccount={() => openPicker(item, 'account')}
                     onPickCategory={() => openPicker(item, 'category')}
                   />
@@ -141,7 +178,8 @@ export default function SmsReviewPage() {
         isOpen={pickerOpen}
         title={picking?.kind === 'account' ? t('sms.pickAccount') : t('sms.pickCategory')}
         items={pickerItems}
-        selectedId={picking?.kind === 'account' ? pickedChoice?.accountId : pickedChoice?.categoryId}
+        selectedId={picking?.kind === 'account' ? pickedChoice?.accountId : pickedChoice?.personId ?? pickedChoice?.categoryId}
+        section={section}
         onPick={pick}
         onClose={() => setPickerOpen(false)}
       />
