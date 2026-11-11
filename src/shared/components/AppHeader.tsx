@@ -3,10 +3,12 @@ import { IonButtons, IonIcon, IonMenuToggle, IonTitle, IonToolbar, useIonRouter 
 import { warningOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useAccountFilter } from '@/core/contexts/AccountFilterContext';
-import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
+import { useConverter, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useAccounts, useBalances, useCurrenciesInUse, useNames } from '@/core/db/hooks';
 import { addAmounts, headerCurrencies } from '@/core/utils/currency';
 import AccountsFilterSheet from '@/features/accounts/AccountsFilterSheet';
+import { usePendingCount } from '@/features/sms/hooks';
+import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
 import MoneyText from './MoneyText';
 import ProfileAvatar from './ProfileAvatar';
 
@@ -28,6 +30,11 @@ export default function AppHeader({ end }: { end?: ReactNode }) {
   const inUse = useCurrenciesInUse();
   const router = useIonRouter();
   const [filterOpen, setFilterOpen] = useState(false);
+  const { smsImport } = useSettings();
+  const smsAvailable = useSmsAvailable();
+  const pendingTexts = usePendingCount();
+  // A dot on the avatar while bank texts wait for review (shown when the menu lists Bank texts).
+  const textsWaiting = smsAvailable && smsImport.enabled && pendingTexts > 0;
 
   const chosen = (accounts ?? []).filter((a) => inTotal.has(a.id!));
   const amounts = addAmounts(chosen.map((a) => balances?.get(a.id!)));
@@ -44,7 +51,10 @@ export default function AppHeader({ end }: { end?: ReactNode }) {
       <IonButtons slot="start">
         <IonMenuToggle autoHide={false}>
           <button className="b-apphead__me" aria-label={t('menu.open')}>
-            <ProfileAvatar size={32} outlined />
+            <span className="b-apphead__avatar">
+              <ProfileAvatar size={32} outlined />
+              {textsWaiting && <span className="b-apphead__dot" aria-hidden="true" />}
+            </span>
           </button>
         </IonMenuToggle>
       </IonButtons>

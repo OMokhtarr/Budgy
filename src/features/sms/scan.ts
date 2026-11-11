@@ -38,6 +38,15 @@ export function sinceOf(period: ScanPeriod, now: Date, lastScanAt?: string): num
   return d.getTime();
 }
 
+/** Gap after a scan during which opening the app doesn't scan again, so switching apps back and forth stays quiet. */
+const AUTO_SCAN_GAP_MS = 60_000;
+
+/** Whether opening the app should scan now: no scan yet, or the last one is at least a minute old (or in the future). */
+export function autoScanDue(lastScanAt: string | undefined, now: Date): boolean {
+  const ago = now.getTime() - (lastScanAt ? Date.parse(lastScanAt) : NaN);
+  return !(ago >= 0 && ago < AUTO_SCAN_GAP_MS);
+}
+
 export interface ScanDeps {
   list: (o: { since: number }) => Promise<{ messages: SmsMessage[] }>;
   database?: BudgyDB;

@@ -38,6 +38,8 @@ export interface SmsImportSettings {
   senders: string[];
   /** ISO time of the last inbox scan. */
   lastScanAt?: string;
+  /** Scan since the last scan each time the app opens or comes back (see `AutoScan`). */
+  autoScan?: boolean;
 }
 
 interface SettingsContextValue extends Settings {

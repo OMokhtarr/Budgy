@@ -536,6 +536,7 @@
   "sms": {
     "title": "الاستيراد من الرسائل",
     "readTexts": "قراءة رسائل البنك",
+    "autoScan": "الفحص عند فتح التطبيق",
     "permission": "إذن الرسائل",
     "permissionAllowed": "مسموح",
     "permissionNotAllowed": "غير مسموح",

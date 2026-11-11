@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
 import type { Transaction } from '@/shared/models';
 import type { SmsMessage } from './parser/types';
-import { fingerprintOf, scanInbox, sinceOf } from './scan';
+import { autoScanDue, fingerprintOf, scanInbox, sinceOf } from './scan';
 
 const database = new BudgyDB('t-scan');
 
@@ -73,5 +73,23 @@ describe('sinceOf', () => {
   it('uses the last scan, or a week when there is none', () => {
     expect(sinceOf('sinceLast', now, '2026-05-14T08:00:00.000Z')).toBe(Date.parse('2026-05-14T08:00:00.000Z'));
     expect(sinceOf('sinceLast', now, undefined)).toBe(sinceOf('1w', now));
+  });
+});
+
+describe('autoScanDue', () => {
+  const now = new Date('2026-11-11T12:00:00.000Z');
+
+  it('scans when there was no scan before', () => {
+    expect(autoScanDue(undefined, now)).toBe(true);
+    expect(autoScanDue('not a date', now)).toBe(true);
+  });
+
+  it('skips when the last scan was under a minute ago', () => {
+    expect(autoScanDue('2026-11-11T11:59:30.000Z', now)).toBe(false);
+    expect(autoScanDue('2026-11-11T11:59:00.000Z', now)).toBe(true);
+  });
+
+  it('scans when the last scan is in the future, e.g. after the clock was turned back', () => {
+    expect(autoScanDue('2026-11-12T12:00:00.000Z', now)).toBe(true);
   });
 });

@@ -468,6 +468,7 @@
   "sms": {
     "title": "Import from SMS",
     "readTexts": "Read bank texts",
+    "autoScan": "Scan when the app opens",
     "permission": "SMS permission",
     "permissionAllowed": "Allowed",
     "permissionNotAllowed": "Not allowed",

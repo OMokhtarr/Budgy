@@ -1231,6 +1231,23 @@ ion-searchbar.b-search {
   display: flex;
 }
 
+.b-apphead__avatar {
+  position: relative;
+  display: flex;
+}
+
+/* Bank texts waiting for review */
+.b-apphead__dot {
+  position: absolute;
+  top: -2px;
+  inset-inline-end: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ion-color-danger);
+  border: 2px solid var(--ion-toolbar-background);
+}
+
 .b-apphead ion-button { --color: var(--b-text); }
 
 .b-apphead__balance {
