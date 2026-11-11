@@ -110,6 +110,13 @@ export default function SmsSettingsSection() {
           {t('sms.readTexts')}
         </IonToggle>
       </IonItem>
+      {smsImport.enabled && (
+        <IonItem>
+          <IonToggle checked={!!smsImport.autoScan} onIonChange={(e) => set({ autoScan: e.detail.checked })}>
+            {t('sms.autoScan')}
+          </IonToggle>
+        </IonItem>
+      )}
       {(refused || permission === 'denied') && (
         <IonItem lines="none">
           <IonNote style={{ fontSize: 12.5, padding: '8px 0' }}>{t('sms.permissionDenied')}</IonNote>

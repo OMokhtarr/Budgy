@@ -2,10 +2,10 @@
 
 > **Published at https://omokhtarr.github.io/Budgy/privacy.html from the `gh-pages` branch.** When this
 > changes, update `privacy.html` and `privacy-ar.html` there too. Keep it in line with what the app actually
-> does: it matches the code as of 2026-11-08 (optional Google/Apple sign-in, cloud sync on Supabase, optional
+> does: it matches the code as of 2026-11-11 (optional Google/Apple sign-in, cloud sync on Supabase, optional
 > SMS import on Android, no ads, no analytics).
 
-_Last updated: November 8, 2026_
+_Last updated: November 11, 2026_
 
 Budgy ("the app") is a personal budget and spending tracker made by Omar Mokhtar ("we"). This policy
 explains what data the app handles and why.
@@ -35,8 +35,9 @@ nothing else. With Apple's "Hide My Email", we only see a relay address.
 **Bank text messages, only if you turn on SMS import (Android):** Budgy can read your bank's text
 messages and turn them into transactions for you to review. It's off until you turn it on in
 Settings → Import from SMS, and Android asks for your permission first.
-- Budgy reads only texts from the bank senders you list, only on your phone, and only when you tap
-  "Scan inbox". It doesn't read texts in the background.
+- Budgy reads only texts from the bank senders you list, and only on your phone. It reads them when you
+  tap "Scan inbox", or, if you turn on "Scan when the app opens", each time you open Budgy (looking only at
+  texts that arrived since the last scan). It doesn't read texts in the background or when a text arrives.
 - While a text waits for your review, its message is kept on your phone. It's deleted as soon as you
   confirm or dismiss it. Message text is never uploaded, backed up or shared.
 - A text you confirm becomes an ordinary transaction: its amount, date and merchant. To suggest the

@@ -18,6 +18,7 @@ import SmsReviewPage from '@/features/sms/SmsReviewPage';
 import AppMenu, { MENU_CONTENT_ID } from '@/features/menu/AppMenu';
 import FirstRunCurrency from '@/features/onboarding/FirstRunCurrency';
 import BackupReminder from '@/features/data/BackupReminder';
+import AutoScan from '@/features/sms/AutoScan';
 
 setupIonicReact({ mode: 'ios' });
 
@@ -72,6 +73,7 @@ export default function App() {
       </TxEditorProvider>
       <FirstRunCurrency />
       <BackupReminder />
+      <AutoScan />
       </CloudProvider>
     </IonApp>
   );

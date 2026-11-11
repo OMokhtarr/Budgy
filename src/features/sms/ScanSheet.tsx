@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { IonIcon, IonModal, IonSpinner, useIonAlert, useIonRouter, useIonToast } from '@ionic/react';
 import { closeOutline, searchOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocale, useSettings } from '@/core/contexts/SettingsContext';
 import { dayTimeLabel } from '@/core/utils/period';
 import { SmsInbox } from './native';
-import { scanInbox, sinceOf, type ScanPeriod } from './scan';
+import type { ScanPeriod } from './scan';
+import { useInboxScan } from './useInboxScan';
 
 const PERIODS: ScanPeriod[] = ['sinceLast', '3d', '1w', '2w', '1m', '3m', '6m'];
 
@@ -14,14 +15,12 @@ export default function ScanSheet({ isOpen, onClose }: { isOpen: boolean; onClos
   const { t } = useTranslation();
   const locale = useLocale();
   const router = useIonRouter();
-  const { smsImport, update } = useSettings();
+  const { smsImport } = useSettings();
+  const runScan = useInboxScan();
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
   const [period, setPeriod] = useState<ScanPeriod>('1w');
   const [scanning, setScanning] = useState(false);
-  // The settings as they are when the scan ends, so saving lastScanAt doesn't undo a change made meanwhile.
-  const latest = useRef(smsImport);
-  latest.current = smsImport;
 
   const last = smsImport.lastScanAt;
   const periods = last ? PERIODS : PERIODS.filter((p) => p !== 'sinceLast');
@@ -43,12 +42,7 @@ export default function ScanSheet({ isOpen, onClose }: { isOpen: boolean; onClos
         });
         return;
       }
-      const started = new Date();
-      const { added } = await scanInbox(
-        { since: sinceOf(period, started, last), senders: smsImport.senders },
-        { list: (o) => SmsInbox.list(o) },
-      );
-      update({ smsImport: { ...latest.current, lastScanAt: started.toISOString() } });
+      const added = await runScan(period);
       onClose();
       void toast(added ? t('sms.scanFound', { count: added }) : t('sms.scanNothing'));
     } catch {
