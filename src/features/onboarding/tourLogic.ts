@@ -6,7 +6,8 @@
 import type { OnboardingState } from './onboardingStore';
 import type { Release, TourId } from './tourCatalog';
 
-export type Deck = { kind: 'welcome' } | { kind: 'whatsNew'; releases: Release[] } | null;
+/** `replay` is the welcome replayed from Settings: no currency slide, and finishing changes nothing. */
+export type Deck = { kind: 'welcome'; replay: boolean } | { kind: 'whatsNew'; releases: Release[] } | null;
 
 /** Each update's features not yet seen; updates with none left are dropped. */
 export function unseenReleases(state: OnboardingState, releases: Release[]): Release[] {
@@ -17,7 +18,7 @@ export function unseenReleases(state: OnboardingState, releases: Release[]): Rel
 
 export function launchDeck(state: OnboardingState | null, releases: Release[]): Deck {
   if (!state) return null;
-  if (!state.welcomeDone) return { kind: 'welcome' };
+  if (!state.welcomeDone) return { kind: 'welcome', replay: false };
   const fresh = unseenReleases(state, releases);
   return fresh.length > 0 ? { kind: 'whatsNew', releases: fresh } : null;
 }

@@ -25,7 +25,7 @@ const state = (over = {}) => ({ welcomeDone: true, seenTours: [] as string[], se
 describe('launchDeck', () => {
   it('shows nothing when storage is unusable', () => expect(launchDeck(null, [rel('a')])).toBeNull());
   it('shows the welcome until it is done', () =>
-    expect(launchDeck(state({ welcomeDone: false }), [rel('a')])).toEqual({ kind: 'welcome' }));
+    expect(launchDeck(state({ welcomeDone: false }), [rel('a')])).toEqual({ kind: 'welcome', replay: false }));
   it('shows unseen features oldest first', () =>
     expect(launchDeck(state({ seenReleases: ['a'] }), [rel('a'), rel('b'), rel('c')])).toEqual({
       kind: 'whatsNew',

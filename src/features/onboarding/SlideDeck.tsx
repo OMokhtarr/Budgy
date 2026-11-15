@@ -3,13 +3,14 @@
  * Ionic's sheets and popups, but below toasts, so a toast raised from a slide still shows. The back
  * button acts as Skip.
  */
-import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { swipeStep } from '@/core/utils/swipe';
 import { Illustration } from './illustrations';
 import type { IllustrationId } from './tourCatalog';
 import { useBackToSkip } from './useBackToSkip';
+import { useOverlayHost } from './useOverlayHost';
 import './onboarding.css';
 
 export interface DeckSlide {
@@ -66,10 +67,7 @@ export function SlideDeck({ slides, eyebrow, finishLabel, onFinish, onSkip, skip
   };
   useBackToSkip(skip);
 
-  // Inside ion-app, like Ionic's own overlays: a toast (z-index 60000+) then stacks above the deck,
-  // which it could not from outside ion-app. Resolved after mount, when ion-app is in the document.
-  const [host, setHost] = useState<Element | null>(null);
-  useLayoutEffect(() => setHost(document.querySelector('ion-app') ?? document.body), []);
+  const host = useOverlayHost();
 
   useEffect(() => {
     titleRef.current?.focus();

@@ -22,6 +22,8 @@
   --ion-color-success: #10b981;
 
   --ion-font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  /* The bottom tab bar, without the safe-area inset under it; the tour card sits above it. */
+  --ion-tab-bar-height: 72px;
 
   --b-bg: #f4f6f8;
   --b-surface: #ffffff;
@@ -131,7 +133,7 @@ ion-content {
 
 ion-tab-bar {
   --border: 0;
-  height: 72px;
+  height: var(--ion-tab-bar-height);
   padding-bottom: env(safe-area-inset-bottom);
 }
 

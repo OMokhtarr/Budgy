@@ -16,20 +16,23 @@ import DataPage from '@/features/data/DataPage';
 import LinkedNumbersPage from '@/features/sms/LinkedNumbersPage';
 import SmsReviewPage from '@/features/sms/SmsReviewPage';
 import AppMenu, { MENU_CONTENT_ID } from '@/features/menu/AppMenu';
-import FirstRunCurrency from '@/features/onboarding/FirstRunCurrency';
+import { TourProvider } from '@/features/onboarding/TourProvider';
+import type { OnboardingState } from '@/features/onboarding/onboardingStore';
 import BackupReminder from '@/features/data/BackupReminder';
 import AutoScan from '@/features/sms/AutoScan';
 
 setupIonicReact({ mode: 'ios' });
 
-export default function App() {
+export default function App({ onboarding }: { onboarding: OnboardingState | null }) {
   const { t } = useTranslation();
 
   return (
     <IonApp>
       <CloudProvider>
-      <TxEditorProvider>
       <IonReactRouter>
+      {/* Inside the router: "Show me" navigates, and the editor asks for its tour. */}
+      <TourProvider initial={onboarding}>
+      <TxEditorProvider>
         <AppMenu />
         <div id={MENU_CONTENT_ID} className="ion-page">
         <IonTabs>
@@ -69,11 +72,11 @@ export default function App() {
           </IonTabBar>
         </IonTabs>
         </div>
-      </IonReactRouter>
+        <BackupReminder />
+        <AutoScan />
       </TxEditorProvider>
-      <FirstRunCurrency />
-      <BackupReminder />
-      <AutoScan />
+      </TourProvider>
+      </IonReactRouter>
       </CloudProvider>
     </IonApp>
   );

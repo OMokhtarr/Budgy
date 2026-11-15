@@ -124,7 +124,7 @@ src/
     profile/       ProfilePage, AccountSyncSection
     data/          DataPage, useDataActions, BackupReminder
     menu/          AppMenu
-    onboarding/    FirstRunCurrency
+    onboarding/    TourProvider (welcome slides, What's new, page tours), SpotlightOverlay, tourCatalog
     sms/           SMS import (in progress; see docs/superpowers)
   shared/
     components/ AppHeader, PeriodBar, Donut, Bubble, Avatar, MoneyText, RateInput, IconColorPicker, …

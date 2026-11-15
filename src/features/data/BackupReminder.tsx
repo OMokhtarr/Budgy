@@ -6,6 +6,7 @@ import { useSettings } from '@/core/contexts/SettingsContext';
 import { alive, db } from '@/core/db/db';
 import { useDataActions } from './useDataActions';
 import { useCloud } from '@/core/cloud/CloudContext';
+import { useTours } from '@/features/onboarding/TourProvider';
 
 /**
  * Everything lives only on this device, so nudge the user to back up: once they have some data and
@@ -34,9 +35,11 @@ export default function BackupReminder() {
   const txCount = useLiveQuery(() => db.transactions.filter(alive).count());
   // Signed in, sync already keeps a copy in the account.
   const { user } = useCloud();
+  // Not over the welcome slides; the timer starts once they close.
+  const { welcomeOpen } = useTours();
 
   useEffect(() => {
-    if (user || txCount == null || txCount < MIN_TRANSACTIONS) return;
+    if (welcomeOpen || user || txCount == null || txCount < MIN_TRANSACTIONS) return;
     const now = Date.now();
     const last = lastBackupAt ? Date.parse(lastBackupAt) : 0;
     if (last && now - last < 30 * DAY) return;
@@ -60,7 +63,7 @@ export default function BackupReminder() {
       });
     }, 2000);
     return () => window.clearTimeout(timer);
-  }, [user, txCount, lastBackupAt, presentToast, t]);
+  }, [welcomeOpen, user, txCount, lastBackupAt, presentToast, t]);
 
   return null;
 }
