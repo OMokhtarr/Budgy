@@ -8,7 +8,7 @@ import { alive, db, softDelete } from './db';
 /** The columns of an exported file. An import needs only `REQUIRED`, and takes them in any order. */
 export const CSV_HEADER = [
   'Date', 'Type', 'Amount', 'Currency', 'Account', 'To account', 'Category', 'Subcategory', 'Note',
-  'Received', 'Received currency', 'Rate', 'Rate currency',
+  'Received', 'Received currency', 'Rate', 'Rate currency', 'Group', 'Money back',
 ] as const;
 const REQUIRED = ['date', 'type', 'amount', 'currency', 'account'];
 
@@ -38,6 +38,8 @@ export function csvRows(txs: Transaction[], accounts: Account[], categories: Cat
       x.toCurrency ?? '',
       x.rate ?? '',
       x.rateCurrency ?? '',
+      x.groupId ?? '',
+      x.moneyBack ? 'yes' : '',
     ]),
   ];
 }
@@ -116,7 +118,14 @@ interface Row {
   toCurrency?: string;
   rate?: number;
   rateCurrency?: string;
+  /** Transactions shown as one entry share it. */
+  group: string;
+  /** Income that is money back on an expense category. */
+  moneyBack: boolean;
 }
+
+/** Money back counts as spending, so it looks for (and makes) expense categories. */
+const flowOfRow = (r: Pick<Row, 'type' | 'moneyBack'>): Flow => (r.moneyBack ? 'expense' : (r.type as Flow));
 
 const norm = (s: string) => s.trim().toLocaleLowerCase();
 const isCurrency = (s: string) => /^[A-Z]{3}$/.test(s);
@@ -140,7 +149,7 @@ function readRow(get: (column: string) => string): Row | undefined {
   if (!date || (type !== 'expense' && type !== 'income' && type !== 'transfer') || amount == null || !isCurrency(currency) || !account) return undefined;
   const row: Row = {
     day: get('date'), date, type, amount, currency, account, note: get('note'),
-    toAccount: '', category: '', subcategory: '',
+    toAccount: '', category: '', subcategory: '', group: '', moneyBack: false,
   };
   if (type === 'transfer') {
     row.toAccount = get('to account');
@@ -156,6 +165,8 @@ function readRow(get: (column: string) => string): Row | undefined {
   }
   row.category = get('category');
   row.subcategory = get('subcategory');
+  row.group = get('group');
+  row.moneyBack = type === 'income' && norm(get('money back')) === 'yes';
   if (row.subcategory && !row.category) return undefined;
   const rate = get('rate');
   const rateCurrency = get('rate currency').toUpperCase();
@@ -171,8 +182,13 @@ function readRow(get: (column: string) => string): Row | undefined {
 const holds = (a: Account, currency: string) => a.currency === currency || a.currency2 === currency;
 
 /** Identifies a transaction by what shows in a file, for spotting ones already saved. */
-function fingerprint(t: Pick<Transaction, 'type' | 'amount' | 'currency' | 'accountId' | 'toAccountId' | 'categoryId' | 'subcategoryId' | 'note' | 'toAmount' | 'toCurrency'>, day: string): string {
-  return [day, t.type, t.amount, t.currency, t.accountId, t.toAccountId, t.categoryId, t.subcategoryId, t.note?.trim(), t.toAmount, t.toCurrency].map((v) => v ?? '').join('\u0000');
+function fingerprint(
+  t: Pick<Transaction, 'type' | 'amount' | 'currency' | 'accountId' | 'toAccountId' | 'categoryId' | 'subcategoryId' | 'note' | 'toAmount' | 'toCurrency' | 'moneyBack' | 'groupId'>,
+  day: string,
+): string {
+  return [day, t.type, t.amount, t.currency, t.accountId, t.toAccountId, t.categoryId, t.subcategoryId, t.note?.trim(), t.toAmount, t.toCurrency, t.moneyBack, t.groupId]
+    .map((v) => v ?? '')
+    .join('\u0000');
 }
 
 /**
@@ -259,11 +275,14 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
   const alreadySaved = (r: Row): boolean => {
     const account = findAccount(r.account);
     const toAccount = r.toAccount ? findAccount(r.toAccount) : undefined;
-    const category = r.category && r.type !== 'transfer' ? findCategory(r.category, r.type) : undefined;
+    const category = r.category && r.type !== 'transfer' ? findCategory(r.category, flowOfRow(r)) : undefined;
     const subcategory = r.subcategory ? findSubcategory(category, r.subcategory) : undefined;
     if (!account || (r.toAccount && !toAccount) || (r.category && !category) || (r.subcategory && !subcategory)) return false;
     const key = fingerprint(
-      { type: r.type, amount: r.amount, currency: r.currency, accountId: account.id!, toAccountId: toAccount?.id, categoryId: category?.id, subcategoryId: subcategory?.id, note: r.note, toAmount: r.toAmount, toCurrency: r.toCurrency },
+      {
+        type: r.type, amount: r.amount, currency: r.currency, accountId: account.id!, toAccountId: toAccount?.id, categoryId: category?.id, subcategoryId: subcategory?.id,
+        note: r.note, toAmount: r.toAmount, toCurrency: r.toCurrency, moneyBack: r.moneyBack || undefined, groupId: r.group || undefined,
+      },
       r.day,
     );
     const left = saved.get(key) ?? 0;
@@ -282,6 +301,8 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
       plan.badRows.push(rowNumber);
       return;
     }
+    // Money back named after a category that only takes income is read as that income.
+    if (r.moneyBack && r.category && !findCategory(r.category, 'expense') && findCategory(r.category, 'income')) r.moneyBack = false;
     if (r.category && r.type !== 'transfer') categorized.push(r);
     if (alreadySaved(r)) {
       plan.duplicates++;
@@ -301,8 +322,10 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
         t.toCurrency = r.toCurrency;
       }
     } else {
+      if (r.moneyBack) t.moneyBack = true;
+      if (r.group) t.groupId = r.group;
       if (r.category) {
-        const c = categoryFor(r.category, r.type);
+        const c = categoryFor(r.category, flowOfRow(r));
         t.categoryId = c.id;
         if (r.subcategory) t.subcategoryId = subcategoryFor(c, r.subcategory).id;
       }
@@ -317,8 +340,8 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
   const unused = unusedAfter(
     data.categories.filter(alive),
     [...data.transactions.filter(alive), ...plan.transactions],
-    new Set(categorized.map((r) => r.type as Flow)),
-    new Set(categorized.filter((r) => r.subcategory).map((r) => findCategory(r.category, r.type as Flow)?.id)),
+    new Set(categorized.map(flowOfRow)),
+    new Set(categorized.filter((r) => r.subcategory).map((r) => findCategory(r.category, flowOfRow(r))?.id)),
   );
   plan.unusedCategories = unused.categories;
   plan.unusedSubcategories = unused.subcategories;

@@ -335,6 +335,43 @@ describe('csvRows', () => {
   });
 });
 
+describe('money back and groups in CSV', () => {
+  const names = { accountName: (a?: Account) => a?.name ?? 'Deleted', categoryName: (c?: Category) => c?.name ?? 'Uncategorized' };
+  const at = new Date(2026, 2, 15, 12).toISOString();
+  const back: Transaction = { id: 'b', type: 'income', moneyBack: true, groupId: 'g1', amount: 200, currency: 'EGP', accountId: 'cash', categoryId: 'food', date: at, createdAt: at };
+  const paidBack = { Date: '2026-03-15', Type: 'income', Amount: '200', Currency: 'EGP', Account: 'Cash', Note: 'Ali' };
+
+  it('writes the group and money back columns', () => {
+    const [head, row] = csvRows([back], [CASH], [FOOD], names);
+    expect(row[head.indexOf('Group')]).toBe('g1');
+    expect(row[head.indexOf('Money back')]).toBe('yes');
+  });
+
+  it('reads money back into an expense category, with its group', () => {
+    const [t] = plan(file({ ...paidBack, Category: 'Food', Group: 'g1', 'Money back': 'Yes' })).transactions;
+    expect(t).toMatchObject({ type: 'income', moneyBack: true, groupId: 'g1', categoryId: 'food' });
+  });
+
+  it('reads money back named after an income category as plain income', () => {
+    const [t] = plan(file({ ...paidBack, Category: 'Salary', 'Money back': 'yes' })).transactions;
+    expect(t.categoryId).toBe('salary');
+    expect(t.moneyBack).toBeUndefined();
+  });
+
+  it('does not take money back for plain income already saved in the same category', () => {
+    const gifts = category({ id: 'gifts', name: 'Gifts', kind: 'both', order: 2 });
+    const plain: Transaction = { ...back, moneyBack: undefined, groupId: undefined, categoryId: 'gifts', note: 'Ali' };
+    const data = { ...DATA, categories: [...DATA.categories, gifts], transactions: [plain] };
+    expect(plan(file({ ...paidBack, Category: 'Gifts' }), data).duplicates).toBe(1);
+    expect(plan(file({ ...paidBack, Category: 'Gifts', 'Money back': 'yes' }), data).duplicates).toBe(0);
+  });
+
+  it('round trips money back and groups', () => {
+    const data = { ...DATA, transactions: [back] };
+    expect(plan(toCsv(csvRows([back], data.accounts, data.categories, names)), data)).toMatchObject({ transactions: [], duplicates: 1, badRows: [] });
+  });
+});
+
 describe('saveCsvImport', () => {
   beforeEach(async () => {
     await Promise.all([db.accounts.clear(), db.categories.clear(), db.transactions.clear()]);
