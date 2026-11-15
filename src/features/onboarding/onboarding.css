@@ -1,0 +1,138 @@
+/* Welcome / What's new decks. Above every app surface, Ionic overlays included; colours only from
+   theme tokens so light and dark both work. */
+
+/* ─── Shared ───────────────────────────────────────────────────────────────── */
+.ob-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14.5px;
+  cursor: pointer;
+}
+.ob-btn--ghost {
+  background: transparent;
+  border: 1.5px solid var(--ion-color-primary);
+  color: var(--ion-color-primary);
+}
+.ob-btn--link {
+  background: none;
+  color: var(--b-muted);
+  padding: 0 8px;
+  font-weight: 500;
+}
+.ob-dots { display: flex; justify-content: center; gap: 6px; }
+.ob-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ion-color-primary) 30%, transparent);
+  transition: width 0.2s ease;
+}
+.ob-dot.is-on { width: 18px; background: var(--ion-color-primary); }
+.ob-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ─── Slide decks ──────────────────────────────────────────────────────────── */
+.ob-deck {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: flex;
+  justify-content: center;
+  background: var(--b-bg);
+  color: var(--b-text);
+  font-family: var(--ion-font-family);
+}
+.ob-deck-inner {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 20px)
+    calc(env(safe-area-inset-bottom) + 20px) calc(env(safe-area-inset-left) + 20px);
+}
+/* Skip sits at the top start (left, or right in Arabic). */
+.ob-deck-top { display: flex; justify-content: flex-start; min-height: 44px; }
+/* Auto margins centre the content but, unlike justify-content: center, keep its top reachable when
+   it is taller than the screen (the currency chips). */
+.ob-deck-slide {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  overflow-y: auto;
+  touch-action: pan-y;
+  animation: ob-slide-in 0.25s ease-out;
+}
+.ob-deck-slide > :first-child { margin-top: auto; }
+.ob-deck-slide > :last-child { margin-bottom: auto; }
+.ob-deck-art { width: min(52vw, 190px); flex-shrink: 0; color: var(--ion-color-primary); }
+/* The currency chips need the room. */
+.ob-deck-slide:has(.b-chipgrid) .ob-deck-art { width: min(30vw, 112px); }
+.ob-deck-art svg { width: 100%; height: auto; display: block; }
+/* No letter-spacing: tracking breaks Arabic letter joining. */
+.ob-deck-eyebrow {
+  margin: 0;
+  color: var(--ion-color-primary);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.ob-deck-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--b-text);
+  outline: none;
+}
+.ob-deck-body {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--b-muted);
+}
+.ob-deck-extra { width: 100%; margin-top: 8px; }
+.ob-deck .ob-dots { margin: 16px 0; }
+.ob-deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.ob-deck-next { min-width: 120px; }
+.ob-lang-row { display: flex; justify-content: center; gap: 12px; }
+.ob-lang-btn {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1.5px solid var(--b-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ion-color-primary) 8%, transparent);
+  color: var(--b-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ob-lang-btn.is-active {
+  background: var(--ion-color-primary);
+  border-color: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+}
+@keyframes ob-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-deck-slide { animation: none; }
+  .ob-dot { transition: none; }
+}
