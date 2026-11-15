@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { alive, BudgyDB } from '@/core/db/db';
 import { totalsOf } from '@/core/db/hooks';
 import type { SmsPending, Transaction } from '@/shared/models';
-import { recentExpenses, takeOff } from './grouping';
+import { changeOn } from '@/core/utils/lending';
+import { combineFlow, combineTexts, defaultNote, recentExpenses, takeOff } from './grouping';
 import { linkIdOf } from './learning';
 
 const database = new BudgyDB('t-grouping');
@@ -26,6 +27,11 @@ const all = async () => (await database.transactions.toArray()).filter(alive);
 
 beforeEach(async () => {
   await Promise.all([database.transactions.clear(), database.smsPending.clear(), database.smsLinks.clear(), database.merchantRules.clear()]);
+  await database.categories.bulkPut([
+    { id: 'food', name: 'Food', kind: 'expense', icon: 'restaurant', color: '#f00', order: 0 },
+    { id: 'shopping', name: 'Shopping', kind: 'expense', icon: 'shirt', color: '#f0f', order: 1 },
+    { id: 'salary', name: 'Salary', kind: 'income', icon: 'briefcase', color: '#0f0', order: 2 },
+  ]);
 });
 
 describe('takeOff', () => {
@@ -96,5 +102,74 @@ describe('recentExpenses', () => {
     await purchase({ date: daysAgo(2), type: 'transfer', toAccountId: 'bank' });
     await purchase({ date: daysAgo(2), deletedAt: daysAgo(1) });
     expect((await recentExpenses(30, database)).map((t) => t.id)).toEqual([newer.id, older.id]);
+  });
+});
+
+describe('combineTexts', () => {
+  const out = (over: Partial<SmsPending> = {}) => item({ fingerprint: 'out1', address: 'CIB', direction: 'out', amount: 600, merchant: 'Pizza Place', ...over });
+  const toBase = (n: number, c: string) => n * (conv.rate(c) ?? 0);
+
+  it('makes a payment and the money paid back one entry, netting the spending', async () => {
+    const parts = [out(), item(), item({ fingerprint: 'in2', merchant: 'Sara' })].map((x) => ({ item: x, accountId: x.direction === 'out' ? 'card' : 'bank' }));
+    await database.smsPending.bulkPut(parts.map((p) => p.item));
+    const rows = await combineTexts(parts, { categoryId: 'food', moneyBack: false, note: 'Dinner' }, conv, database);
+
+    expect(rows.map((r) => [r.type, !!r.moneyBack, r.accountId])).toEqual([['expense', false, 'card'], ['income', true, 'bank'], ['income', true, 'bank']]);
+    expect(new Set(rows.map((r) => r.groupId)).size).toBe(1);
+    expect(rows[0].groupId).toBeTruthy();
+    expect(rows.every((r) => r.categoryId === 'food' && r.note === 'Dinner')).toBe(true);
+    expect(totalsOf(rows, { base: 'EGP', toBase }).expense).toBe(200);
+    expect(await database.smsPending.count()).toBe(0);
+    expect(await database.merchantRules.count()).toBe(1);
+  });
+
+  it('makes one purchase paid from two cards, each card moving by its own text', async () => {
+    const parts = [
+      { item: out({ amount: 300 }), accountId: 'card1' },
+      { item: out({ fingerprint: 'out2', address: 'NBE', amount: 200 }), accountId: 'card2' },
+    ];
+    const rows = await combineTexts(parts, { categoryId: 'shopping', moneyBack: false }, conv, database);
+    expect(totalsOf(rows, { base: 'EGP', toBase }).expense).toBe(500);
+    expect(rows.flatMap((r) => changeOn(r, 'card1'))).toEqual([[-300, 'EGP']]);
+    expect(rows.flatMap((r) => changeOn(r, 'card2'))).toEqual([[-200, 'EGP']]);
+  });
+
+  it('keeps texts of money in as income in an income category', async () => {
+    const parts = [item(), item({ fingerprint: 'in2' })].map((x) => ({ item: x, accountId: 'bank' }));
+    const rows = await combineTexts(parts, { categoryId: 'salary', moneyBack: false }, conv, database);
+    expect(rows.every((r) => r.type === 'income' && !r.moneyBack && r.categoryId === 'salary')).toBe(true);
+    expect(await database.merchantRules.count()).toBe(0);
+  });
+
+  it('makes texts of money in money back when asked', async () => {
+    const parts = [item(), item({ fingerprint: 'in2' })].map((x) => ({ item: x, accountId: 'bank' }));
+    const rows = await combineTexts(parts, { categoryId: 'food', moneyBack: true }, conv, database);
+    expect(rows.every((r) => r.type === 'income' && r.moneyBack)).toBe(true);
+  });
+
+  it('writes nothing when the category does not take the spending', async () => {
+    const parts = [{ item: out(), accountId: 'card' }, { item: item(), accountId: 'bank' }];
+    await expect(combineTexts(parts, { categoryId: 'salary', moneyBack: false }, conv, database)).rejects.toThrow();
+    expect(await all()).toHaveLength(0);
+  });
+
+  it('needs two texts, each with an account', async () => {
+    await expect(combineTexts([{ item: out(), accountId: 'card' }], { categoryId: 'food', moneyBack: false }, conv, database)).rejects.toThrow();
+    await expect(combineTexts([{ item: out(), accountId: 'card' }, { item: item(), accountId: '' }], { categoryId: 'food', moneyBack: false }, conv, database)).rejects.toThrow();
+    expect(await all()).toHaveLength(0);
+  });
+
+  it('saves texts only once when run twice', async () => {
+    const parts = [{ item: out(), accountId: 'card' }, { item: item(), accountId: 'bank' }];
+    await combineTexts(parts, { categoryId: 'food', moneyBack: false }, conv, database);
+    await combineTexts(parts, { categoryId: 'food', moneyBack: false }, conv, database);
+    expect(await all()).toHaveLength(2);
+  });
+
+  it('works out the flow and the note from the texts', () => {
+    expect(combineFlow([item(), out()])).toBe('expense');
+    expect(combineFlow([item(), item({ fingerprint: 'in2' })])).toBe('income');
+    expect(defaultNote([item(), out({ amount: 100, merchant: 'Small' }), out({ fingerprint: 'o2', amount: 600, merchant: 'Big' })])).toBe('Big');
+    expect(defaultNote([item({ merchant: undefined }), item({ fingerprint: 'in2', merchant: 'Sara' })])).toBe('Sara');
   });
 });

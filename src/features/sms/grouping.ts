@@ -1,10 +1,11 @@
 import type { Converter } from '@/core/contexts/SettingsContext';
 import { alive, db, type BudgyDB } from '@/core/db/db';
+import { categoryFits } from '@/core/db/hooks';
 import { newId } from '@/core/utils/id';
 import { rateToSave } from '@/core/utils/txRate';
 import { buildTxRecord, saveTx } from '@/features/transactions/txRecord';
-import type { SmsPending, Transaction } from '@/shared/models';
-import { learn, lessonIdsOf } from './learning';
+import type { Flow, SmsPending, Transaction } from '@/shared/models';
+import { learn, lessonIdsOf, type LessonIds } from './learning';
 
 /** A bank text and the account it goes on, as picked on its card or in a sheet. */
 export interface TextPart {
@@ -47,11 +48,26 @@ export async function takeOff(parts: TextPart[], target: Transaction, conv: Conv
       rate: rateToSave({ saved: conv.rate(currency), currency, base: conv.base }),
     });
   });
-  // Hashed up front: a Dexie transaction can't wait on crypto.
   const lessons = await Promise.all(records.map((r, i) => lessonIdsOf(parts[i].item, r)));
-
-  return database.transaction('rw', database.transactions, database.smsLinks, database.merchantRules, database.smsPending, async () => {
+  return saveTexts(parts, records, lessons, database, async () => {
     if (!target.groupId) await database.transactions.update(targetId, { groupId });
+  });
+}
+
+/**
+ * Saves each text's record (once: one saved before is returned instead), learns from it and drops it from review,
+ * after `first`, all in one Dexie transaction. The lesson ids are hashed beforehand: a Dexie transaction can't
+ * wait on crypto.
+ */
+function saveTexts(
+  parts: TextPart[],
+  records: Omit<Transaction, 'id'>[],
+  lessons: LessonIds[],
+  database: BudgyDB,
+  first?: () => Promise<void>,
+): Promise<Transaction[]> {
+  return database.transaction('rw', database.transactions, database.smsLinks, database.merchantRules, database.smsPending, async () => {
+    await first?.();
     const saved: Transaction[] = [];
     for (const [i, record] of records.entries()) {
       const tx = await saveTx(record, undefined, database);
@@ -60,6 +76,66 @@ export async function takeOff(parts: TextPart[], target: Transaction, conv: Conv
     }
     return saved;
   });
+}
+
+/** What a combined entry is: its category (and subcategory), whether money in is money back, and its note. */
+export interface CombineChoice {
+  categoryId: string;
+  subcategoryId?: string;
+  moneyBack: boolean;
+  note?: string;
+}
+
+/** A combined entry is spending when any text is money out; otherwise it's money in. */
+export const combineFlow = (items: SmsPending[]): Flow => (items.some((x) => x.direction !== 'in') ? 'expense' : 'income');
+
+/** The note a combined entry starts with: the merchant of the largest payment, or else the first merchant. */
+export function defaultNote(items: SmsPending[]): string | undefined {
+  const outs = items.filter((x) => x.direction !== 'in' && x.merchant).sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0));
+  return outs[0]?.merchant ?? items.find((x) => x.merchant)?.merchant;
+}
+
+/**
+ * Saves several texts as one entry: rows on their own accounts, sharing a new group, the category, subcategory and
+ * note. Money out is spending; money in is money back on it (or, when every text is money in, income, or money
+ * back when `moneyBack`). The category must take that spending or income. Merchant categories are learned from the
+ * payments only; every sender's link is learned. All or nothing; a text saved before isn't saved again.
+ */
+export async function combineTexts(parts: TextPart[], choice: CombineChoice, conv: Conv, database: BudgyDB = db): Promise<Transaction[]> {
+  if (parts.length < 2 || parts.some((p) => !understood(p.item) || !p.accountId)) {
+    throw new Error('Combining needs two or more texts that were read, each with an account');
+  }
+  const spending = combineFlow(parts.map((p) => p.item)) === 'expense' || choice.moneyBack;
+  const category = await database.categories.get(choice.categoryId);
+  if (!category || !alive(category) || !categoryFits(category, spending ? 'expense' : 'income')) {
+    throw new Error("The category doesn't take this entry");
+  }
+  const groupId = newId();
+  const records = parts.map(({ item, accountId }) => {
+    const { amount, currency } = item as SmsPending & { amount: number; currency: string };
+    const out = item.direction !== 'in';
+    return buildTxRecord({
+      type: out ? 'expense' : 'income',
+      moneyBack: !out && spending,
+      amount,
+      currency,
+      accountId,
+      categoryId: choice.categoryId,
+      subcategoryId: choice.subcategoryId,
+      date: item.date,
+      note: choice.note,
+      smsFingerprint: item.fingerprint,
+      groupId,
+      rate: rateToSave({ saved: conv.rate(currency), currency, base: conv.base }),
+    });
+  });
+  const lessons = await Promise.all(
+    records.map(async (r, i) => {
+      const ids = await lessonIdsOf(parts[i].item, r);
+      return r.type === 'expense' ? ids : { linkId: ids.linkId };
+    }),
+  );
+  return saveTexts(parts, records, lessons, database);
 }
 
 /** The live expenses of the last `days` days, newest first: the purchases money can come back on. */
