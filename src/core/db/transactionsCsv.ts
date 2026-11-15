@@ -181,12 +181,16 @@ function readRow(get: (column: string) => string): Row | undefined {
 
 const holds = (a: Account, currency: string) => a.currency === currency || a.currency2 === currency;
 
-/** Identifies a transaction by what shows in a file, for spotting ones already saved. */
+/**
+ * Identifies a transaction by what shows in a file, for spotting ones already saved. The group isn't part of it (a
+ * purchase grouped after the export is still the same purchase), and money back only when the file has its column.
+ */
 function fingerprint(
-  t: Pick<Transaction, 'type' | 'amount' | 'currency' | 'accountId' | 'toAccountId' | 'categoryId' | 'subcategoryId' | 'note' | 'toAmount' | 'toCurrency' | 'moneyBack' | 'groupId'>,
+  t: Pick<Transaction, 'type' | 'amount' | 'currency' | 'accountId' | 'toAccountId' | 'categoryId' | 'subcategoryId' | 'note' | 'toAmount' | 'toCurrency' | 'moneyBack'>,
   day: string,
+  withMoneyBack: boolean,
 ): string {
-  return [day, t.type, t.amount, t.currency, t.accountId, t.toAccountId, t.categoryId, t.subcategoryId, t.note?.trim(), t.toAmount, t.toCurrency, t.moneyBack, t.groupId]
+  return [day, t.type, t.amount, t.currency, t.accountId, t.toAccountId, t.categoryId, t.subcategoryId, t.note?.trim(), t.toAmount, t.toCurrency, withMoneyBack ? t.moneyBack : undefined]
     .map((v) => v ?? '')
     .join('\u0000');
 }
@@ -203,6 +207,7 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
   const [head, ...rows] = parseCsv(text);
   const columns = (head ?? []).map(norm);
   if (!REQUIRED.every((c) => columns.includes(c))) return null;
+  const withMoneyBack = columns.includes('money back');
 
   const accounts = data.accounts.filter(alive);
   const categories = data.categories.filter(alive).map((c) => ({ ...c }));
@@ -268,7 +273,7 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
 
   const saved = new Map<string, number>();
   for (const t of data.transactions.filter(alive)) {
-    const key = fingerprint(t, dayKey(new Date(t.date)));
+    const key = fingerprint(t, dayKey(new Date(t.date)), withMoneyBack);
     saved.set(key, (saved.get(key) ?? 0) + 1);
   }
   /** Spends a saved match for this row, if everything it names already exists and one is left. */
@@ -281,9 +286,10 @@ export function planCsvImport(text: string, data: CsvData, labelsOf: (key: strin
     const key = fingerprint(
       {
         type: r.type, amount: r.amount, currency: r.currency, accountId: account.id!, toAccountId: toAccount?.id, categoryId: category?.id, subcategoryId: subcategory?.id,
-        note: r.note, toAmount: r.toAmount, toCurrency: r.toCurrency, moneyBack: r.moneyBack || undefined, groupId: r.group || undefined,
+        note: r.note, toAmount: r.toAmount, toCurrency: r.toCurrency, moneyBack: r.moneyBack || undefined,
       },
       r.day,
+      withMoneyBack,
     );
     const left = saved.get(key) ?? 0;
     if (left) saved.set(key, left - 1);

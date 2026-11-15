@@ -55,6 +55,7 @@ export default function CombineSheet({ isOpen, parts, category, moneyBack, note,
         <div className="b-combine__net">
           <span>{t(spending ? 'sms.netSpent' : 'sms.netReceived')}</span>
           <strong className={`b-num ${spending ? 'b-expense' : 'b-income'}`} dir="ltr">
+            {spending && net < 0 && '+'}
             {money.plain(Math.abs(net), netCurrency)} {netCurrency}
           </strong>
         </div>

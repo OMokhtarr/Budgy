@@ -7,7 +7,7 @@ import { alive, db } from '@/core/db/db';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
-import { subcategoryBreakdown, totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
+import { budgetSpent, subcategoryBreakdown, totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import { spentOnTile } from '@/core/utils/accountTiles';
 import { isMoneyBack } from '@/core/utils/flow';
 import { txInBase } from '@/core/utils/txRate';
@@ -113,7 +113,7 @@ export default function OverviewPage() {
 
   const budgets = mode === 'month' ? (expenseCats ?? []).filter((c) => c.budget) : [];
   const budgetTotal = budgets.reduce((s, c) => s + (c.budget ?? 0), 0);
-  const budgetSpent = budgets.reduce((s, c) => s + (totals.byCategory.expense.get(c.id!) ?? 0), 0);
+  const budgetUsed = budgetSpent(totals, budgets.map((c) => c.id!));
 
   return (
     <IonPage>
@@ -180,11 +180,11 @@ export default function OverviewPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginBottom: 8 }}>
                   <span>{t('overview.totalBudget')}</span>
                   <span className="b-num">
-                    {money.format(budgetSpent)} <span className="b-muted">/ {money.format(budgetTotal)}</span>
+                    {money.format(budgetUsed)} <span className="b-muted">/ {money.format(budgetTotal)}</span>
                   </span>
                 </div>
                 <div className="b-bar" style={{ marginBottom: 16 }}>
-                  <span style={{ width: `${Math.min(100, (Math.max(0, budgetSpent) / budgetTotal) * 100)}%`, background: budgetSpent > budgetTotal ? 'var(--b-expense)' : 'var(--ion-color-primary)' }} />
+                  <span style={{ width: `${Math.min(100, (budgetUsed / budgetTotal) * 100)}%`, background: budgetUsed > budgetTotal ? 'var(--b-expense)' : 'var(--ion-color-primary)' }} />
                 </div>
                 {budgets.map((c) => {
                   const spent = totals.byCategory.expense.get(c.id!) ?? 0;

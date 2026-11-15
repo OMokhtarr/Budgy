@@ -10,7 +10,7 @@ import { isMoneyBack } from '@/core/utils/flow';
 import MoneyText from '@/shared/components/MoneyText';
 import { iconFor } from '@/shared/icons';
 import { deleteGroup, groupRows, setGroupCategory, setGroupNote, ungroup } from './bulk';
-import { foldGroups } from './groups';
+import { foldGroups, groupFlows } from './groups';
 
 interface Props {
   /** The group to show; null keeps the sheet closed. */
@@ -46,8 +46,10 @@ export default function GroupSheet({ groupId, onClose }: Props) {
   }, [groupId, rows, onClose]);
 
   const pickCategory = () => {
-    if (!groupId || !group) return;
-    const fits = (activeCategories ?? []).filter((c) => categoryFits(c, group.flow));
+    if (!groupId || !rows) return;
+    // Every row has to fit: money back only goes in categories that take spending.
+    const flows = groupFlows(rows);
+    const fits = (activeCategories ?? []).filter((c) => flows.every((f) => categoryFits(c, f)));
     presentSheet({
       header: t('transactions.changeCategory'),
       buttons: [
@@ -96,6 +98,7 @@ export default function GroupSheet({ groupId, onClose }: Props) {
           <div className="b-combine__net">
             <span>{t(group?.flow === 'income' ? 'sms.netReceived' : 'sms.netSpent')}</span>
             <strong className={`b-num ${group?.flow === 'income' ? 'b-income' : 'b-expense'}`}>
+              {group?.flow === 'expense' && netValue < 0 && '+'}
               <MoneyText currency={netCurrency} text={money.plain(Math.abs(netValue), netCurrency)} />
             </strong>
           </div>

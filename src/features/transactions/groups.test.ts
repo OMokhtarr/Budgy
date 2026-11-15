@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Transaction } from '@/shared/models';
-import { foldGroups } from './groups';
+import { foldGroups, groupFlows } from './groups';
 
 const CONV = { base: 'EGP', toBase: (n: number, cur: string) => (cur === 'USD' ? n * 50 : n) };
 
@@ -56,6 +56,22 @@ describe('foldGroups', () => {
   it('adds up a group of money received', () => {
     const [entry] = foldGroups([tx(100, { groupId: 'g', type: 'income', categoryId: 'salary' }), tx(50, { groupId: 'g', type: 'income', categoryId: 'salary' })], CONV);
     expect(entry).toMatchObject({ kind: 'group', flow: 'income', net: 150, categoryId: 'salary' });
+  });
+
+  it('treats a group of only money back as spending that came back', () => {
+    const [entry] = foldGroups([back(200, { groupId: 'g' }), back(200, { groupId: 'g' })], CONV);
+    expect(entry).toMatchObject({ kind: 'group', flow: 'expense', net: -400, netInCurrency: -400 });
+  });
+
+  it('gives a net below zero when more came back than the purchase in view', () => {
+    const [entry] = foldGroups([tx(100, { groupId: 'g' }), back(300, { groupId: 'g' })], CONV);
+    expect(entry).toMatchObject({ kind: 'group', flow: 'expense', net: -200 });
+  });
+
+  it('names the flows a group category must take: money back takes spending ones', () => {
+    expect(groupFlows([back(1), back(2)])).toEqual(['expense']);
+    expect(groupFlows([tx(1), back(2)])).toEqual(['expense']);
+    expect(groupFlows([tx(1, { type: 'income' })])).toEqual(['income']);
   });
 
   it('returns nothing for nothing', () => {

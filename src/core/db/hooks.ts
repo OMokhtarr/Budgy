@@ -193,6 +193,11 @@ export function totalsOf(txs: Transaction[] | undefined, conv: BaseConverter, ti
   return { expense, income, byCategory, byCategoryCur, bySubcategory, byTile };
 }
 
+/** What the budgeted categories spent in total; one below zero (more came back than was spent) counts as nothing. */
+export function budgetSpent(totals: PeriodTotals, categoryIds: string[]): number {
+  return categoryIds.reduce((s, id) => s + Math.max(0, totals.byCategory.expense.get(id) ?? 0), 0);
+}
+
 /**
  * How a category's total splits: subcategories with money in them (highest first), and the `rest`
  * with no subcategory. Empty when none were used, as the category's own row already says it all.

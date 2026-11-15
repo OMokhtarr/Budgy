@@ -3,7 +3,9 @@ import { IonDatetime, IonIcon, IonModal, useIonAlert, useIonToast } from '@ionic
 import { arrowForwardOutline, backspaceOutline, calendarOutline, checkmarkOutline, trashOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db, softDelete } from '@/core/db/db';
+import { groupRows } from './bulk';
 import { useAccounts, useBalances, useCategories, useNames } from '@/core/db/hooks';
 import { evaluate, hasOperator, pressKey } from '@/core/utils/calc';
 import { defaultAccountFor } from '@/core/utils/defaultAccount';
@@ -64,8 +66,9 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId);
   // Money back on a purchase: income in an expense category (see Transaction.moneyBack). Only income keeps it.
   const [moneyBack, setMoneyBack] = useState(!!(tx?.moneyBack ?? init.moneyBack));
-  // A grouped transaction's category belongs to its group, and is changed there.
-  const grouped = tx?.groupId != null;
+  // A grouped transaction's category belongs to its group, and is changed there, while the group has other rows.
+  const groupSize = useLiveQuery(async () => (tx?.groupId ? (await groupRows(tx.groupId)).length : 0), [tx?.groupId]);
+  const grouped = (groupSize ?? 0) > 1;
   const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : init.amount ? String(init.amount) : '');
   // Currency the user picked for the amount, and for what arrives in a transfer.
   const [curPick, setCurPick] = useState<string | undefined>(tx?.currency ?? init.currency);

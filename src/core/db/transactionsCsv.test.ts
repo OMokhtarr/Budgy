@@ -366,6 +366,16 @@ describe('money back and groups in CSV', () => {
     expect(plan(file({ ...paidBack, Category: 'Gifts', 'Money back': 'yes' }), data).duplicates).toBe(0);
   });
 
+  it('still finds a purchase grouped after an old export was made', () => {
+    const dinner: Transaction = { id: 'd', type: 'expense', amount: 600, currency: 'EGP', accountId: 'cash', categoryId: 'food', note: 'Dinner', groupId: 'g1', date: at, createdAt: at };
+    const oldFile = toCsv([
+      ['Date', 'Type', 'Amount', 'Currency', 'Account', 'Category', 'Note'],
+      ['2026-03-15', 'expense', '600', 'EGP', 'Cash', 'Food', 'Dinner'],
+    ]);
+    expect(plan(oldFile, { ...DATA, transactions: [dinner] })).toMatchObject({ transactions: [], duplicates: 1 });
+    expect(plan(file({ Date: '2026-03-15', Type: 'expense', Amount: '600', Currency: 'EGP', Account: 'Cash', Category: 'Food', Note: 'Dinner' }), { ...DATA, transactions: [dinner] }).duplicates).toBe(1);
+  });
+
   it('round trips money back and groups', () => {
     const data = { ...DATA, transactions: [back] };
     expect(plan(toCsv(csvRows([back], data.accounts, data.categories, names)), data)).toMatchObject({ transactions: [], duplicates: 1, badRows: [] });

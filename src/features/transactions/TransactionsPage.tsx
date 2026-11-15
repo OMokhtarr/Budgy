@@ -135,7 +135,12 @@ export default function TransactionsPage() {
       Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
       setSelected((s) => new Set(s).add(x.id!));
     },
-    (x) => (selecting ? toggle(x) : openEditor({ tx: x })),
+    // A row whose group has other rows out of view (another period or account) opens the group.
+    (x) => {
+      if (selecting) return toggle(x);
+      if (x.groupId && (groupSizes?.get(x.groupId) ?? 0) > 1) return setOpenGroup(x.groupId);
+      openEditor({ tx: x });
+    },
   );
   // A group's entry selects and toggles all its rows in view; a tap outside selection opens the group.
   type GroupEntry = Extract<ListEntry, { kind: 'group' }>;
@@ -435,7 +440,8 @@ export default function TransactionsPage() {
                           {elsewhere > 0 && <div className="b-row__note">{t('transactions.moreInGroup', { count: elsewhere })}</div>}
                         </div>
                         <div className={`b-row__amount b-num ${spent ? 'b-expense' : 'b-income'}`}>
-                          <SignedMoney plus={!spent} currency={shownIn} text={money.plain(Math.abs(amount), shownIn)} />
+                          {/* More came back than was spent in view: shown like money back, with a plus. */}
+                          <SignedMoney plus={!spent || amount < 0} currency={shownIn} text={money.plain(Math.abs(amount), shownIn)} />
                         </div>
                       </button>
                     );

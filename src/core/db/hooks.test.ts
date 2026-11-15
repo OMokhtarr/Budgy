@@ -1,6 +1,6 @@
 import '@/test/setup-db';
 import { describe, expect, it } from 'vitest';
-import { subcategoryBreakdown, totalsOf } from './hooks';
+import { budgetSpent, subcategoryBreakdown, totalsOf } from './hooks';
 import type { Category, Transaction } from '@/shared/models';
 
 const GROCERIES = { id: 'groceries', name: 'Groceries', icon: 'cart' };
@@ -154,5 +154,15 @@ describe('totalsOf with money back', () => {
 
   it('takes money back off its subcategory too', () => {
     expect(totalsOf([tx(600, 'akl'), back(100, { subcategoryId: 'akl' })], CONV).bySubcategory.expense.get('akl')).toBe(500);
+  });
+});
+
+describe('budgetSpent', () => {
+  it('counts a category that is below zero (more came back than was spent) as nothing spent', () => {
+    const t = totalsOf([
+      { ...tx(300), categoryId: 'food' },
+      { ...tx(500, undefined, 'income'), categoryId: 'fun', moneyBack: true },
+    ], CONV);
+    expect(budgetSpent(t, ['food', 'fun'])).toBe(300);
   });
 });
