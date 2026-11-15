@@ -62,6 +62,10 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [toAccountId, setToAccountId] = useState<string | undefined>(tx?.toAccountId ?? init.toAccountId);
   const [categoryId, setCategoryId] = useState<string | undefined>(tx?.categoryId ?? init.categoryId);
   const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId);
+  // Money back on a purchase: income in an expense category (see Transaction.moneyBack). Only income keeps it.
+  const [moneyBack, setMoneyBack] = useState(!!(tx?.moneyBack ?? init.moneyBack));
+  // A grouped transaction's category belongs to its group, and is changed there.
+  const grouped = tx?.groupId != null;
   const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : init.amount ? String(init.amount) : '');
   // Currency the user picked for the amount, and for what arrives in a transfer.
   const [curPick, setCurPick] = useState<string | undefined>(tx?.currency ?? init.currency);
@@ -100,7 +104,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     }
   }, [type, accounts, account, accountId, toAccountId]);
 
-  const cats = type === 'income' ? incomeCats : expenseCats;
+  const back = moneyBack && type === 'income';
+  const cats = type === 'income' && !back ? incomeCats : expenseCats;
   const category = allCats?.find((c) => c.id === categoryId);
   const subcategories = type === 'transfer' ? [] : pickableSubcategories(category, subcategoryId);
 
@@ -111,6 +116,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const types: TxType[] =
     tx?.type === 'transfer' ? ['transfer']
     : !byCategory ? ['expense', 'income', 'transfer']
+    : back ? ['expense', 'income']
     : !category ? [type]
     : category.kind === 'both' ? ['expense', 'income']
     : [category.kind];
@@ -146,6 +152,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     if (next === type) return;
     setType(next);
     setPicking(null);
+    // Money back is income; as an expense or a transfer it's an ordinary one.
+    if (next !== 'income') setMoneyBack(false);
     if (next !== 'transfer') {
       const list = next === 'income' ? incomeCats : expenseCats;
       if (!list?.some((c) => c.id === categoryId)) setCategoryId(undefined);
@@ -269,6 +277,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
         date: iso,
         note,
         smsFingerprint: tx?.smsFingerprint ?? init.smsFingerprint,
+        moneyBack: back,
+        groupId: tx?.groupId,
         createdAt: tx?.createdAt,
       });
       saved = await saveTx(record, tx?.id);
@@ -312,7 +322,10 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     <button
       className={`b-ft b-ft--${side} ${picking === side ? 'is-picking' : ''}`}
       style={item ? { background: item.color } : undefined}
-      onClick={() => setPicking(picking === side ? null : side)}
+      onClick={() => {
+        if (round && grouped) return void presentToast({ message: t('editor.groupCategory'), duration: 2200, position: 'top', color: 'medium' });
+        setPicking(picking === side ? null : side);
+      }}
     >
       {item && (
         <span className={`b-ft__badge ${round ? 'is-round' : ''}`} style={{ color: item.color }}>
@@ -437,12 +450,12 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
               <div className="b-typeswitch">
                 {types.map((k) => (
                   <button key={k} className={type === k ? 'is-active' : ''} onClick={() => switchType(k)}>
-                    {t(`type.${k}`)}
+                    {t(k === 'income' && back ? 'editor.moneyBack' : `type.${k}`)}
                   </button>
                 ))}
               </div>
             ) : (
-              <span className="b-typeline__label">{t(`type.${type}`)}</span>
+              <span className="b-typeline__label">{t(back ? 'editor.moneyBack' : `type.${type}`)}</span>
             )}
             {tx?.id != null ? (
               <button className="b-typeline__del" onClick={remove} aria-label={t('common.delete')}>

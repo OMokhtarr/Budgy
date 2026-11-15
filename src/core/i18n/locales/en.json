@@ -245,7 +245,9 @@
     "receivedIn": "Received in {{currency}}",
     "date": "Date",
     "backspace": "Delete (hold to clear)",
-    "currencyNotHeld": "{{account}} holds {{held}}. To match your statement, switch to {{held}} and enter the amount charged."
+    "currencyNotHeld": "{{account}} holds {{held}}. To match your statement, switch to {{held}} and enter the amount charged.",
+    "moneyBack": "Money back",
+    "groupCategory": "This is part of a group: change its category from the group."
   },
   "overview": {
     "noSubcategory": "No subcategory",

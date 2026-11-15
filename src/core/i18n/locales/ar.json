@@ -293,7 +293,9 @@
     "receivedIn": "يُستلم بـ {{currency}}",
     "date": "التاريخ",
     "backspace": "حذف (اضغط مطولًا للمسح)",
-    "currencyNotHeld": "عملة {{account}} هي {{held}}. لتطابق كشف حسابك، غيّر العملة إلى {{held}} وأدخل المبلغ المخصوم."
+    "currencyNotHeld": "عملة {{account}} هي {{held}}. لتطابق كشف حسابك، غيّر العملة إلى {{held}} وأدخل المبلغ المخصوم.",
+    "moneyBack": "مبلغ مُسترد",
+    "groupCategory": "هذه العملية جزء من مجموعة: غيّر فئتها من المجموعة."
   },
   "overview": {
     "noSubcategory": "بدون فئة فرعية",
