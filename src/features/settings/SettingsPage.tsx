@@ -16,6 +16,7 @@ import SmsSettingsSection from '@/features/sms/SmsSettingsSection';
 import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
+import ToursSettingsSection from '@/features/onboarding/ToursSettingsSection';
 import { usePageTour } from '@/features/onboarding/usePageTour';
 
 export default function SettingsPage() {
@@ -175,6 +176,10 @@ export default function SettingsPage() {
               </IonItem>
             </IonList>
           )}
+
+          <div {...tourAttr('settings.tours')}>
+            <ToursSettingsSection />
+          </div>
 
           <IonList inset>
             <IonItem lines="none">

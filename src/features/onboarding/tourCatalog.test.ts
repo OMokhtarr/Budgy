@@ -97,17 +97,11 @@ describe('tour targets', () => {
       .flatMap((f) => [...readFileSync(f, 'utf8').matchAll(/tourAttr\(([^)]*)\)/g)])
       .flatMap((m) => [...m[1].matchAll(/'([^']+)'/g)].map((q) => q[1])),
   );
-  const later = ['settings.tours']; // Task 7 adds it; drop the allow-list then
-
   it('every tour step has a target in the code', () => {
     for (const [id, steps] of Object.entries(TOURS))
       for (const s of steps) {
         const ref = `${id}.${s.key}`;
-        if (later.includes(ref)) continue;
         expect(targeted.has(ref), ref).toBe(true);
       }
-  });
-  it('the allow-list holds only refs that are still missing', () => {
-    for (const ref of later) expect(targeted.has(ref), `${ref} now has a target: drop it from the allow-list`).toBe(false);
   });
 });
