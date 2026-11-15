@@ -63,12 +63,12 @@ const bankSideOf = (item: SmsPending, tx: Transaction) =>
   tx.type === 'transfer' && item.direction === 'in' && tx.toAccountId ? tx.toAccountId : tx.accountId;
 
 /** The ids of the link and rule a text's transaction teaches. Hashed up front: a Dexie transaction can't wait on crypto. */
-interface LessonIds {
+export interface LessonIds {
   linkId: string;
   rule?: { id: string; flow: Flow };
 }
 
-async function lessonIdsOf(item: SmsPending, tx: Omit<Transaction, 'id'>): Promise<LessonIds> {
+export async function lessonIdsOf(item: SmsPending, tx: Omit<Transaction, 'id'>): Promise<LessonIds> {
   const linkId = await linkIdOf(item.address, item.digits || undefined);
   // Money back is about who paid you, not where you spend: it teaches no category.
   if (tx.type === 'transfer' || tx.moneyBack || !tx.categoryId || !item.merchant) return { linkId };
@@ -80,7 +80,7 @@ async function lessonIdsOf(item: SmsPending, tx: Omit<Transaction, 'id'>): Promi
  * rw transaction on smsLinks, merchantRules and smsPending. Stamps come after the stored ones, so a phone
  * whose clock is behind still counts as the latest edit.
  */
-async function learn(database: BudgyDB, item: SmsPending, tx: Transaction, ids: LessonIds): Promise<void> {
+export async function learn(database: BudgyDB, item: SmsPending, tx: Transaction, ids: LessonIds): Promise<void> {
   const digits = item.digits || undefined;
   const oldLink = await database.smsLinks.get(ids.linkId);
   await database.smsLinks.put({
