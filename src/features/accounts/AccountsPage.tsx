@@ -19,6 +19,8 @@ import CardReminders from './CardReminders';
 import CreditCardSheet from './CreditCardSheet';
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 type Tab = 'accounts' | 'debts' | 'finances';
 /** An account being edited, or a new one to create in the given group. */
@@ -35,6 +37,7 @@ export default function AccountsPage() {
   const archived = (useAccounts(true) ?? []).filter((a) => a.archived);
   const balances = useBalances();
   useRevealWhen(!!accounts && !!balances);
+  usePageTour(['accounts'], { ready: !!accounts && !!balances });
   const [tab, setTab] = useState<Tab>('accounts');
   const [editing, setEditing] = useState<Editing | null>(null);
   /** The credit card whose summary is open. */
@@ -87,7 +90,7 @@ export default function AccountsPage() {
     const kind = groupOf(a) === 'debt' ? '' : credit ? t('cards.credit') : t(`accountType.${a.type}`);
     const sub = [kind, a.currency2 ? `${a.currency} + ${a.currency2}` : '', cardNote(status)].filter(Boolean).join(' · ');
     return (
-      <button key={a.id} className="b-row" onClick={() => (credit && !a.archived ? setViewing(a) : setEditing(a))}>
+      <button key={a.id} className="b-row" {...tourAttr('accounts.row')} onClick={() => (credit && !a.archived ? setViewing(a) : setEditing(a))}>
         <Avatar icon={a.icon} color={a.color} square />
         <div className="b-row__main">
           <div className="b-row__title">{accountName(a)}</div>
@@ -189,13 +192,13 @@ export default function AccountsPage() {
       <IonHeader className="ion-no-border">
         <AppHeader
           end={
-            <IonButton onClick={() => setEditing({ newGroup: tab === 'debts' ? 'debt' : 'regular' })} aria-label={t('accounts.add')}>
+            <IonButton {...tourAttr('accounts.add')} onClick={() => setEditing({ newGroup: tab === 'debts' ? 'debt' : 'regular' })} aria-label={t('accounts.add')}>
               <IonIcon slot="icon-only" icon={addIcon} />
             </IonButton>
           }
         />
         <IonToolbar className="b-toolbar">
-          <div className="b-tabs" role="tablist">
+          <div className="b-tabs" role="tablist" {...tourAttr('accounts.tabs')}>
             {tabs.map((x) => (
               <button key={x.key} role="tab" aria-selected={tab === x.key} className={tab === x.key ? 'is-active' : ''} onClick={() => setTab(x.key)}>
                 <IonIcon icon={x.icon} />
@@ -212,7 +215,7 @@ export default function AccountsPage() {
             <>
               <CardReminders onOpen={setViewing} />
               <div className="b-actions">
-                <button className="b-btn b-btn--muted" onClick={() => openEditor({ type: 'transfer' })}>
+                <button className="b-btn b-btn--muted" {...tourAttr('accounts.transfer')} onClick={() => openEditor({ type: 'transfer' })}>
                   <IonIcon icon={swapHorizontalOutline} />
                   {t('accounts.transfer')}
                 </button>

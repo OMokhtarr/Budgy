@@ -21,6 +21,8 @@ import Bubble from '@/shared/components/Bubble';
 import { iconFor } from '@/shared/icons';
 import { useDuplicatePrompt } from '@/features/sms/useDuplicatePrompt';
 import { buildTxRecord, saveTx } from './txRecord';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 const LAST_ACCOUNT_KEY = 'budgy-last-account';
 
@@ -43,6 +45,7 @@ function fitClass(text: string): string {
 
 export default function TransactionEditor({ init, onClose }: { init: EditorInit; onClose: () => void }) {
   const { t } = useTranslation();
+  usePageTour(['editor'], { overOverlay: true });
   const money = useMoney();
   const conv = useConverter();
   const locale = useLocale();
@@ -426,7 +429,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     <div className="b-editor" style={{ '--accent': accent } as CSSProperties}>
       {init.header != null && <div className="b-editor__header">{init.header}</div>}
       <div className="b-editor__sheet">
-        <div className="b-fromto">
+        <div className="b-fromto" {...tourAttr('editor.fromto')}>
           {fromBox}
           {toBox}
         </div>
@@ -513,6 +516,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
 
         <input
           className="b-note"
+          {...tourAttr('editor.note')}
           placeholder={t('editor.notePlaceholder')}
           value={note}
           maxLength={120}
@@ -550,7 +554,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
             </div>
           </div>
         ) : (
-          <div className="b-keypad" dir="ltr">
+          <div className="b-keypad" dir="ltr" {...tourAttr('editor.keypad')}>
             {op('÷')}
             {digit('7')}
             {digit('8')}
@@ -569,7 +573,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
             {digit('4')}
             {digit('5')}
             {digit('6')}
-            <button className="b-key b-key--op" onClick={() => setDateOpen(true)} aria-label={t('editor.date')}>
+            <button className="b-key b-key--op" {...tourAttr('editor.date')} onClick={() => setDateOpen(true)} aria-label={t('editor.date')}>
               <IonIcon icon={calendarOutline} />
             </button>
             {op('−')}

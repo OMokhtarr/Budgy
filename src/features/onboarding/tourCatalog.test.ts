@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import en from '@/core/i18n/locales/en.json';
 import ar from '@/core/i18n/locales/ar.json';
@@ -80,4 +81,25 @@ describe('releases', () => {
 describe('tourAttr', () => {
   it('joins several refs with a space', () =>
     expect(tourAttr('categories.menu', 'accounts.tabs')).toEqual({ 'data-tour': 'categories.menu accounts.tabs' }));
+});
+
+const walk = (dir: string): string[] =>
+  readdirSync(dir).flatMap((n) => {
+    const p = `${dir}/${n}`;
+    return statSync(p).isDirectory() ? walk(p) : [p];
+  });
+
+describe('tour targets', () => {
+  it('every tour step has a target in the code', () => {
+    const src = walk('src')
+      .filter((f) => f.endsWith('.tsx'))
+      .map((f) => readFileSync(f, 'utf8'))
+      .join('\n');
+    const later = ['settings.tours']; // Task 7
+    for (const [id, steps] of Object.entries(TOURS))
+      for (const s of steps) {
+        if (later.includes(`${id}.${s.key}`)) continue;
+        expect(src.includes(`'${id}.${s.key}'`), `${id}.${s.key}`).toBe(true);
+      }
+  });
 });

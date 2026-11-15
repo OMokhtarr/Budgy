@@ -14,6 +14,7 @@ import type { Account, Category, SmsPending } from '@/shared/models';
 import { flowOf, importText, resolveImported, resolveSkipped } from './learning';
 import { cardDraft, type CardChoice } from './review';
 import { useDuplicatePrompt } from './useDuplicatePrompt';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
 
 interface Props {
   item: SmsPending;
@@ -134,7 +135,7 @@ export default function SmsItemCard({ item, choice, account, category, person, o
   const incoming = item.direction === 'in';
 
   return (
-    <div className={`b-card b-smscard ${busy ? 'is-busy' : ''} ${selected ? 'is-selected' : ''}`} {...press}>
+    <div className={`b-card b-smscard ${busy ? 'is-busy' : ''} ${selected ? 'is-selected' : ''}`} {...tourAttr('sms.card')} {...press}>
       {/* The tappable summary; the click reaches the card's handler. */}
       <button type="button" className="b-smscard__main">
         <span className="b-smscard__top">

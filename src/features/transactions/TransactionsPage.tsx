@@ -33,6 +33,8 @@ import GroupSheet from './GroupSheet';
 import { foldGroups, type ListEntry } from './groups';
 import type { Transaction } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 /** What the category filter matches on: a category, or all transfers. */
 const filterKey = (x: Transaction) => (x.type === 'transfer' ? 'transfer' : `c${x.categoryId}`);
@@ -74,6 +76,7 @@ export default function TransactionsPage() {
 
   const txs = useFilteredTransactionsInRange(range);
   useRevealWhen(!!txs && lookupsReady);
+  usePageTour(['transactions'], { ready: !!txs && lookupsReady });
   const { tiles } = useAccountFilter();
 
   const filtered = useMemo(() => {
@@ -315,6 +318,7 @@ export default function TransactionsPage() {
           <AppHeader
             end={
               <IonButton
+                {...tourAttr('transactions.search')}
                 onClick={() => {
                   if (searchOpen) setQuery('');
                   setSearchOpen((v) => !v);
@@ -422,7 +426,7 @@ export default function TransactionsPage() {
                     const shownIn = e.currency ?? conv.base;
                     const note = e.rows.find((x) => x.note)?.note;
                     return (
-                      <button key={e.groupId} className={`b-row ${allIn(e) ? 'is-selected' : ''}`} {...bindGroup(e)}>
+                      <button key={e.groupId} className={`b-row ${allIn(e) ? 'is-selected' : ''}`} {...tourAttr('transactions.row')} {...bindGroup(e)}>
                         {allIn(e) ? (
                           <span className="b-avatar b-avatar--check">
                             <IonIcon icon={checkmarkOutline} />
@@ -453,7 +457,7 @@ export default function TransactionsPage() {
                   if (x.type === 'transfer') {
                     const to = accounts.get(x.toAccountId!);
                     return (
-                      <button key={x.id} className={cls} {...bind(x)}>
+                      <button key={x.id} className={cls} {...tourAttr('transactions.row')} {...bind(x)}>
                         {avatarFor(x)}
                         <div className="b-row__main">
                           <div className="b-row__title">{t('type.transfer')}</div>
@@ -478,7 +482,7 @@ export default function TransactionsPage() {
                   const isExp = x.type === 'expense' || back;
                   const sub = subcategoryName(cat, x.subcategoryId);
                   return (
-                    <button key={x.id} className={cls} {...bind(x)}>
+                    <button key={x.id} className={cls} {...tourAttr('transactions.row')} {...bind(x)}>
                       {avatarFor(x)}
                       <div className="b-row__main">
                         <div className="b-row__title">
@@ -509,7 +513,7 @@ export default function TransactionsPage() {
               <IonIcon icon={filterIcon} />
             </IonFabButton>
           ) : (
-            <IonFabButton className="b-fab" onClick={() => openEditor()} aria-label={t('transactions.add')}>
+            <IonFabButton className="b-fab" {...tourAttr('transactions.add')} onClick={() => openEditor()} aria-label={t('transactions.add')}>
               <IonIcon icon={addOutline} />
             </IonFabButton>
           )}

@@ -138,7 +138,34 @@ export function SpotlightOverlay({
   // nothing is drawn, so Back belongs to the page.
   useBackToSkip(onSkip, visible);
   useEffect(() => {
-    if (visible) cardRef.current?.focus();
+    if (!visible) return;
+    // Over an open sheet (the editor tour) Ionic's focus trap would pull focus back into the
+    // sheet, so the trap is switched off while the card is up, on exactly the sheets that had it
+    // on. A sheet turns the class off again itself as it settles, so it is put back when that happens.
+    const off = 'ion-disable-focus-trap';
+    const sheets = Array.from(document.querySelectorAll('ion-modal:not(.overlay-hidden)')).filter(
+      (m) => !m.classList.contains(off),
+    );
+    sheets.forEach((m) => m.classList.add(off));
+    const keep = new MutationObserver(() =>
+      sheets.forEach((m) => {
+        if (!m.classList.contains(off)) m.classList.add(off);
+      }),
+    );
+    sheets.forEach((m) => keep.observe(m, { attributes: true, attributeFilter: ['class'] }));
+    cardRef.current?.focus();
+    // A sheet still sliding in focuses itself just after it lands, which would take focus from the card.
+    let later: number | undefined;
+    const refocus = () => {
+      later = window.setTimeout(() => cardRef.current?.focus(), 50);
+    };
+    document.addEventListener('ionModalDidPresent', refocus);
+    return () => {
+      window.clearTimeout(later);
+      document.removeEventListener('ionModalDidPresent', refocus);
+      keep.disconnect();
+      sheets.forEach((m) => m.classList.remove(off));
+    };
   }, [visible]);
 
   if (!host) return null;

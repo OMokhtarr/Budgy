@@ -26,6 +26,8 @@ import SmsItemCard from './SmsItemCard';
 import TextsSheet from './TextsSheet';
 import { useBatchDuplicatePrompt } from './useBatchDuplicatePrompt';
 import { useSmsAvailability } from './useSmsAvailable';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 const PATH = '/sms';
 
@@ -43,6 +45,7 @@ const BACK = 'back:';
 /** "Bank texts": the scanned texts waiting for review, newest first. Long-press a card to act on several at once. */
 export default function SmsReviewPage() {
   const { t } = useTranslation();
+  usePageTour(['sms']);
   const locale = useLocale();
   const { pathname } = useLocation();
   const router = useIonRouter();
@@ -340,7 +343,7 @@ export default function SmsReviewPage() {
   };
 
   const scanButton = (
-    <button className="b-btn b-btn--primary b-scanbtn" onClick={() => setScanOpen(true)}>
+    <button className="b-btn b-btn--primary b-scanbtn" {...tourAttr('sms.scan')} onClick={() => setScanOpen(true)}>
       <IonIcon icon={searchOutline} />
       {t('sms.scan')}
     </button>

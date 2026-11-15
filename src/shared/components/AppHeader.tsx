@@ -11,6 +11,7 @@ import { usePendingCount } from '@/features/sms/hooks';
 import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
 import MoneyText from './MoneyText';
 import ProfileAvatar from './ProfileAvatar';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
 
 /**
  * Top bar of the main tabs: the menu button, the balance of the accounts picked in the
@@ -50,7 +51,7 @@ export default function AppHeader({ end }: { end?: ReactNode }) {
     <IonToolbar className="b-toolbar b-apphead">
       <IonButtons slot="start">
         <IonMenuToggle autoHide={false}>
-          <button className="b-apphead__me" aria-label={t('menu.open')}>
+          <button className="b-apphead__me" {...tourAttr('categories.menu')} aria-label={t('menu.open')}>
             <span className="b-apphead__avatar">
               <ProfileAvatar size={32} outlined />
               {textsWaiting && <span className="b-apphead__dot" aria-hidden="true" />}
@@ -59,7 +60,7 @@ export default function AppHeader({ end }: { end?: ReactNode }) {
         </IonMenuToggle>
       </IonButtons>
       <IonTitle>
-        <button className="b-apphead__balance" onClick={() => setFilterOpen(true)} aria-label={t('filter.title')}>
+        <button className="b-apphead__balance" {...tourAttr('categories.balance')} onClick={() => setFilterOpen(true)} aria-label={t('filter.title')}>
           <small>{label}</small>
           {ownCurrencies ? (
             <span className={`b-num ${ownCurrencies.length > 1 ? 'b-apphead__dual' : ''}`}>
