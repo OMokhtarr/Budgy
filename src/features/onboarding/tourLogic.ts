@@ -47,11 +47,6 @@ export interface Box {
   height: number;
 }
 
-/** The card moves to the top when the target's centre is in the lower 40%. */
-export function cardPlacement(target: Box, viewportHeight: number): 'top' | 'bottom' {
-  return target.top + target.height / 2 > viewportHeight * 0.6 ? 'top' : 'bottom';
-}
-
 /** Space between the ring and its target. */
 export const RING_PAD = 6;
 /** The ring's border, drawn outside its box (box-shadow spread). */
@@ -64,6 +59,25 @@ const RING_EDGE = RING_LINE + 1;
  *  its 12px corners. */
 const CORNER_ZONE = 40;
 const CORNER_EDGE = 10;
+
+/** Where a card may sit, in viewport pixels: a top card's top edge and a bottom card's bottom edge. */
+export interface CardZone {
+  top: number;
+  bottom: number;
+}
+
+/**
+ * The card sits at the bottom when it fits there below the ring, at the top when it fits above
+ * it, and otherwise on the side with more room around the ring. `ring` is the box from ringBox,
+ * whose 2px line is drawn just outside it, so the card keeps clear of that line too.
+ */
+export function cardPlacement(ring: Box, cardHeight: number, zone: CardZone): 'top' | 'bottom' {
+  const ringTop = ring.top - RING_LINE;
+  const ringBottom = ring.top + ring.height + RING_LINE;
+  if (zone.bottom - cardHeight >= ringBottom) return 'bottom';
+  if (zone.top + cardHeight <= ringTop) return 'top';
+  return ringTop - zone.top > zone.bottom - ringBottom ? 'top' : 'bottom';
+}
 
 /**
  * The spotlight ring: RING_PAD outside the target, but pulled in on any side

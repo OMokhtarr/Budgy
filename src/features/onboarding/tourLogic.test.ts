@@ -69,10 +69,28 @@ describe('isOverlayOpen', () => {
 });
 
 describe('cardPlacement', () => {
-  it('puts the card at the bottom for targets in the upper part', () =>
-    expect(cardPlacement({ top: 10, left: 0, width: 40, height: 40 }, 800)).toBe('bottom'));
-  it('moves the card to the top for targets in the lower 40%', () =>
-    expect(cardPlacement({ top: 740, left: 0, width: 40, height: 40 }, 800)).toBe('top'));
+  // A 360x640 phone without insets: a top card starts 12px down and a bottom card ends above the
+  // 72px tab bar and its 12px gap. The card is 162px tall.
+  const zone = { top: 12, bottom: 556 };
+  const ring = (top: number, bottom: number) => ({ top, left: 10, width: 340, height: bottom - top });
+  it('keeps the card at the bottom when it clears the ring', () =>
+    expect(cardPlacement(ring(100, 160), 162, zone)).toBe('bottom'));
+  it('moves the card to the top when a bottom card would cover the ring', () =>
+    expect(cardPlacement(ring(307, 435), 162, zone)).toBe('top'));
+  it('moves the card to the top for the tab bar', () =>
+    expect(cardPlacement(ring(568, 637), 162, zone)).toBe('top'));
+  it("keeps the ring's line clear, not just its box", () =>
+    expect(cardPlacement(ring(300, 393), 162, zone)).toBe('top'));
+  it('takes the side with more room when neither clears: above', () =>
+    expect(cardPlacement(ring(150, 480), 162, zone)).toBe('top'));
+  it('takes the side with more room when neither clears: below', () =>
+    expect(cardPlacement(ring(100, 420), 162, zone)).toBe('bottom'));
+  it('stays at the bottom on a tie', () => expect(cardPlacement(ring(100, 468), 162, zone)).toBe('bottom'));
+  it('counts the system bars', () => {
+    expect(cardPlacement(ring(200, 380), 162, zone)).toBe('bottom');
+    // A 24px status bar and a 24px gesture bar push both cards in.
+    expect(cardPlacement(ring(200, 380), 162, { top: 36, bottom: 532 })).toBe('top');
+  });
 });
 
 describe('ringBox', () => {

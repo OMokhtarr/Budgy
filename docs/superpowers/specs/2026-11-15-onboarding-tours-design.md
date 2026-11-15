@@ -266,9 +266,12 @@ swallowed; only the card acts. Off-screen targets are scrolled into view in
 their `IonContent` first. Re-measures on scroll, resize and rotation.
 
 **Card**: `--b-surface`, `--b-border` plus a primary accent, Budgy's sheet
-radius. Title, body, step dots, Previous (from step 2), Next / Done, Skip. Sits
-at the bottom above the tab bar; moves to the top when the target's centre is in
-the lower 40% of the screen.
+radius. Title, body, step dots, Previous (from step 2), Next / Done, Skip. The
+card is measured before it shows, then placed against the ring: at the bottom
+(above the tab bar, its gap and the safe area) when its top clears the ring's
+bottom; else at the top (below the safe area plus 12px) when its bottom clears
+the ring's top; else on the side with more room. It never covers the ring when
+either side has room for it.
 
 **Gesture glyph**: a touch dot animating the gesture over the target (swipe,
 long-press pulse, tap, drag). Static under `prefers-reduced-motion`.
@@ -300,7 +303,7 @@ dim.
   - `onboardingStore.test.ts`: new vs existing init (`fresh`, the
     `budgy-pick-currency` flag, neither), blocked storage, mark seen, reset.
   - `tourLogic.test.ts`: unseen releases, pending tours in order, card
-    placement thresholds, ring kept inside the screen, gating decisions.
+    placement against the ring, ring kept inside the screen, gating decisions.
   - A catalog check: every tour step has en and ar title/body strings, and every
     release's tourId exists.
 - `npm run typecheck` and `npm test`.

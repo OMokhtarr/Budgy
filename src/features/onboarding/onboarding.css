@@ -140,6 +140,9 @@
   z-index: 30000;
   touch-action: none;
   font-family: var(--ion-font-family);
+  /* Where a top card starts and a bottom card ends (clear of the tab bar). */
+  --ob-card-top: calc(env(safe-area-inset-top) + 12px);
+  --ob-card-bottom: calc(var(--ion-tab-bar-height, 56px) + env(safe-area-inset-bottom) + 12px);
 }
 /* Still looking for the step's target (it may never appear): nothing is drawn, so the page must
    keep taking taps instead of feeling frozen. */
@@ -151,6 +154,16 @@
   right: env(safe-area-inset-right);
   bottom: env(safe-area-inset-bottom);
   left: env(safe-area-inset-left);
+  visibility: hidden;
+  pointer-events: none;
+}
+/* Invisible probe spanning the room the card may use, which cardPlacement weighs against the ring. */
+.ob-card-zone {
+  position: fixed;
+  top: var(--ob-card-top);
+  bottom: var(--ob-card-bottom);
+  left: 0;
+  right: 0;
   visibility: hidden;
   pointer-events: none;
 }
@@ -178,10 +191,10 @@
   animation: ob-slide-in 0.2s ease-out;
 }
 /* Clears the tab bar. */
-.ob-card--bottom {
-  bottom: calc(var(--ion-tab-bar-height, 56px) + env(safe-area-inset-bottom) + 12px);
-}
-.ob-card--top { top: calc(env(safe-area-inset-top) + 12px); }
+.ob-card--bottom { bottom: var(--ob-card-bottom); }
+.ob-card--top { top: var(--ob-card-top); }
+/* Drawn but not shown for the one render before its height is known. */
+.ob-card--measuring { visibility: hidden; }
 .ob-card-title {
   margin: 0 0 4px;
   font-size: 17px;

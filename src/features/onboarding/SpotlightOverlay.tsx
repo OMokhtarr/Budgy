@@ -1,14 +1,14 @@
 /**
  * One spotlight step: dims the screen, rings the target and explains it in a card above the tab bar
- * (or at the top, when the target sits low). The page underneath gets no taps while it is up; only
- * the card's buttons act.
+ * (or at the top, when a card at the bottom would cover the ring). The page underneath gets no taps
+ * while it is up; only the card's buttons act.
  */
-import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Dots } from './SlideDeck';
 import type { Gesture, TourId, TourStep } from './tourCatalog';
-import { cardPlacement, resolveTarget, ringBox, type Box } from './tourLogic';
+import { cardPlacement, resolveTarget, ringBox, type Box, type CardZone } from './tourLogic';
 import { useBackToSkip } from './useBackToSkip';
 import { useOverlayHost } from './useOverlayHost';
 import './onboarding.css';
@@ -26,6 +26,14 @@ const visibleBounds = (probe: HTMLElement | null): Box => {
   const r = probe?.getBoundingClientRect();
   if (r && r.width > 0 && r.height > 0) return { top: r.top, left: r.left, width: r.width, height: r.height };
   return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight };
+};
+
+/** Where the card may sit, read off the `.ob-card-zone` probe, which the CSS places exactly where a
+ *  top card starts and a bottom card ends; the whole window if it can't measure. */
+const cardZone = (probe: HTMLElement | null): CardZone => {
+  const r = probe?.getBoundingClientRect();
+  if (r && r.height > 0) return { top: r.top, bottom: r.bottom };
+  return { top: 0, bottom: window.innerHeight };
 };
 
 /** A touch dot acting out the gesture over the target: a sliding trail for swipe, a filling ring
@@ -80,8 +88,12 @@ export function SpotlightOverlay({
   const host = useOverlayHost();
   const titleId = useId();
   const [box, setBox] = useState<Box | null>(null);
+  // The card's height, measured after each render; until it is known the card stays hidden, so it
+  // never shows for a frame on the wrong side.
+  const [cardHeight, setCardHeight] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const safeRef = useRef<HTMLDivElement>(null);
+  const zoneRef = useRef<HTMLDivElement>(null);
   const cb = useRef({ onShown, onMissing });
   useEffect(() => {
     cb.current = { onShown, onMissing };
@@ -133,12 +145,21 @@ export function SpotlightOverlay({
     };
   }, [tourId, step.key, step.union]);
 
+  // Runs before the browser paints, so a card that grows or shrinks (a new step, another
+  // language) moves to its side in the same frame. offsetHeight ignores the slide-in transform.
+  useLayoutEffect(() => {
+    const h = cardRef.current?.offsetHeight;
+    if (h && h !== cardHeight) setCardHeight(h);
+  });
+
   const visible = box !== null && host !== null;
   // Back skips the tour only once it is on screen; while a target is still being looked for
   // nothing is drawn, so Back belongs to the page.
   useBackToSkip(onSkip, visible);
+  // A hidden card can't take focus, so this waits for the card's first measurement.
+  const shown = visible && cardHeight !== null;
   useEffect(() => {
-    if (!visible) return;
+    if (!shown) return;
     // Over an open sheet (the editor tour) Ionic's focus trap would pull focus back into the
     // sheet, so the trap is switched off while the card is up, on exactly the sheets that had it
     // on. A sheet turns the class off again itself as it settles, so it is put back when that happens.
@@ -167,14 +188,14 @@ export function SpotlightOverlay({
       keep.disconnect();
       sheets.forEach((m) => m.classList.remove(off));
     };
-  }, [visible]);
+  }, [shown]);
 
   if (!host) return null;
 
-  const placement = box ? cardPlacement(box, window.innerHeight) : 'bottom';
   const ring = box
     ? ringBox(box, visibleBounds(safeRef.current), { width: window.innerWidth, height: window.innerHeight })
     : null;
+  const placement = ring && cardHeight ? cardPlacement(ring, cardHeight, cardZone(zoneRef.current)) : 'bottom';
   // Kept from the page and from Ionic's gestures, which listen on the document for touch and mouse
   // starts: without this an edge drag across the dim would still open the side menu.
   const swallow = (e: SyntheticEvent) => e.stopPropagation();
@@ -188,6 +209,7 @@ export function SpotlightOverlay({
       onMouseDown={swallow}
     >
       <div ref={safeRef} className="ob-safe" aria-hidden="true" />
+      <div ref={zoneRef} className="ob-card-zone" aria-hidden="true" />
       {box && ring && (
         <>
           <div className="ob-spot-ring" style={ring} />
@@ -195,7 +217,7 @@ export function SpotlightOverlay({
           <div
             ref={cardRef}
             tabIndex={-1}
-            className={`ob-card ob-card--${placement}`}
+            className={`ob-card ob-card--${placement}` + (cardHeight ? '' : ' ob-card--measuring')}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
