@@ -26,6 +26,8 @@ import SmsItemCard from './SmsItemCard';
 import TextsSheet from './TextsSheet';
 import { useBatchDuplicatePrompt } from './useBatchDuplicatePrompt';
 import { useSmsAvailability } from './useSmsAvailable';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 const PATH = '/sms';
 
@@ -112,6 +114,7 @@ export default function SmsReviewPage() {
   // Waits for the availability check; and since hidden pages stay mounted in Ionic's stack, only
   // leaves while this page is the one showing.
   const allowed = available === true && smsImport.enabled;
+  usePageTour(['sms'], { ready: allowed && !!items });
   const blocked = available === false || (available === true && !smsImport.enabled);
   useEffect(() => {
     if (blocked && pathname === PATH) router.push('/categories', 'root', 'replace');
@@ -340,7 +343,7 @@ export default function SmsReviewPage() {
   };
 
   const scanButton = (
-    <button className="b-btn b-btn--primary b-scanbtn" onClick={() => setScanOpen(true)}>
+    <button className="b-btn b-btn--primary b-scanbtn" {...tourAttr('sms.scan')} onClick={() => setScanOpen(true)}>
       <IonIcon icon={searchOutline} />
       {t('sms.scan')}
     </button>

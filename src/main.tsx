@@ -8,7 +8,8 @@ import { AccountFilterProvider } from '@/core/contexts/AccountFilterContext';
 import { openData } from '@/core/db/db';
 import DbError from '@/shared/components/DbError';
 import { revealApp } from '@/shared/splash';
-import { markFirstRun } from '@/features/onboarding/FirstRunCurrency';
+import { initOnboarding, type OnboardingState } from '@/features/onboarding/onboardingStore';
+import { RELEASE_FEATURE_KEYS } from '@/features/onboarding/tourCatalog';
 import App from './App';
 // Fonts ship with the app (no Google Fonts request): works offline and keeps "your data stays on this device" true.
 import '@fontsource-variable/inter/wght.css';
@@ -26,22 +27,19 @@ if (!Capacitor.isNativePlatform()) {
 }
 
 openData()
-  .then((fresh) => {
-    if (fresh) markFirstRun();
-    return true;
-  })
-  .catch((err) => {
+  .then((fresh) => ({ dbOk: true, onboarding: initOnboarding({ fresh, releaseKeys: RELEASE_FEATURE_KEYS }) }))
+  .catch((err): { dbOk: boolean; onboarding: OnboardingState | null } => {
     console.error('Budgy: could not open the local database', err);
-    return false;
+    return { dbOk: false, onboarding: null };
   })
-  .then((dbOk) => {
+  .then(({ dbOk, onboarding }) => {
     createRoot(document.getElementById('root')!).render(
       <StrictMode>
         {dbOk ? (
           <SettingsProvider>
             <PeriodProvider>
               <AccountFilterProvider>
-                <App />
+                <App onboarding={onboarding} />
               </AccountFilterProvider>
             </PeriodProvider>
           </SettingsProvider>

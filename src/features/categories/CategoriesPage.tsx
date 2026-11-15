@@ -20,6 +20,8 @@ import AccountEditModal from '@/features/accounts/AccountEditModal';
 import CategoryEditModal from './CategoryEditModal';
 import type { Account, Amounts, Category, Flow } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 /**
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
@@ -58,6 +60,7 @@ export default function CategoriesPage() {
 
   const accounts = useAccounts();
   useRevealWhen(!!categories && !!txs && !!accounts);
+  usePageTour(['categories'], { ready: !!categories && !!txs && !!accounts });
   // Accounts with "Display in expenses" on have a tile, except Cash In and Cash Out; only savings and lending to debts are spending.
   const tileAccounts = splitMainAccounts(accounts ?? [])[1].filter((a) => tiles.tileIds.has(a.id!) || tiles.everydayIds.has(a.id!));
   // Account tiles are dragged among themselves, the same way as the categories.
@@ -104,12 +107,12 @@ export default function CategoriesPage() {
       <IonHeader className="ion-no-border">
         <AppHeader
           end={
-            <IonButton onClick={() => setEditMode((v) => !v)} aria-label={editMode ? t('common.done') : t('common.edit')}>
+            <IonButton {...tourAttr('categories.edit')} onClick={() => setEditMode((v) => !v)} aria-label={editMode ? t('common.done') : t('common.edit')}>
               <IonIcon slot="icon-only" icon={editMode ? doneIcon : editIcon} />
             </IonButton>
           }
         />
-        <IonToolbar className="b-toolbar">
+        <IonToolbar className="b-toolbar" {...tourAttr('categories.period')}>
           <PeriodBar />
         </IonToolbar>
       </IonHeader>
@@ -122,6 +125,7 @@ export default function CategoriesPage() {
             {/* Tapping the middle switches between expense and income categories. */}
             <button
               className="b-catgrid__center"
+              {...tourAttr('categories.center')}
               onClick={() => setKind(isExpense ? 'income' : 'expense')}
               aria-label={t('categories.switchKind')}
             >
@@ -150,6 +154,7 @@ export default function CategoriesPage() {
                   muted={spent === 0 && !editMode}
                   onClick={() => tap(c)}
                   dragging={dragging === c.id}
+                  {...tourAttr('categories.bubble')}
                   {...itemProps(c.id!)}
                 />
               );

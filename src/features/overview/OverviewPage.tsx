@@ -22,6 +22,8 @@ import AccountEditModal from '@/features/accounts/AccountEditModal';
 import CardReminders from '@/features/accounts/CardReminders';
 import CreditCardSheet from '@/features/accounts/CreditCardSheet';
 import { useRevealWhen } from '@/shared/splash';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 const BUCKETS: Record<PeriodMode, number> = { day: 7, week: 6, month: 6, year: 5, all: 5, range: 6 };
 
@@ -76,7 +78,9 @@ export default function OverviewPage() {
       return { inc, exp };
     });
   }, [buckets, conv, matches, tiles]);
-  useRevealWhen(!!txs && !!accounts && !!categories && !!trend);
+  const overviewReady = !!txs && !!accounts && !!categories && !!trend;
+  useRevealWhen(overviewReady);
+  usePageTour(['overview'], { ready: overviewReady });
 
   const bucketLabel = (d: Date) => {
     const o: Intl.DateTimeFormatOptions =
@@ -126,7 +130,7 @@ export default function OverviewPage() {
       <IonContent ref={contentRef}>
         <div className="b-page">
           <CardReminders onOpen={setViewing} />
-          <div className="b-tiles">
+          <div className="b-tiles" {...tourAttr('overview.tiles')}>
             <div className="b-card b-tile">
               <div className="b-tile__label">{t('type.incomes')}</div>
               <div className="b-tile__value b-income b-num">{money.format(totals.income)}</div>
@@ -150,7 +154,7 @@ export default function OverviewPage() {
 
           {/* Trend */}
           <div className="b-section-title">{t('overview.trend')}</div>
-          <div className="b-card" style={{ padding: 14 }}>
+          <div className="b-card" style={{ padding: 14 }} {...tourAttr('overview.trend')}>
             <div className="b-legend">
               <span><i style={{ background: 'var(--b-income)' }} />{t('type.incomes')}</span>
               <span><i style={{ background: 'var(--b-expense)' }} />{t('type.expenses')}</span>
@@ -176,7 +180,7 @@ export default function OverviewPage() {
           {budgets.length > 0 && (
             <>
               <div className="b-section-title">{t('overview.budgets')}</div>
-              <div className="b-card" style={{ padding: 14 }}>
+              <div className="b-card" style={{ padding: 14 }} {...tourAttr('overview.budgets')}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, marginBottom: 8 }}>
                   <span>{t('overview.totalBudget')}</span>
                   <span className="b-num">

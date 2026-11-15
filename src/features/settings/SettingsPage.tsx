@@ -15,6 +15,9 @@ import { useCloud } from '@/core/cloud/CloudContext';
 import SmsSettingsSection from '@/features/sms/SmsSettingsSection';
 import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
 import { useRevealWhen } from '@/shared/splash';
+import { tourAttr } from '@/features/onboarding/tourCatalog';
+import ToursSettingsSection from '@/features/onboarding/ToursSettingsSection';
+import { usePageTour } from '@/features/onboarding/usePageTour';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -22,6 +25,7 @@ export default function SettingsPage() {
   const { user } = useCloud();
   const smsAvailable = useSmsAvailable();
   useRevealWhen(true);
+  usePageTour(['settings']);
   const accounts = useAccounts(true);
   const categories = useCategories(undefined, true);
   const inUse = useCurrenciesInUse();
@@ -107,7 +111,7 @@ export default function SettingsPage() {
         <div className="b-page" style={{ paddingInline: 0 }}>
           <IonList inset>
             <IonListHeader>{t('settings.general')}</IonListHeader>
-            <IonItem>
+            <IonItem {...tourAttr('settings.currency')}>
               <IonSelect
                 key={currencyKey}
                 label={t('settings.currency')}
@@ -172,6 +176,10 @@ export default function SettingsPage() {
               </IonItem>
             </IonList>
           )}
+
+          <div {...tourAttr('settings.tours')}>
+            <ToursSettingsSection />
+          </div>
 
           <IonList inset>
             <IonItem lines="none">
