@@ -18,13 +18,18 @@ export interface TxDraft {
   date: string;
   note?: string;
   smsFingerprint?: string;
+  /** Money back on a purchase; kept on income only. */
+  moneyBack?: boolean;
+  /** Kept on expenses and income, so an edit doesn't take a transaction out of its group. */
+  groupId?: string;
   rate?: Pick<Transaction, 'rate' | 'rateCurrency'>;
   /** Kept from the transaction being edited. */
   createdAt?: string;
 }
 
 /**
- * The record to store: transfer-only fields only on transfers, category and rate only on expense/income,
+ * The record to store: transfer-only fields only on transfers, category, rate and group only on expense/income,
+ * money back only on income,
  * note trimmed to 120 chars (undefined when empty), createdAt kept or now, updatedAt now.
  */
 export function buildTxRecord(d: TxDraft): Omit<Transaction, 'id'> {
@@ -44,6 +49,8 @@ export function buildTxRecord(d: TxDraft): Omit<Transaction, 'id'> {
     date: d.date,
     note: d.note?.trim().slice(0, NOTE_MAX).trim() || undefined,
     smsFingerprint: d.smsFingerprint,
+    moneyBack: d.type === 'income' && d.moneyBack ? true : undefined,
+    groupId: transfer ? undefined : d.groupId,
     createdAt: d.createdAt ?? now,
     // put() replaces the whole record, so set this here rather than relying on the update hook.
     updatedAt: now,

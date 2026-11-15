@@ -18,6 +18,24 @@ const draft = (over: Partial<TxDraft> = {}): TxDraft => ({
 describe('buildTxRecord', () => {
   beforeEach(() => database.transactions.clear());
 
+  it('keeps money back and the group on income', () => {
+    const record = buildTxRecord(draft({ type: 'income', moneyBack: true, groupId: 'g' }));
+    expect(record.moneyBack).toBe(true);
+    expect(record.groupId).toBe('g');
+  });
+
+  it('keeps the group on an expense but never marks it money back', () => {
+    const record = buildTxRecord(draft({ moneyBack: true, groupId: 'g' }));
+    expect(record.groupId).toBe('g');
+    expect(record.moneyBack).toBeUndefined();
+  });
+
+  it('drops money back and the group from a transfer', () => {
+    const record = buildTxRecord(draft({ type: 'transfer', toAccountId: 'acc2', moneyBack: true, groupId: 'g' }));
+    expect(record.moneyBack).toBeUndefined();
+    expect(record.groupId).toBeUndefined();
+  });
+
   it('drops transfer fields from an expense and category/rate from a transfer', () => {
     const transferBits = { toAccountId: 'acc2', toAmount: 20, toCurrency: 'USD' };
     const rate = { rate: 50, rateCurrency: 'EGP' };

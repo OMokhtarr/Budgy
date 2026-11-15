@@ -129,3 +129,30 @@ describe('subcategoryBreakdown', () => {
     expect(breakdown([tx(0.1, 'akl'), tx(0.2, 'akl'), tx(0.7, 'groceries')]).rest).toBe(0);
   });
 });
+
+describe('totalsOf with money back', () => {
+  const back = (amount: number, over: Partial<Transaction> = {}): Transaction => ({ ...tx(amount, undefined, 'income'), moneyBack: true, ...over });
+
+  it('takes money back off the spending in its category, not counting it as income', () => {
+    const t = totalsOf([tx(600), back(400)], CONV);
+    expect(t.expense).toBe(200);
+    expect(t.income).toBe(0);
+    expect(t.byCategory.expense.get('food')).toBe(200);
+    expect(t.byCategory.income.has('food')).toBe(false);
+    expect(t.byCategoryCur.expense.get('food')).toEqual({ EGP: 200 });
+  });
+
+  it('lets a period with only the money back go below zero', () => {
+    const t = totalsOf([back(400)], CONV);
+    expect(t.expense).toBe(-400);
+    expect(t.byCategory.expense.get('food')).toBe(-400);
+  });
+
+  it('takes money back in another currency off at its own rate', () => {
+    expect(totalsOf([tx(600), back(10, { currency: 'USD', rate: 48, rateCurrency: 'EGP' })], CONV).expense).toBe(120);
+  });
+
+  it('takes money back off its subcategory too', () => {
+    expect(totalsOf([tx(600, 'akl'), back(100, { subcategoryId: 'akl' })], CONV).bySubcategory.expense.get('akl')).toBe(500);
+  });
+});

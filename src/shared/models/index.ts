@@ -119,6 +119,13 @@ export interface Transaction extends Synced {
   createdAt: string;
   /** Fingerprint of the bank text it was imported from (see SMS import). Syncs; the text itself never does. */
   smsFingerprint?: string;
+  /**
+   * Money back on a purchase (e.g. a friend paying their share): set only on income, whose category is then an
+   * expense category. It lowers spending in that category and never counts as income.
+   */
+  moneyBack?: true;
+  /** Transactions with the same id show as one entry: a purchase, the cards or accounts it was paid from, and money back. */
+  groupId?: string;
 }
 
 /** Learned: texts from this sender with these masked digits belong to this account. Synced. */

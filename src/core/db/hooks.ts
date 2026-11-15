@@ -7,6 +7,7 @@ import { txInBase, type BaseConverter } from '@/core/utils/txRate';
 import { groupOf, openingOf, roundTo } from '@/core/utils/currency';
 import { lendingShares, type LendingShares } from '@/core/utils/lending';
 import { cardStatus, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
+import { flowOfTx, isMoneyBack } from '@/core/utils/flow';
 import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
 
 export function useAccounts(includeArchived = false): Account[] | undefined {
@@ -175,16 +176,19 @@ export function totalsOf(txs: Transaction[] | undefined, conv: BaseConverter, ti
       for (const s of everydayShiftsOf(t, tiles)) addToTile(s.tileId, s.sign * conv.toBase(...s.onTile), s.sign, s.onTile);
       continue;
     }
-    const v = txInBase(t, conv);
-    if (t.type === 'expense') expense += v;
+    // Money back counts against spending in its category, never as income.
+    const flow = flowOfTx(t)!;
+    const sign = isMoneyBack(t) ? -1 : 1;
+    const v = sign * txInBase(t, conv);
+    if (flow === 'expense') expense += v;
     else income += v;
     if (t.categoryId == null) continue;
-    const m = byCategory[t.type];
+    const m = byCategory[flow];
     m.set(t.categoryId, (m.get(t.categoryId) ?? 0) + v);
-    const raw = byCategoryCur[t.type].get(t.categoryId) ?? {};
-    raw[t.currency] = roundTo((raw[t.currency] ?? 0) + t.amount, t.currency);
-    byCategoryCur[t.type].set(t.categoryId, raw);
-    if (t.subcategoryId != null) bySubcategory[t.type].set(t.subcategoryId, (bySubcategory[t.type].get(t.subcategoryId) ?? 0) + v);
+    const raw = byCategoryCur[flow].get(t.categoryId) ?? {};
+    raw[t.currency] = roundTo((raw[t.currency] ?? 0) + sign * t.amount, t.currency);
+    byCategoryCur[flow].set(t.categoryId, raw);
+    if (t.subcategoryId != null) bySubcategory[flow].set(t.subcategoryId, (bySubcategory[flow].get(t.subcategoryId) ?? 0) + v);
   }
   return { expense, income, byCategory, byCategoryCur, bySubcategory, byTile };
 }
