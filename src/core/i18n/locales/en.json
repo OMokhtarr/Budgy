@@ -526,6 +526,19 @@
     "personCurrency": "{{name}}'s debt is kept in {{held}}, not {{currency}}. Tap the card to enter both amounts.",
     "emptyTitle": "No bank texts to review",
     "emptyBody": "Scan your inbox to bring in new bank texts. Texts you've already imported or dismissed won't come back.",
-    "lastScan": "Last scan: {{when}}"
+    "lastScan": "Last scan: {{when}}",
+    "sameCategory": "Same category",
+    "combine": "Combine into one",
+    "takeOff": "Take off a purchase",
+    "comingSoon": "Coming soon",
+    "batchSaved_one": "1 saved",
+    "batchSaved_other": "{{count}} saved",
+    "batchNeedAccount_one": "1 needs an account",
+    "batchNeedAccount_other": "{{count}} need an account",
+    "batchDuplicateTitle": "Some look already added",
+    "batchDuplicateBody_one": "1 of these has the same amount, account and day as a transaction you entered yourself.",
+    "batchDuplicateBody_other": "{{count}} of these have the same amount, account and day as transactions you entered yourself.",
+    "skipThose": "Skip those",
+    "keepAll": "Keep all"
   }
 }

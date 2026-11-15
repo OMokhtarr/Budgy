@@ -1,27 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
-import { IonBackButton, IonButtons, IonContent, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar, useIonAlert, useIonRouter, useIonToast } from '@ionic/react';
+import {
+  IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar,
+  useIonAlert, useIonRouter, useIonToast,
+} from '@ionic/react';
 import { chatboxEllipsesOutline, searchOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useConverter, useLocale, useSettings } from '@/core/contexts/SettingsContext';
 import { categoryFits, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import { dayTimeLabel } from '@/core/utils/period';
-import type { SmsPending } from '@/shared/models';
+import { closeIcon } from '@/shared/icons';
+import type { Flow, SmsPending } from '@/shared/models';
+import type { TxDraft } from '@/features/transactions/txRecord';
+import { actionsFor, duplicatesOf, importMany } from './batch';
 import { useLearned, usePendingSms } from './hooks';
-import { flowOf, suggestFor } from './learning';
+import { flowOf, resolveSkipped, suggestFor } from './learning';
 import PickerSheet, { type PickerItem, type PickerSection } from './PickerSheet';
-import { addPerson, choiceOf, isPerson, usablePick, type CardChoice, type CardPick } from './review';
+import { addPerson, cardDraft, choiceOf, isPerson, usablePick, type CardChoice, type CardPick } from './review';
 import ScanSheet from './ScanSheet';
 import SmsItemCard from './SmsItemCard';
+import { useBatchDuplicatePrompt } from './useBatchDuplicatePrompt';
 import { useSmsAvailability } from './useSmsAvailable';
 
 const PATH = '/sms';
 
-type Picking = { item: SmsPending; kind: 'account' | 'category' };
+/** What the picker sheet is choosing: one card's account or category, or one category for every selected text. */
+type Picking = { item: SmsPending; kind: 'account' | 'category' } | { kind: 'batch'; flow: Flow };
 
 const toItem = (x: { id?: string; icon: string; color: string }, name: string): PickerItem => ({ id: x.id!, name, icon: x.icon, color: x.color });
 
-/** "Bank texts": the scanned texts waiting for review, newest first. */
+/** "Bank texts": the scanned texts waiting for review, newest first. Long-press a card to act on several at once. */
 export default function SmsReviewPage() {
   const { t } = useTranslation();
   const locale = useLocale();
@@ -40,25 +49,38 @@ export default function SmsReviewPage() {
   const [picking, setPicking] = useState<Picking | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  // Fingerprints of the texts picked for a batch action.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
+  const askDuplicates = useBatchDuplicatePrompt();
   const conv = useConverter();
+  const selecting = selected.size > 0;
+
+  /** A card's choice: the suggestion with the user's usable picks (plus `extra`, if given) on top. */
+  const choiceFor = (item: SmsPending, extra: CardPick = {}): CardChoice => {
+    const s = suggestFor(item, learned?.links ?? [], learned?.rules ?? [], accounts ?? [], categories ?? []);
+    return choiceOf(s, usablePick({ ...picks[item.fingerprint], ...extra }, flowOf(item), accounts ?? [], categories ?? []));
+  };
 
   const choices = useMemo(() => {
     const map = new Map<string, CardChoice>();
-    for (const item of items ?? []) {
-      const s = suggestFor(item, learned?.links ?? [], learned?.rules ?? [], accounts ?? [], categories ?? []);
-      const pick = usablePick(picks[item.fingerprint], flowOf(item), accounts ?? [], categories ?? []);
-      map.set(item.fingerprint, choiceOf(s, pick));
-    }
+    for (const item of items ?? []) map.set(item.fingerprint, choiceFor(item));
     return map;
   }, [items, learned, accounts, categories, picks]);
 
+  const chosen = useMemo(() => (items ?? []).filter((x) => selected.has(x.fingerprint)), [items, selected]);
+  const actions = actionsFor(chosen);
+
+  const categoriesFor = (flow: Flow) =>
+    (categories ?? []).filter((c) => !c.archived && categoryFits(c, flow)).map((c) => toItem(c, categoryName(c)));
+
   const pickerItems = useMemo((): PickerItem[] => {
     if (!picking) return [];
+    if (picking.kind === 'batch') return categoriesFor(picking.flow);
     if (picking.kind === 'account') return (accounts ?? []).filter((a) => !a.archived).map((a) => toItem(a, accountName(a)));
-    const flow = flowOf(picking.item);
-    return (categories ?? []).filter((c) => !c.archived && categoryFits(c, flow)).map((c) => toItem(c, categoryName(c)));
+    return categoriesFor(flowOf(picking.item));
   }, [picking, accounts, categories, accountName, categoryName]);
 
   const people = useMemo(() => (accounts ?? []).filter(isPerson).map((a) => toItem(a, accountName(a))), [accounts, accountName]);
@@ -71,14 +93,92 @@ export default function SmsReviewPage() {
     if (blocked && pathname === PATH) router.push('/categories', 'root', 'replace');
   }, [blocked, pathname, router]);
 
-  const openPicker = (item: SmsPending, kind: Picking['kind']) => {
+  // Texts resolved (or gone) drop out of the selection.
+  useEffect(() => {
+    setSelected((s) => {
+      if (!s.size) return s;
+      const pending = new Set((items ?? []).map((x) => x.fingerprint));
+      const next = new Set([...s].filter((fp) => pending.has(fp)));
+      return next.size === s.size ? s : next;
+    });
+  }, [items]);
+
+  // The selection bar takes the tab bar's place; the hardware back button leaves selection mode.
+  useEffect(() => {
+    document.body.classList.toggle('b-selecting', selecting);
+    if (!selecting) return;
+    const onBack = (e: Event) => (e as CustomEvent).detail.register(100, () => setSelected(new Set()));
+    document.addEventListener('ionBackButton', onBack);
+    return () => {
+      document.body.classList.remove('b-selecting');
+      document.removeEventListener('ionBackButton', onBack);
+    };
+  }, [selecting]);
+
+  const toggle = (item: SmsPending) => {
+    if (!selecting) Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(item.fingerprint)) next.delete(item.fingerprint);
+      else next.add(item.fingerprint);
+      return next;
+    });
+  };
+
+  const toast = (message: string, color = 'medium') => void presentToast({ message, duration: 2600, position: 'top', color });
+  const failed = () => toast(t('sms.actionFailed'), 'danger');
+
+  const openPicker = (item: SmsPending, kind: 'account' | 'category') => {
     setPicking({ item, kind });
     setPickerOpen(true);
   };
   const setPick = (fp: string, patch: CardPick) => setPicks((p) => ({ ...p, [fp]: { ...p[fp], ...patch } }));
+
+  /**
+   * "Same category": every selected text gets the category and the complete ones are saved together, after one
+   * question about any that look already added. Texts still missing an account stay, selected, with the category set.
+   */
+  const applyCategory = async (categoryId: string) => {
+    const patch: CardPick = { categoryId, personId: undefined };
+    const batch = chosen;
+    setPicks((p) => Object.fromEntries([...Object.entries(p), ...batch.map((x) => [x.fingerprint, { ...p[x.fingerprint], ...patch }])]));
+    const complete: { item: SmsPending; draft: TxDraft }[] = [];
+    const incomplete: string[] = [];
+    for (const item of batch) {
+      const draft = cardDraft(item, choiceFor(item, patch), conv);
+      if (draft) complete.push({ item, draft });
+      else incomplete.push(item.fingerprint);
+    }
+
+    setBusy(true);
+    try {
+      const dupes = await duplicatesOf(complete.map(({ item, draft }) => ({ fingerprint: item.fingerprint, draft })));
+      let toSave = complete;
+      if (dupes.size) {
+        const answer = await askDuplicates(dupes.size);
+        if (answer === 'cancel') return;
+        if (answer === 'skip') {
+          await Promise.all(complete.filter(({ item }) => dupes.has(item.fingerprint)).map(({ item }) => resolveSkipped(item, 'duplicate')));
+          toSave = complete.filter(({ item }) => !dupes.has(item.fingerprint));
+        }
+      }
+      const { saved, failed: failedCount } = await importMany(toSave);
+      setSelected(new Set(incomplete));
+      const parts = [t('sms.batchSaved', { count: saved })];
+      if (incomplete.length) parts.push(t('sms.batchNeedAccount', { count: incomplete.length }));
+      if (failedCount) parts.push(t('sms.actionFailed'));
+      toast(parts.join(' · '), failedCount ? 'danger' : 'medium');
+    } catch {
+      failed();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // A category and a person take the same place on the card: picking one clears the other.
   const pick = (id: string) => {
     if (!picking) return;
+    if (picking.kind === 'batch') return void applyCategory(id);
     const fp = picking.item.fingerprint;
     if (picking.kind === 'account') setPick(fp, { accountId: id });
     else if (people.some((p) => p.id === id)) setPick(fp, { personId: id, categoryId: undefined });
@@ -99,21 +199,30 @@ export default function SmsReviewPage() {
             if (!name) return false;
             addPerson(name, item.currency ?? conv.base)
               .then((id) => setPick(item.fingerprint, { personId: id, categoryId: undefined }))
-              .catch(() => void presentToast({ message: t('sms.actionFailed'), duration: 3000, position: 'top', color: 'danger' }));
+              .catch(failed);
           },
         },
       ],
     });
 
-  const section: PickerSection | undefined =
+  const sections: PickerSection[] =
     picking?.kind === 'category'
-      ? {
-          title: t(flowOf(picking.item) === 'expense' ? 'sms.lentTo' : 'sms.paidBackBy'),
-          items: people,
-          addLabel: t('sms.newPerson'),
-          onAdd: () => askNewPerson(picking.item),
-        }
-      : undefined;
+      ? [
+          {
+            title: t(flowOf(picking.item) === 'expense' ? 'sms.lentTo' : 'sms.paidBackBy'),
+            items: people,
+            addLabel: t('sms.newPerson'),
+            onAdd: () => askNewPerson(picking.item),
+          },
+        ]
+      : [];
+
+  const sameCategory = () => {
+    const first = chosen[0];
+    if (!first) return;
+    setPicking({ kind: 'batch', flow: flowOf(first) });
+    setPickerOpen(true);
+  };
 
   const scanButton = (
     <button className="b-btn b-btn--primary b-scanbtn" onClick={() => setScanOpen(true)}>
@@ -122,23 +231,37 @@ export default function SmsReviewPage() {
     </button>
   );
   const count = items?.length ?? 0;
-  const pickedChoice = picking ? choices.get(picking.item.fingerprint) : undefined;
+  const pickedChoice = picking && picking.kind !== 'batch' ? choices.get(picking.item.fingerprint) : undefined;
+  const pickerTitle = picking?.kind === 'account' ? t('sms.pickAccount') : picking?.kind === 'batch' ? t('sms.sameCategory') : t('sms.pickCategory');
+  const pickerSelected =
+    picking?.kind === 'account' ? pickedChoice?.accountId : picking?.kind === 'category' ? pickedChoice?.personId ?? pickedChoice?.categoryId : undefined;
 
   return (
     <IonPage>
       <IonHeader className="ion-no-border">
-        <IonToolbar className="b-toolbar">
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/categories" text="" />
-          </IonButtons>
-          <IonTitle className="b-title">{count ? `${t('sms.bankTexts')} (${count})` : t('sms.bankTexts')}</IonTitle>
-          {allowed && count > 0 && <IonButtons slot="end">{scanButton}</IonButtons>}
-        </IonToolbar>
+        {selecting ? (
+          <IonToolbar className="b-toolbar b-selbar">
+            <IonButtons slot="start">
+              <IonButton onClick={() => setSelected(new Set())} aria-label={t('common.close')}>
+                <IonIcon slot="icon-only" icon={closeIcon} />
+              </IonButton>
+              <span className="b-selbar__count">{chosen.length}</span>
+            </IonButtons>
+          </IonToolbar>
+        ) : (
+          <IonToolbar className="b-toolbar">
+            <IonButtons slot="start">
+              <IonBackButton defaultHref="/categories" text="" />
+            </IonButtons>
+            <IonTitle className="b-title">{count ? `${t('sms.bankTexts')} (${count})` : t('sms.bankTexts')}</IonTitle>
+            {allowed && count > 0 && <IonButtons slot="end">{scanButton}</IonButtons>}
+          </IonToolbar>
+        )}
       </IonHeader>
       <IonContent>
         {allowed && items && (
           <div className="b-page">
-            {smsImport.lastScanAt && (
+            {smsImport.lastScanAt && !selecting && (
               <p className="b-muted b-smslast">
                 {t('sms.lastScan', {
                   when: dayTimeLabel(new Date(smsImport.lastScanAt), locale, { today: t('period.today'), yesterday: t('period.yesterday') }),
@@ -165,6 +288,9 @@ export default function SmsReviewPage() {
                     person={choice.personId ? accounts?.find((a) => a.id === choice.personId) : undefined}
                     onPickAccount={() => openPicker(item, 'account')}
                     onPickCategory={() => openPicker(item, 'category')}
+                    selecting={selecting}
+                    selected={selected.has(item.fingerprint)}
+                    onSelect={item.status === 'understood' ? () => toggle(item) : undefined}
                   />
                 );
               })
@@ -173,13 +299,27 @@ export default function SmsReviewPage() {
         )}
       </IonContent>
 
+      {selecting && (
+        <IonFooter className="b-smsbatch">
+          <button className="b-btn b-btn--primary" onClick={sameCategory} disabled={busy || !actions.sameCategory}>
+            {t('sms.sameCategory')}
+          </button>
+          <button className="b-btn b-btn--muted" onClick={() => toast(t('sms.comingSoon'))} disabled={busy || !actions.combine}>
+            {t('sms.combine')}
+          </button>
+          <button className="b-btn b-btn--muted" onClick={() => toast(t('sms.comingSoon'))} disabled={busy || !actions.takeOff}>
+            {t('sms.takeOff')}
+          </button>
+        </IonFooter>
+      )}
+
       <ScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} />
       <PickerSheet
         isOpen={pickerOpen}
-        title={picking?.kind === 'account' ? t('sms.pickAccount') : t('sms.pickCategory')}
+        title={pickerTitle}
         items={pickerItems}
-        selectedId={picking?.kind === 'account' ? pickedChoice?.accountId : pickedChoice?.personId ?? pickedChoice?.categoryId}
-        section={section}
+        selectedId={pickerSelected}
+        sections={sections}
         onPick={pick}
         onClose={() => setPickerOpen(false)}
       />

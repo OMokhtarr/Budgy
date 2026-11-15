@@ -25,6 +25,11 @@
       phone.
     - Settings: keywords add/remove and the permission row still updates after resume.
     - Arabic (RTL) layout and dark mode of the new screens.
+  - [ ] **Several texts at once, money back and combining — checks (need a debug build on a device):**
+    - Long-press a card to select it; tap toggles; ✕ and the back button leave selection.
+    - Same category with one text missing an account: the others save, it stays selected with the category set.
+    - The "some look already added" prompt: Skip those, Keep all, and closing it (nothing saved).
+    - Arabic (RTL) layout and dark mode of the selection bar.
   - [ ] **Stage 3, before the SMS release:**
     - Recheck Play's live SMS policy.
     - Add `READ_SMS` to the main manifest.

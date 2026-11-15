@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { IonIcon, useIonToast } from '@ionic/react';
+import { checkmarkCircle, ellipseOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
@@ -7,6 +8,7 @@ import { useNames } from '@/core/db/hooks';
 import { currenciesOf } from '@/core/utils/currency';
 import { dayTimeLabel } from '@/core/utils/period';
 import { buildTxRecord } from '@/features/transactions/txRecord';
+import { useLongPress } from '@/shared/hooks/useLongPress';
 import { iconFor } from '@/shared/icons';
 import type { Account, Category, SmsPending } from '@/shared/models';
 import { flowOf, importText, resolveImported, resolveSkipped } from './learning';
@@ -23,6 +25,11 @@ interface Props {
   person?: Account;
   onPickAccount(): void;
   onPickCategory(): void;
+  /** While several texts are being picked, a tap toggles the card instead of opening the editor. */
+  selecting: boolean;
+  selected: boolean;
+  /** A long-press, or a tap while selecting. Texts that couldn't be read leave it out: they can't be picked. */
+  onSelect?(): void;
 }
 
 /** Stops a button's tap from also opening the editor (which a tap anywhere else on the card does). */
@@ -32,7 +39,7 @@ const only = (fn: () => void) => (e: MouseEvent) => {
 };
 
 /** One bank text on the review screen: confirm or dismiss it here, or tap it to open the editor pre-filled. */
-export default function SmsItemCard({ item, choice, account, category, person, onPickAccount, onPickCategory }: Props) {
+export default function SmsItemCard({ item, choice, account, category, person, onPickAccount, onPickCategory, selecting, selected, onSelect }: Props) {
   const { t } = useTranslation();
   const locale = useLocale();
   const money = useMoney();
@@ -107,6 +114,11 @@ export default function SmsItemCard({ item, choice, account, category, person, o
     });
   };
 
+  const press = useLongPress<void>(
+    () => onSelect?.(),
+    () => (selecting ? onSelect?.() : edit()),
+  )();
+
   const chip = (label: string, picked: { name: string; icon: string; color: string } | undefined, onClick: () => void): ReactNode => (
     <button
       className={`b-smschip ${picked ? 'is-set' : 'is-empty'}`}
@@ -122,11 +134,14 @@ export default function SmsItemCard({ item, choice, account, category, person, o
   const incoming = item.direction === 'in';
 
   return (
-    <div className={`b-card b-smscard ${busy ? 'is-busy' : ''}`} onClick={edit}>
+    <div className={`b-card b-smscard ${busy ? 'is-busy' : ''} ${selected ? 'is-selected' : ''}`} {...press}>
       {/* The tappable summary; the click reaches the card's handler. */}
       <button type="button" className="b-smscard__main">
         <span className="b-smscard__top">
-          <span>{sender}</span>
+          <span>
+            {selecting && onSelect && <IonIcon className="b-smscard__check" icon={selected ? checkmarkCircle : ellipseOutline} />}
+            {sender}
+          </span>
           <span>{when}</span>
         </span>
         {understood && item.amount != null && item.currency && (
@@ -137,7 +152,7 @@ export default function SmsItemCard({ item, choice, account, category, person, o
         {understood && item.merchant && <span className="b-smscard__merchant">{item.merchant}</span>}
       </button>
 
-      {understood ? (
+      {selecting ? null : understood ? (
         <>
           <div className="b-smscard__chips">
             {chip(t('sms.pickAccount'), account && { name: accountName(account), icon: account.icon, color: account.color }, onPickAccount)}
@@ -165,20 +180,22 @@ export default function SmsItemCard({ item, choice, account, category, person, o
         </>
       )}
 
-      <div className="b-smscard__btns">
-        <button className="b-btn b-btn--muted" onClick={only(() => void dismiss())} disabled={busy}>
-          {t('sms.dismiss')}
-        </button>
-        {understood ? (
-          <button className="b-btn b-btn--primary" onClick={only(() => void confirm())} disabled={busy || !draft}>
-            {t('sms.confirm')}
+      {!selecting && (
+        <div className="b-smscard__btns">
+          <button className="b-btn b-btn--muted" onClick={only(() => void dismiss())} disabled={busy}>
+            {t('sms.dismiss')}
           </button>
-        ) : (
-          <button className="b-btn b-btn--primary" onClick={only(edit)} disabled={busy}>
-            {t('sms.fillIn')}
-          </button>
-        )}
-      </div>
+          {understood ? (
+            <button className="b-btn b-btn--primary" onClick={only(() => void confirm())} disabled={busy || !draft}>
+              {t('sms.confirm')}
+            </button>
+          ) : (
+            <button className="b-btn b-btn--primary" onClick={only(edit)} disabled={busy}>
+              {t('sms.fillIn')}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

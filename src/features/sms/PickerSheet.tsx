@@ -10,12 +10,12 @@ export interface PickerItem {
   color: string;
 }
 
-/** A second, titled group under the main one, ending with an "add" bubble. */
+/** A titled group under the main one, ending with an "add" bubble when it has `onAdd`. */
 export interface PickerSection {
   title: string;
   items: PickerItem[];
-  addLabel: string;
-  onAdd(): void;
+  addLabel?: string;
+  onAdd?(): void;
 }
 
 interface Props {
@@ -24,14 +24,14 @@ interface Props {
   title?: string;
   items: PickerItem[];
   selectedId?: string;
-  /** Picking from it also calls `onPick`. */
-  section?: PickerSection;
+  /** Picking from one also calls `onPick`. */
+  sections?: PickerSection[];
   onPick(id: string): void;
   onClose(): void;
 }
 
 /** Bottom sheet with a grid of accounts or categories, as in the editor's picker. Picking calls `onPick`, then `onClose`. */
-export default function PickerSheet({ isOpen, title, items, selectedId, section, onPick, onClose }: Props) {
+export default function PickerSheet({ isOpen, title, items, selectedId, sections = [], onPick, onClose }: Props) {
   const { t } = useTranslation();
 
   const grid = (list: PickerItem[], add?: PickerSection) => (
@@ -50,16 +50,16 @@ export default function PickerSheet({ isOpen, title, items, selectedId, section,
           }}
         />
       ))}
-      {add && (
+      {add?.onAdd && (
         <Bubble
           className="b-picker__item"
-          name={add.addLabel}
+          name={add.addLabel ?? ''}
           icon="other"
           color=""
           variant="add"
           onClick={() => {
             onClose();
-            add.onAdd();
+            add.onAdd?.();
           }}
         />
       )}
@@ -77,12 +77,12 @@ export default function PickerSheet({ isOpen, title, items, selectedId, section,
         </div>
         <div className="b-sheet__body">
           {grid(items)}
-          {section && (
-            <>
+          {sections.map((section) => (
+            <div key={section.title}>
               <h3 className="b-pickersheet__section">{section.title}</h3>
               {grid(section.items, section)}
-            </>
-          )}
+            </div>
+          ))}
         </div>
       </div>
     </IonModal>
