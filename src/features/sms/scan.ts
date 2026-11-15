@@ -52,6 +52,14 @@ export interface ScanDeps {
   database?: BudgyDB;
 }
 
+/** Drops pending texts the parser now ignores, e.g. OTPs read as purchases before it learned their wording. */
+async function clearIgnoredPending(database: BudgyDB): Promise<void> {
+  const stale = (await database.smsPending.toArray())
+    .filter((row) => parseSms(row.address, row.body).status === 'ignored')
+    .map((row) => row.fingerprint);
+  await database.smsPending.bulkDelete(stale);
+}
+
 /** Reads matching texts since `since` into smsPending; returns how many are new. */
 export async function scanInbox(opts: { since: number; senders: string[] }, deps: ScanDeps): Promise<{ added: number }> {
   const database = deps.database ?? db;
@@ -61,6 +69,7 @@ export async function scanInbox(opts: { since: number; senders: string[] }, deps
   for (const msg of messages) {
     if (matchesSender(msg.address, opts.senders)) candidates.push({ msg, fingerprint: await fingerprintOf(msg) });
   }
+  await database.transaction('rw', database.smsPending, () => clearIgnoredPending(database));
   if (!candidates.length) return { added: 0 };
 
   const keys = candidates.map((c) => c.fingerprint);

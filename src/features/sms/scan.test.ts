@@ -37,6 +37,16 @@ describe('scanInbox', () => {
     expect(await database.smsPending.count()).toBe(2);
   });
 
+  it('clears pending texts the parser now reads as OTPs, even when no new text came in', async () => {
+    const otp = '482913 is your OTP for purchase of EGP 450.00 at AMAZON';
+    await database.smsPending.bulkPut([
+      { fingerprint: 'otp', smsId: '8', address: 'CIB', date: 'x', body: otp, status: 'understood', amount: 450, direction: 'out' },
+      { fingerprint: 'debit', smsId: '9', address: 'CIB', date: 'x', body: DEBIT, status: 'understood', amount: 450, direction: 'out' },
+    ]);
+    expect((await run([])).added).toBe(0);
+    expect((await database.smsPending.toArray()).map((r) => r.fingerprint)).toEqual(['debit']);
+  });
+
   it('skips by fingerprint, not by SMS id', async () => {
     await run([msg()]);
     expect((await run([msg({ date: msg().date + 1 })])).added).toBe(1);
