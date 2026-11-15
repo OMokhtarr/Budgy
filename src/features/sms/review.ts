@@ -12,11 +12,14 @@ export interface CardPick {
   accountId?: string;
   categoryId?: string;
   personId?: string;
+  /** With an expense category on a text of money in: money back that lowers that category's spending. */
+  moneyBack?: boolean;
 }
 
 /** What a card saves: the suggestion with the user's picks on top, or an account and a person. */
 export interface CardChoice extends Suggestion {
   personId?: string;
+  moneyBack?: boolean;
 }
 
 /** A debt account that can still be picked as the person a text lends to or is paid back by. */
@@ -26,23 +29,30 @@ export const isPerson = (a: Account) => alive(a) && !a.archived && groupOf(a) ==
  * The picks whose target can still be used: an account that's there and not archived, a category that's
  * there, not archived and fits the flow. Others (deleted or archived since they were picked) are dropped,
  * so the card falls back to the suggestion. A person is kept while they're still a live, unarchived debt.
+ * Money back on a text of money in needs a category that takes spending.
  */
 export function usablePick(pick: CardPick | undefined, flow: Flow, accounts: Account[], categories: Category[]): CardPick {
   const out: CardPick = {};
   if (pick?.accountId && accounts.some((a) => a.id === pick.accountId && alive(a) && !a.archived)) out.accountId = pick.accountId;
+  const moneyBack = !!pick?.moneyBack && flow === 'income';
   const category = pick?.categoryId && categories.find((c) => c.id === pick.categoryId);
-  if (category && alive(category) && !category.archived && categoryFits(category, flow)) out.categoryId = category.id;
+  if (category && alive(category) && !category.archived && categoryFits(category, moneyBack ? 'expense' : flow)) {
+    out.categoryId = category.id;
+    if (moneyBack) out.moneyBack = true;
+  }
   if (pick?.personId && accounts.some((a) => a.id === pick.personId && isPerson(a))) out.personId = pick.personId;
   return out;
 }
 
 /**
  * The suggestion with the user's picks on top. Picking another category drops the suggested subcategory, which
- * belongs to the suggested one; picking a person drops the category altogether.
+ * belongs to the suggested one; picking a person drops the category altogether. Money back is always a category
+ * picked on purpose.
  */
 export function choiceOf(s: Suggestion, pick: CardPick = {}): CardChoice {
   const accountId = pick.accountId ?? s.accountId;
   if (pick.personId) return { accountId, personId: pick.personId };
+  if (pick.moneyBack && pick.categoryId) return { accountId, categoryId: pick.categoryId, moneyBack: true };
   const ownCategory = pick.categoryId == null || pick.categoryId === s.categoryId;
   return {
     accountId,
@@ -52,6 +62,7 @@ export function choiceOf(s: Suggestion, pick: CardPick = {}): CardChoice {
 
 /**
  * The transaction a card's Confirm saves, or undefined while something it needs is missing (Confirm stays disabled).
+ * Money in picked as money back is income marked `moneyBack`, in the expense category it lowers.
  * With a person picked it's a transfer: money out is lent (account → person), money in is paid back (person → account).
  * That needs `person`, the picked debt account, to keep the text's currency; otherwise the editor asks for both amounts.
  */
@@ -72,8 +83,10 @@ export function cardDraft(item: SmsPending, choice: CardChoice, conv: Pick<Conve
   }
 
   if (!choice.categoryId) return undefined;
+  const flow = flowOf(item);
   return {
-    type: flowOf(item),
+    type: flow,
+    ...(choice.moneyBack && flow === 'income' ? { moneyBack: true } : {}),
     ...common,
     accountId: choice.accountId,
     categoryId: choice.categoryId,

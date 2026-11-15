@@ -141,3 +141,16 @@ describe('importing a text is never done twice', () => {
     expect(await database.smsPending.get('fp-editor')).toBeUndefined();
   });
 });
+
+describe('money back teaches no merchant rule', () => {
+  it('learns the sender link but no rule, and drops the pending item', async () => {
+    await Promise.all([database.merchantRules.clear(), database.smsLinks.clear()]);
+    const text = item({ fingerprint: 'fp-back', direction: 'in', merchant: 'Ahmed' });
+    await database.smsPending.put(text);
+    const record = buildTxRecord({ type: 'income', moneyBack: true, amount: 200, currency: 'EGP', accountId: 'a1', categoryId: 'c1', date: text.date, smsFingerprint: 'fp-back' });
+    await importText(text, record, database);
+    expect(await database.merchantRules.count()).toBe(0);
+    expect((await database.smsLinks.get(await linkIdOf('CIB', '4821')))?.accountId).toBe('a1');
+    expect(await database.smsPending.get('fp-back')).toBeUndefined();
+  });
+});

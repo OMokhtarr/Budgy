@@ -151,3 +151,36 @@ describe('addPerson', () => {
     expect(isPerson(added!)).toBe(true);
   });
 });
+
+describe('money back from a card', () => {
+  const categories = [category('food'), category('salary', { kind: 'income' }), category('mixed', { kind: 'both' })];
+  const accounts = [account('a1')];
+
+  it('keeps a money-back pick on an expense category for money in', () => {
+    expect(usablePick({ categoryId: 'food', moneyBack: true }, 'income', accounts, categories)).toEqual({ categoryId: 'food', moneyBack: true });
+    expect(usablePick({ categoryId: 'mixed', moneyBack: true }, 'income', accounts, categories)).toEqual({ categoryId: 'mixed', moneyBack: true });
+  });
+
+  it('drops a money-back pick on a category that takes no spending', () => {
+    expect(usablePick({ categoryId: 'salary', moneyBack: true }, 'income', accounts, categories)).toEqual({});
+  });
+
+  it('a money-back pick replaces the suggested category and its subcategory', () => {
+    expect(choiceOf({ accountId: 'a1', categoryId: 'salary', subcategoryId: 's1' }, { categoryId: 'food', moneyBack: true })).toEqual({
+      accountId: 'a1',
+      categoryId: 'food',
+      moneyBack: true,
+    });
+  });
+
+  it('saves money in as money back on the category, with its rate', () => {
+    const d = cardDraft(item({ direction: 'in', amount: 20, currency: 'USD' }), { accountId: 'a1', categoryId: 'food', moneyBack: true }, conv);
+    expect(d).toMatchObject({ type: 'income', moneyBack: true, categoryId: 'food', amount: 20, rate: { rate: 50, rateCurrency: 'EGP' } });
+  });
+
+  it('ignores money back on money out', () => {
+    const d = cardDraft(item(), { accountId: 'a1', categoryId: 'food', moneyBack: true }, conv);
+    expect(d?.type).toBe('expense');
+    expect(d?.moneyBack).toBeUndefined();
+  });
+});

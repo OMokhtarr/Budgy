@@ -70,7 +70,8 @@ interface LessonIds {
 
 async function lessonIdsOf(item: SmsPending, tx: Omit<Transaction, 'id'>): Promise<LessonIds> {
   const linkId = await linkIdOf(item.address, item.digits || undefined);
-  if (tx.type === 'transfer' || !tx.categoryId || !item.merchant) return { linkId };
+  // Money back is about who paid you, not where you spend: it teaches no category.
+  if (tx.type === 'transfer' || tx.moneyBack || !tx.categoryId || !item.merchant) return { linkId };
   return { linkId, rule: { id: await ruleIdOf(item.merchant, tx.type), flow: tx.type } };
 }
 
