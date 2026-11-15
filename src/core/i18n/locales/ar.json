@@ -669,6 +669,12 @@
     "combined_two": "دُمجت رسالتان في عملية واحدة",
     "combined_few": "دُمجت {{count}} رسائل في عملية واحدة",
     "combined_many": "دُمجت {{count}} رسالة في عملية واحدة",
-    "combined_other": "دُمجت {{count}} رسالة في عملية واحدة"
+    "combined_other": "دُمجت {{count}} رسالة في عملية واحدة",
+    "paidFromParts_zero": "",
+    "paidFromParts_one": "مدفوعة من حساب واحد",
+    "paidFromParts_two": "مدفوعة من حسابين",
+    "paidFromParts_few": "مدفوعة من {{count}} حسابات",
+    "paidFromParts_many": "مدفوعة من {{count}} حسابًا",
+    "paidFromParts_other": "مدفوعة من {{count}} حساب"
   }
 }

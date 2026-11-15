@@ -4,7 +4,7 @@ import { alive, BudgyDB } from '@/core/db/db';
 import { totalsOf } from '@/core/db/hooks';
 import type { SmsPending, Transaction } from '@/shared/models';
 import { changeOn } from '@/core/utils/lending';
-import { combineFlow, combineTexts, defaultNote, recentExpenses, takeOff } from './grouping';
+import { combineFlow, combineTexts, defaultNote, purchaseChoices, recentExpenses, takeOff } from './grouping';
 import { linkIdOf } from './learning';
 
 const database = new BudgyDB('t-grouping');
@@ -171,5 +171,20 @@ describe('combineTexts', () => {
     expect(combineFlow([item(), item({ fingerprint: 'in2' })])).toBe('income');
     expect(defaultNote([item(), out({ amount: 100, merchant: 'Small' }), out({ fingerprint: 'o2', amount: 600, merchant: 'Big' })])).toBe('Big');
     expect(defaultNote([item({ merchant: undefined }), item({ fingerprint: 'in2', merchant: 'Sara' })])).toBe('Sara');
+  });
+});
+
+describe('purchaseChoices', () => {
+  const row = (id: string, amount: number, over: Partial<Transaction> = {}): Transaction =>
+    ({ id, type: 'expense', amount, currency: 'EGP', accountId: 'card', categoryId: 'food', date: '2026-11-06T20:00:00.000Z', createdAt: 'x', ...over });
+
+  it('lists a purchase paid from two cards once, with its total, where its newest row was', () => {
+    const choices = purchaseChoices([row('a', 50), row('b', 300, { groupId: 'g' }), row('c', 20), row('d', 200, { groupId: 'g' })]);
+    expect(choices.map((c) => [c.tx.id, c.total, c.parts])).toEqual([['a', 50, 1], ['b', 500, 2], ['c', 20, 1]]);
+  });
+
+  it('gives no total when a group mixes currencies', () => {
+    const [choice] = purchaseChoices([row('b', 300, { groupId: 'g' }), row('d', 4, { groupId: 'g', currency: 'USD' })]);
+    expect(choice).toMatchObject({ total: undefined, parts: 2 });
   });
 });

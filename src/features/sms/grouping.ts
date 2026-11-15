@@ -1,6 +1,7 @@
 import type { Converter } from '@/core/contexts/SettingsContext';
 import { alive, db, type BudgyDB } from '@/core/db/db';
 import { categoryFits } from '@/core/db/hooks';
+import { roundTo } from '@/core/utils/currency';
 import { newId } from '@/core/utils/id';
 import { rateToSave } from '@/core/utils/txRate';
 import { buildTxRecord, saveTx } from '@/features/transactions/txRecord';
@@ -143,4 +144,27 @@ export async function recentExpenses(days: number, database: BudgyDB = db): Prom
   const since = new Date(Date.now() - days * 86400000).toISOString();
   const rows = await database.transactions.where('date').aboveOrEqual(since).filter((t) => alive(t) && t.type === 'expense').toArray();
   return rows.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** A purchase money can come back on: one row, or the rows of one group (e.g. paid from two cards). */
+export interface PurchaseChoice {
+  /** The row picked to stand for it; taking money off it joins its group. */
+  tx: Transaction;
+  /** What the rows add up to, when they share one currency. */
+  total?: number;
+  parts: number;
+}
+
+/** One choice per purchase, in the order given: a group's rows show once, where its first (newest) row was. */
+export function purchaseChoices(txs: Transaction[]): PurchaseChoice[] {
+  const byGroup = new Map<string, Transaction[]>();
+  for (const t of txs) if (t.groupId) byGroup.set(t.groupId, [...(byGroup.get(t.groupId) ?? []), t]);
+  const out: PurchaseChoice[] = [];
+  for (const t of txs) {
+    const rows = t.groupId ? byGroup.get(t.groupId)! : [t];
+    if (rows[0] !== t) continue;
+    const oneCurrency = rows.every((r) => r.currency === t.currency);
+    out.push({ tx: t, total: oneCurrency ? roundTo(rows.reduce((s, r) => s + r.amount, 0), t.currency) : undefined, parts: rows.length });
+  }
+  return out;
 }

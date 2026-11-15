@@ -9,7 +9,7 @@ import { dayTimeLabel } from '@/core/utils/period';
 import Avatar from '@/shared/components/Avatar';
 import MoneyText from '@/shared/components/MoneyText';
 import type { Transaction } from '@/shared/models';
-import { recentExpenses } from './grouping';
+import { purchaseChoices, recentExpenses } from './grouping';
 
 /** How far back the purchases to take money off go. */
 const DAYS = 30;
@@ -30,11 +30,13 @@ export default function PurchasePickerSheet({ isOpen, onPick, onClose }: Props) 
   const [query, setQuery] = useState('');
   const purchases = useLiveQuery(() => (isOpen ? recentExpenses(DAYS) : Promise.resolve([])), [isOpen]);
 
+  // A purchase paid from two cards (a group) is one choice, with its total.
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return purchases ?? [];
-    return (purchases ?? []).filter((x) =>
-      [x.note, categoryName(categories.get(x.categoryId!)), accountName(accounts.get(x.accountId)), String(x.amount)].join(' ').toLowerCase().includes(q),
+    const choices = purchaseChoices(purchases ?? []);
+    if (!q) return choices;
+    return choices.filter(({ tx: x, total }) =>
+      [x.note, categoryName(categories.get(x.categoryId!)), accountName(accounts.get(x.accountId)), String(total ?? x.amount)].join(' ').toLowerCase().includes(q),
     );
   }, [purchases, query, categories, accounts, categoryName, accountName]);
 
@@ -55,7 +57,7 @@ export default function PurchasePickerSheet({ isOpen, onPick, onClose }: Props) 
               {t('sms.noPurchases', { count: DAYS })}
             </div>
           )}
-          {shown.map((x) => {
+          {shown.map(({ tx: x, total, parts }) => {
             const cat = categories.get(x.categoryId!);
             const when = dayTimeLabel(new Date(x.date), locale, { today: t('period.today'), yesterday: t('period.yesterday') });
             return (
@@ -71,11 +73,13 @@ export default function PurchasePickerSheet({ isOpen, onPick, onClose }: Props) 
                 <div className="b-row__main">
                   <div className="b-row__title">{x.note || categoryName(cat)}</div>
                   <div className="b-row__sub">
-                    <span>{`${categoryName(cat)} · ${accountName(accounts.get(x.accountId))} · ${when}`}</span>
+                    <span>
+                      {`${categoryName(cat)} · ${parts > 1 ? t('sms.paidFromParts', { count: parts }) : accountName(accounts.get(x.accountId))} · ${when}`}
+                    </span>
                   </div>
                 </div>
                 <div className="b-row__amount b-expense b-num">
-                  <MoneyText currency={x.currency} text={money.plain(x.amount, x.currency)} />
+                  <MoneyText currency={x.currency} text={money.plain(total ?? x.amount, x.currency)} />
                 </div>
               </button>
             );

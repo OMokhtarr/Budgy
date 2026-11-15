@@ -565,6 +565,8 @@
     "combineTitle_one": "Combine 1 text",
     "combineTitle_other": "Combine {{count}} texts",
     "combined_one": "Combined 1 text",
-    "combined_other": "Combined {{count}} texts into one"
+    "combined_other": "Combined {{count}} texts into one",
+    "paidFromParts_one": "Paid from 1 account",
+    "paidFromParts_other": "Paid from {{count}} accounts"
   }
 }
