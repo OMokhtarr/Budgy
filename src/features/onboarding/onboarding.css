@@ -108,6 +108,8 @@
   color: var(--b-muted);
 }
 .ob-deck-extra { width: 100%; margin-top: 8px; }
+/* The picked currency chip: the primary's own text colour, readable on the light dark-mode green. */
+.ob-deck .b-acchip.is-on { color: var(--ion-color-primary-contrast); }
 .ob-deck .ob-dots { margin: 16px 0; }
 .ob-deck-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .ob-deck-next { min-width: 120px; }

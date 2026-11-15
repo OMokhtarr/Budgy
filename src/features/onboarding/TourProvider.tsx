@@ -36,8 +36,9 @@ export interface TourApi {
   showWhatsNew: () => void;
   resetTours: () => void;
   hasReleases: boolean;
-  /** The welcome slides are up; launch-time nudges (backup toast, bank text scan) wait for them. */
-  welcomeOpen: boolean;
+  /** A slide deck (the welcome or What's new) is up; launch-time nudges (backup toast, bank text
+   *  scan) wait for it to close. */
+  deckOpen: boolean;
 }
 
 const NOOP: TourApi = {
@@ -47,7 +48,7 @@ const NOOP: TourApi = {
   showWhatsNew: () => {},
   resetTours: () => {},
   hasReleases: false,
-  welcomeOpen: false,
+  deckOpen: false,
 };
 
 const Ctx = createContext<TourApi>(NOOP);
@@ -170,7 +171,7 @@ export function TourProvider({ initial, children }: { initial: OnboardingState |
     [commit, history],
   );
 
-  const welcomeOpen = deck?.kind === 'welcome';
+  const deckOpen = deck !== null;
   const api = useMemo<TourApi>(
     () => ({
       requestTours,
@@ -185,9 +186,9 @@ export function TourProvider({ initial, children }: { initial: OnboardingState |
         if (s) commit(clearSeenTours(s));
       },
       hasReleases: RELEASES.length > 0,
-      welcomeOpen,
+      deckOpen,
     }),
-    [requestTours, cancelTours, commit, welcomeOpen],
+    [requestTours, cancelTours, commit, deckOpen],
   );
 
   const steps = active ? TOURS[active.req.tourId] : [];

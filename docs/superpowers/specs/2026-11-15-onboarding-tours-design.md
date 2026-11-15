@@ -2,7 +2,7 @@
 
 Date: 2026-11-15
 Branch: `feature/onboarding-tours` (off `master`)
-Status: **Reviewed by a builder; awaiting the owner's approval.**
+Status: **Approved; implemented on feature/onboarding-tours.**
 Reference implementation: Rafeeq, `src/app/features/onboarding/` and its spec
 `docs/superpowers/specs/2026-10-01-onboarding-tours-design.md`
 (at `E:\Docs sent By People\Mokhtar\Personal\Rafeeq Cross Platform`).
@@ -227,15 +227,15 @@ A new section at the bottom of `SettingsPage`:
 | # | Content | Illustration |
 |---|---|---|
 | 1 | "Welcome to Budgy" + **English / العربية** buttons that switch at once (`i18n.changeLanguage`; direction flips) | brand mark |
-| 2 | Log in two taps: tap a category, type the amount. Budgets fill as you spend | category bubble + keypad |
+| 2 | Log spending in two taps: tap a category, type the amount. Budgets fill as you spend | category bubble + keypad |
 | 3 | All your money in one place: accounts, credit cards, debts, several currencies | wallet + card |
 | 4 | See where it goes: transactions by day, the trend, budgets | bar chart |
 | 5 | Yours, on your phone: no ads, works offline. Sign in to sync and back up | phone + cloud |
 | 6 | Currency pick (the current chip grid, guess first) → **Get started** (`Continue with {{currency}}` stays as the button text) | coins |
 
 The currency slide keeps today's behaviour: if the pick differs from the
-default, `update({ currency })` and move the unused starting accounts with
-`moveAccountsToCurrency`.
+default, move the unused starting accounts with
+`moveAccountsToCurrency`, then `update({ currency })` (so a failed move leaves the setting alone and a retry redoes both).
 
 ### Spotlight tours
 
@@ -243,12 +243,12 @@ default, `update({ currency })` and move the unused starting accounts with
 
 | Tour id | Trigger | Steps (key → target) |
 |---|---|---|
-| `categories` | first visit `/categories` (the landing tab) | `bubble` → first category bubble (tap to log spending in it); `center` → `.b-catgrid__center` (tap to switch expenses/income); ✋`period` swipe → `PeriodBar` (tap to pick a period, swipe the page to move between months); `balance` → `.b-apphead__balance` (tap to choose which accounts count); `edit` → the edit button (add, edit, and ✋drag to reorder in edit mode); `menu` → `.b-apphead__me` (Profile, Settings, Data, Bank texts) |
+| `categories` | first visit `/categories` (the landing tab) | `bubble` → first category bubble (tap to log spending in it); `center` → `.b-catgrid__center` (tap to switch expenses/income); ✋`period` swipe → `PeriodBar` (tap to pick a period, swipe the page to move between periods); `balance` → `.b-apphead__balance` (tap to choose which accounts count); `edit` → the edit button (add, edit, and ✋drag to reorder in edit mode); `menu` → `.b-apphead__me` (Profile, Settings, Data and more; Bank texts shows only where it is available) |
 | `accounts` | first visit `/accounts` | ✋`tabs` swipe → `.b-tabs` (Accounts / Debts / Finances; swipe to move between them); `transfer` → the Transfer button; `add` → the add button; `row` (optional) → first account row (tap to edit; a credit card opens its statement) |
-| `transactions` | first visit `/transactions` | `add` → the FAB; ✋`row` longPress (optional) → first transaction row (long-press to select several: delete, change date/account/category, filter by them, see their sum); `search` → the search toggle |
+| `transactions` | first visit `/transactions` | `add` → the FAB; ✋`row` longPress (optional) → first transaction row (long-press to select several: delete, filter by them, change date/account/category; the summary bar shows their sum); `search` → the search toggle |
 | `overview` | first visit `/overview` | `tiles` → `.b-tiles`; `trend` → the trend card; `budgets` (optional) → the budgets card |
 | `editor` (`overOverlay`) | first time the transaction editor opens | `fromto` → `.b-fromto` (where the money comes from and goes to); `keypad` → `.b-keypad` (type sums like 120+35); `date` → the date key; `note` → `.b-note` |
-| `settings` | first visit `/settings` | `currency` → main currency row (rates for other currencies below it); `tours` → the Tours & tips section |
+| `settings` | first visit `/settings` | `currency` → main currency row (other currencies get their own rates on this page); `tours` → the Tours & tips section |
 | `sms` | first visit `/sms` (only reachable where bank texts exist) | `scan` → `.b-scanbtn`; ✋`card` longPress (optional) → first text card (select several to file in one category, combine, or take money off a purchase) |
 
 Copy: a title of 2–5 words and a body of 1–2 lines, in English and Arabic.

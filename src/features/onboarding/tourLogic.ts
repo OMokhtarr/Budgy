@@ -120,7 +120,8 @@ export function unionBox(boxes: Box[]): Box | null {
 /**
  * Finds a step's target on the page the user is looking at. Ionic keeps
  * earlier pages mounted but hidden, and the bottom nav exists on every page,
- * so hidden copies and zero-size elements are ignored.
+ * so hidden copies and zero-size elements are ignored. Without `union` the
+ * first visible match wins and the rest aren't measured (this runs every frame).
  */
 export function resolveTarget(
   root: ParentNode,
@@ -128,14 +129,15 @@ export function resolveTarget(
   union: boolean,
 ): { box: Box; element: Element } | null {
   const hits: { box: Box; element: Element }[] = [];
-  root.querySelectorAll(`[data-tour~="${ref}"]`).forEach((element) => {
-    if (element.closest('.ion-page-hidden, .ion-page-invisible')) return;
+  for (const element of Array.from(root.querySelectorAll(`[data-tour~="${ref}"]`))) {
+    if (element.closest('.ion-page-hidden, .ion-page-invisible')) continue;
     const r = element.getBoundingClientRect();
-    if (r.width <= 0 || r.height <= 0) return;
-    hits.push({ element, box: { top: r.top, left: r.left, width: r.width, height: r.height } });
-  });
+    if (r.width <= 0 || r.height <= 0) continue;
+    const hit = { element, box: { top: r.top, left: r.left, width: r.width, height: r.height } };
+    if (!union) return hit;
+    hits.push(hit);
+  }
   if (hits.length === 0) return null;
-  if (!union) return hits[0];
   return { element: hits[0].element, box: unionBox(hits.map((h) => h.box)) as Box };
 }
 

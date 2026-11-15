@@ -35,11 +35,11 @@ export default function BackupReminder() {
   const txCount = useLiveQuery(() => db.transactions.filter(alive).count());
   // Signed in, sync already keeps a copy in the account.
   const { user } = useCloud();
-  // Not over the welcome slides; the timer starts once they close.
-  const { welcomeOpen } = useTours();
+  // Not over the welcome or What's new slides; the timer starts once they close.
+  const { deckOpen } = useTours();
 
   useEffect(() => {
-    if (welcomeOpen || user || txCount == null || txCount < MIN_TRANSACTIONS) return;
+    if (deckOpen || user || txCount == null || txCount < MIN_TRANSACTIONS) return;
     const now = Date.now();
     const last = lastBackupAt ? Date.parse(lastBackupAt) : 0;
     if (last && now - last < 30 * DAY) return;
@@ -63,7 +63,7 @@ export default function BackupReminder() {
       });
     }, 2000);
     return () => window.clearTimeout(timer);
-  }, [welcomeOpen, user, txCount, lastBackupAt, presentToast, t]);
+  }, [deckOpen, user, txCount, lastBackupAt, presentToast, t]);
 
   return null;
 }

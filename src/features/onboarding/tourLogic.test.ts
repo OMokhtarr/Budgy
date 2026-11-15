@@ -163,19 +163,25 @@ describe('resolveTarget', () => {
   // The Node test environment has no DOM, so the page is a hand-made root.
   const el = (top: number, height = 20, hidden = false, id = '') => ({
     id,
+    measured: 0,
     closest: (sel: string) => (hidden && sel.includes('ion-page-hidden') ? ({} as Element) : null),
-    getBoundingClientRect: () => ({ top, left: 0, width: 50, height }),
+    getBoundingClientRect() {
+      this.measured++;
+      return { top, left: 0, width: 50, height };
+    },
   });
-  const root = (...els: ReturnType<typeof el>[]) =>
-    ({
-      querySelectorAll: () => ({ forEach: (fn: (e: Element) => void) => els.forEach((e) => fn(e as unknown as Element)) }),
-    }) as unknown as ParentNode;
+  const root = (...els: ReturnType<typeof el>[]) => ({ querySelectorAll: () => els }) as unknown as ParentNode;
 
   it('ignores copies inside hidden Ionic pages', () => {
     const hit = resolveTarget(root(el(1, 20, true, 'a'), el(700, 20, false, 'b')), 'categories.menu', false);
     expect((hit?.element as unknown as { id: string }).id).toBe('b');
   });
   it('skips zero-size elements', () => expect(resolveTarget(root(el(10, 0)), 'sms.scan', false)).toBeNull());
+  it('stops at the first visible match when not asked to union', () => {
+    const later = el(40);
+    expect(resolveTarget(root(el(10), later), 'categories.menu', false)?.box.top).toBe(10);
+    expect(later.measured).toBe(0);
+  });
   it('unions every visible match when asked', () =>
     expect(resolveTarget(root(el(10), el(40)), 'accounts.tabs', true)?.box).toEqual({
       top: 10,

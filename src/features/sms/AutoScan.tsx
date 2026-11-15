@@ -23,11 +23,11 @@ export default function AutoScan() {
   lastScanAt.current = smsImport.lastScanAt;
   // Kept outside the effect so a re-run of it (e.g. switching it off and on) can't start a second scan.
   const running = useRef(false);
-  // A first scan waits for the welcome slides, which may still be changing the currency.
-  const { welcomeOpen } = useTours();
+  // A first scan waits for the slides (the welcome may still be changing the currency).
+  const { deckOpen } = useTours();
 
   useEffect(() => {
-    if (!on || welcomeOpen) return;
+    if (!on || deckOpen) return;
     const run = async () => {
       if (running.current || !autoScanDue(lastScanAt.current, new Date())) return;
       running.current = true;
@@ -46,7 +46,7 @@ export default function AutoScan() {
     return () => {
       void handle.then((h) => h.remove());
     };
-  }, [on, welcomeOpen, runScan]);
+  }, [on, deckOpen, runScan]);
 
   return null;
 }

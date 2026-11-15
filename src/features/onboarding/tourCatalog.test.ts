@@ -26,7 +26,7 @@ const both = (path: string) => {
 
 /**
  * Problems with a release list: repeated keys, unknown tours, missing copy.
- * `copy` is the pair of languages to look in, so a test can supply its own.
+ * `langs` is the pair of languages to look in, so a test can supply its own.
  */
 function releaseProblems(releases: Release[], langs: unknown[] = [en, ar]): string[] {
   const problems: string[] = [];

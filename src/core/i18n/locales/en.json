@@ -438,8 +438,6 @@
     "retry": "Try again"
   },
   "onboarding": {
-    "currencyTitle": "Which currency do you use?",
-    "currencyHint": "Your accounts, totals and reports will use it. You can change it later in Settings.",
     "continue": "Continue with {{currency}}",
     "slides": {
       "welcome": {
@@ -447,7 +445,7 @@
         "body": "Track your money simply. Pick your language to begin."
       },
       "log": {
-        "title": "Log in two taps",
+        "title": "Log spending in two taps",
         "body": "Tap a category, type the amount. Your budgets fill as you spend."
       },
       "money": {
@@ -479,7 +477,7 @@
         },
         "period": {
           "title": "Pick a period",
-          "body": "Tap to choose a period. Swipe the page to move between months."
+          "body": "Tap to choose a period. Swipe the page to move between periods."
         },
         "balance": {
           "title": "Your balance",
@@ -491,7 +489,7 @@
         },
         "menu": {
           "title": "Your menu",
-          "body": "Profile, Settings, Data and Bank texts live here."
+          "body": "Profile, Settings, Data and more live here."
         }
       },
       "accounts": {
@@ -519,7 +517,7 @@
         },
         "row": {
           "title": "Select several",
-          "body": "Long-press a row to select more. Then delete, change, filter or see their sum."
+          "body": "Long-press to select more. Delete, filter, or change their date, account or category."
         },
         "search": {
           "title": "Search",
@@ -561,7 +559,7 @@
       "settings": {
         "currency": {
           "title": "Main currency",
-          "body": "Totals use it. Rates for other currencies are below."
+          "body": "Totals use it. Other currencies get their own rates here."
         },
         "tours": {
           "title": "Tours and tips",
