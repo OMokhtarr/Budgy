@@ -15,7 +15,8 @@ import type { Flow, SmsPending, Transaction } from '@/shared/models';
 import type { TxDraft } from '@/features/transactions/txRecord';
 import { actionsFor, duplicatesOf, importMany } from './batch';
 import { useLearned, usePendingSms } from './hooks';
-import { takeOff, type TextPart } from './grouping';
+import CombineSheet from './CombineSheet';
+import { combineFlow, combineTexts, defaultNote, takeOff, type TextPart } from './grouping';
 import { flowOf, resolveSkipped, suggestFor } from './learning';
 import PickerSheet, { type PickerItem, type PickerSection } from './PickerSheet';
 import PurchasePickerSheet from './PurchasePickerSheet';
@@ -29,7 +30,10 @@ import { useSmsAvailability } from './useSmsAvailable';
 const PATH = '/sms';
 
 /** What the picker sheet is choosing: one card's account or category, or one category for every selected text. */
-type Picking = { item: SmsPending; kind: 'account' | 'category' } | { kind: 'batch'; flow: Flow };
+type Picking =
+  | { item: SmsPending; kind: 'account' | 'category' }
+  | { kind: 'batch'; flow: Flow }
+  | { kind: 'combine'; flow: Flow };
 
 const toItem = (x: { id?: string; icon: string; color: string }, name: string): PickerItem => ({ id: x.id!, name, icon: x.icon, color: x.color });
 
@@ -63,6 +67,11 @@ export default function SmsReviewPage() {
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [target, setTarget] = useState<Transaction | null>(null);
   const [textsOpen, setTextsOpen] = useState(false);
+  // "Combine into one": the texts, and the entry's category (money in as money back or not) and note.
+  const [combineFps, setCombineFps] = useState<string[]>([]);
+  const [combineOpen, setCombineOpen] = useState(false);
+  const [combineCat, setCombineCat] = useState<{ categoryId?: string; moneyBack: boolean }>({ moneyBack: false });
+  const [combineNote, setCombineNote] = useState('');
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
   const askDuplicates = useBatchDuplicatePrompt();
@@ -89,7 +98,7 @@ export default function SmsReviewPage() {
 
   const pickerItems = useMemo((): PickerItem[] => {
     if (!picking) return [];
-    if (picking.kind === 'batch') return categoriesFor(picking.flow);
+    if (picking.kind === 'batch' || picking.kind === 'combine') return categoriesFor(picking.flow);
     if (picking.kind === 'account') return (accounts ?? []).filter((a) => !a.archived).map((a) => toItem(a, accountName(a)));
     return categoriesFor(flowOf(picking.item));
   }, [picking, accounts, categories, accountName, categoryName]);
@@ -196,6 +205,7 @@ export default function SmsReviewPage() {
     const moneyBack = id.startsWith(BACK);
     const categoryId = moneyBack ? id.slice(BACK.length) : id;
     if (picking.kind === 'batch') return void applyCategory(categoryId, moneyBack);
+    if (picking.kind === 'combine') return setCombineCat({ categoryId, moneyBack });
     const fp = picking.item.fingerprint;
     if (picking.kind === 'account') setPick(fp, { accountId: id });
     else if (people.some((p) => p.id === id)) setPick(fp, { personId: id, categoryId: undefined, moneyBack: undefined });
@@ -239,7 +249,7 @@ export default function SmsReviewPage() {
               ]
             : []),
         ]
-      : picking?.kind === 'batch' && picking.flow === 'income'
+      : (picking?.kind === 'batch' || picking?.kind === 'combine') && picking.flow === 'income'
         ? [moneyBackSection()]
         : [];
 
@@ -251,6 +261,10 @@ export default function SmsReviewPage() {
     .map((fp) => (items ?? []).find((x) => x.fingerprint === fp))
     .filter((x) => x != null)
     .map((item) => ({ item, accountId: choices.get(item.fingerprint)?.accountId }));
+  const pickPartAccount = (fp: string) => {
+    const item = items?.find((x) => x.fingerprint === fp);
+    if (item) openPicker(item, 'account');
+  };
   const takeOffReady = !!target && takeOffParts.length > 0 && takeOffParts.every((p) => p.accountId);
 
   const saveTakeOff = async () => {
@@ -261,6 +275,54 @@ export default function SmsReviewPage() {
       setTextsOpen(false);
       setSelected(new Set());
       toast(t('sms.takenOff', { count: rows.length }));
+    } catch {
+      failed();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const partsOf = (fingerprints: string[]) =>
+    fingerprints
+      .map((fp) => (items ?? []).find((x) => x.fingerprint === fp))
+      .filter((x) => x != null)
+      .map((item) => ({ item, accountId: choices.get(item.fingerprint)?.accountId }));
+  const combineParts = partsOf(combineFps);
+
+  /** Starts with the note of the largest payment, and the category the first payment's card suggests. */
+  const startCombine = () => {
+    const firstOut = chosen.find((x) => x.direction !== 'in');
+    setCombineFps(chosen.map((x) => x.fingerprint));
+    setCombineNote(defaultNote(chosen) ?? '');
+    setCombineCat({ categoryId: firstOut ? choices.get(firstOut.fingerprint)?.categoryId : undefined, moneyBack: false });
+    setCombineOpen(true);
+  };
+
+  const saveCombine = async () => {
+    const { categoryId, moneyBack } = combineCat;
+    if (!categoryId || busy || combineParts.some((p) => !p.accountId)) return;
+    setBusy(true);
+    try {
+      let parts = combineParts as TextPart[];
+      const dupes = await duplicatesOf(
+        parts.map(({ item, accountId }) => ({
+          fingerprint: item.fingerprint,
+          draft: { type: item.direction === 'in' ? 'income' : 'expense', amount: item.amount!, currency: item.currency!, accountId, date: item.date },
+        })),
+      );
+      if (dupes.size) {
+        const answer = await askDuplicates(dupes.size);
+        if (answer === 'cancel') return;
+        if (answer === 'skip') {
+          if (parts.length - dupes.size < 2) return toast(t('sms.combineNeedsTwo'));
+          await Promise.all(parts.filter((p) => dupes.has(p.item.fingerprint)).map((p) => resolveSkipped(p.item, 'duplicate')));
+          parts = parts.filter((p) => !dupes.has(p.item.fingerprint));
+        }
+      }
+      await combineTexts(parts, { categoryId, moneyBack, note: combineNote }, conv);
+      setCombineOpen(false);
+      setSelected(new Set());
+      toast(t('sms.combined', { count: parts.length }));
     } catch {
       failed();
     } finally {
@@ -282,14 +344,16 @@ export default function SmsReviewPage() {
     </button>
   );
   const count = items?.length ?? 0;
-  const pickedChoice = picking && picking.kind !== 'batch' ? choices.get(picking.item.fingerprint) : undefined;
+  const pickedChoice = picking && 'item' in picking ? choices.get(picking.item.fingerprint) : undefined;
   const pickerTitle = picking?.kind === 'account' ? t('sms.pickAccount') : picking?.kind === 'batch' ? t('sms.sameCategory') : t('sms.pickCategory');
   const pickerSelected =
     picking?.kind === 'account'
       ? pickedChoice?.accountId
       : picking?.kind === 'category'
         ? pickedChoice?.personId ?? (pickedChoice?.moneyBack ? BACK + pickedChoice.categoryId : pickedChoice?.categoryId)
-        : undefined;
+        : picking?.kind === 'combine' && combineCat.categoryId
+          ? (combineCat.moneyBack ? BACK : '') + combineCat.categoryId
+          : undefined;
 
   return (
     <IonPage>
@@ -359,7 +423,7 @@ export default function SmsReviewPage() {
           <button className="b-btn b-btn--primary" onClick={sameCategory} disabled={busy || !actions.sameCategory}>
             {t('sms.sameCategory')}
           </button>
-          <button className="b-btn b-btn--muted" onClick={() => toast(t('sms.comingSoon'))} disabled={busy || !actions.combine}>
+          <button className="b-btn b-btn--muted" onClick={startCombine} disabled={busy || !actions.combine}>
             {t('sms.combine')}
           </button>
           <button className="b-btn b-btn--muted" onClick={() => startTakeOff(chosen.map((x) => x.fingerprint))} disabled={busy || !actions.takeOff}>
@@ -369,6 +433,22 @@ export default function SmsReviewPage() {
       )}
 
       <ScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} />
+      <CombineSheet
+        isOpen={combineOpen}
+        parts={combineParts}
+        category={categories?.find((c) => c.id === combineCat.categoryId)}
+        moneyBack={combineCat.moneyBack}
+        note={combineNote}
+        busy={busy}
+        onPickAccount={pickPartAccount}
+        onPickCategory={() => {
+          setPicking({ kind: 'combine', flow: combineFlow(combineParts.map((p) => p.item)) });
+          setPickerOpen(true);
+        }}
+        onNote={setCombineNote}
+        onSave={() => void saveCombine()}
+        onClose={() => setCombineOpen(false)}
+      />
       <PurchasePickerSheet
         isOpen={purchaseOpen}
         onPick={(tx) => {
@@ -381,10 +461,7 @@ export default function SmsReviewPage() {
         isOpen={textsOpen}
         title={t('sms.takeOffFrom', { name: target?.note || categoryName(categories?.find((c) => c.id === target?.categoryId)) })}
         parts={takeOffParts}
-        onPickAccount={(fp) => {
-          const item = items?.find((x) => x.fingerprint === fp);
-          if (item) openPicker(item, 'account');
-        }}
+        onPickAccount={pickPartAccount}
         footer={
           <button className="b-btn b-btn--primary" onClick={() => void saveTakeOff()} disabled={busy || !takeOffReady}>
             {t('common.save')}

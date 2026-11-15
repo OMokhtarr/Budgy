@@ -1845,6 +1845,10 @@ ion-popover.b-popmenu { --width: 230px; }
   border-bottom: 1px solid var(--b-border);
 }
 .b-textssheet__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-weight: 700; }
+.b-combine { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 12px; }
+.b-combine__net { display: flex; justify-content: space-between; align-items: baseline; width: 100%; font-weight: 600; }
+.b-combine__net strong { font-size: 20px; }
+.b-combine .b-note { width: 100%; }
 .b-textssheet__text small { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .b-pickersheet__section {
   margin: 18px 4px 10px;

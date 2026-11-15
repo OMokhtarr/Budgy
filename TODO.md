@@ -32,7 +32,9 @@
     - Money in picked as "Money back on" Food: the card's note shows, and after Confirm Food's spending drops.
     - Take off a purchase from a hand-entered dinner, and from one in another currency: the category drops by
       the texts' value and each account's balance moves by its own text.
-    - Arabic (RTL) layout and dark mode of the selection bar, the purchase picker and the texts sheet.
+    - Combine two card payments for one purchase, and a payment with two friends paying back: one entry each,
+      with the net shown in the sheet matching the transactions list.
+    - Arabic (RTL) layout and dark mode of the selection bar, the purchase picker, the texts and combine sheets.
   - [ ] **Stage 3, before the SMS release:**
     - Recheck Play's live SMS policy.
     - Add `READ_SMS` to the main manifest.

@@ -533,7 +533,6 @@
     "sameCategory": "Same category",
     "combine": "Combine into one",
     "takeOff": "Take off a purchase",
-    "comingSoon": "Coming soon",
     "batchSaved_one": "1 saved",
     "batchSaved_other": "{{count}} saved",
     "batchNeedAccount_one": "1 needs an account",
@@ -550,6 +549,13 @@
     "searchPurchases": "Search purchases",
     "noPurchases": "No purchases in the last {{count}} days",
     "takenOff_one": "Taken off the purchase",
-    "takenOff_other": "{{count}} taken off the purchase"
+    "takenOff_other": "{{count}} taken off the purchase",
+    "netSpent": "Net spent",
+    "netReceived": "Received",
+    "combineNeedsTwo": "Combining needs at least two texts",
+    "combineTitle_one": "Combine 1 text",
+    "combineTitle_other": "Combine {{count}} texts",
+    "combined_one": "Combined 1 text",
+    "combined_other": "Combined {{count}} texts into one"
   }
 }

@@ -605,7 +605,6 @@
     "sameCategory": "نفس الفئة",
     "combine": "دمجها في عملية واحدة",
     "takeOff": "خصمها من مشتريات",
-    "comingSoon": "قريبًا",
     "batchSaved_zero": "لم يُحفظ شيء",
     "batchSaved_one": "حُفظت رسالة واحدة",
     "batchSaved_two": "حُفظت رسالتان",
@@ -638,6 +637,21 @@
     "takenOff_two": "خُصمت رسالتان من المشتريات",
     "takenOff_few": "خُصمت {{count}} رسائل من المشتريات",
     "takenOff_many": "خُصمت {{count}} رسالة من المشتريات",
-    "takenOff_other": "خُصمت {{count}} رسالة من المشتريات"
+    "takenOff_other": "خُصمت {{count}} رسالة من المشتريات",
+    "netSpent": "صافي المصروف",
+    "netReceived": "المُستلَم",
+    "combineNeedsTwo": "الدمج يحتاج إلى رسالتين على الأقل",
+    "combineTitle_zero": "دمج الرسائل",
+    "combineTitle_one": "دمج رسالة",
+    "combineTitle_two": "دمج رسالتين",
+    "combineTitle_few": "دمج {{count}} رسائل",
+    "combineTitle_many": "دمج {{count}} رسالة",
+    "combineTitle_other": "دمج {{count}} رسالة",
+    "combined_zero": "لم يُدمج شيء",
+    "combined_one": "دُمجت رسالة",
+    "combined_two": "دُمجت رسالتان في عملية واحدة",
+    "combined_few": "دُمجت {{count}} رسائل في عملية واحدة",
+    "combined_many": "دُمجت {{count}} رسالة في عملية واحدة",
+    "combined_other": "دُمجت {{count}} رسالة في عملية واحدة"
   }
 }
