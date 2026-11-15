@@ -7,6 +7,7 @@ import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { categoryFits, useCategories, useLookups, useNames } from '@/core/db/hooks';
 import { isMoneyBack } from '@/core/utils/flow';
+import { pickableSubcategories } from '@/core/utils/subcategories';
 import MoneyText from '@/shared/components/MoneyText';
 import { iconFor } from '@/shared/icons';
 import { deleteGroup, groupRows, setGroupCategory, setGroupNote, ungroup } from './bulk';
@@ -37,8 +38,19 @@ export default function GroupSheet({ groupId, onClose }: Props) {
   const entry = rows && rows.length ? foldGroups(rows, conv)[0] : undefined;
   const group = entry?.kind === 'group' ? entry : undefined;
   const category = categories.get((group?.categoryId ?? rows?.[0]?.categoryId)!);
+  const subcategoryId = rows?.find((x) => x.categoryId === category?.id)?.subcategoryId;
+  const subcategories = pickableSubcategories(category, subcategoryId);
   const firstNote = rows?.[0]?.note ?? '';
   useEffect(() => setNote(firstNote), [groupId, firstNote]);
+
+  // The note is saved when the field loses focus, and again on closing, which a swipe or back may do without blur.
+  const saveNote = () => {
+    if (groupId && note !== firstNote) void setGroupNote(groupId, note);
+  };
+  const close = () => {
+    saveNote();
+    onClose();
+  };
 
   // A group down to one row (or none) isn't a group any more.
   useEffect(() => {
@@ -86,10 +98,10 @@ export default function GroupSheet({ groupId, onClose }: Props) {
   const netValue = group?.netInCurrency ?? group?.net ?? 0;
 
   return (
-    <IonModal className="b-sheet-modal" isOpen={groupId != null} breakpoints={[0, 1]} initialBreakpoint={1} handle={false} onDidDismiss={onClose}>
+    <IonModal className="b-sheet-modal" isOpen={groupId != null} breakpoints={[0, 1]} initialBreakpoint={1} handle={false} onDidDismiss={close}>
       <div className="b-sheet b-groupsheet">
         <div className="b-sheet__head">
-          <button className="b-iconbtn" onClick={onClose} aria-label={t('common.close')}>
+          <button className="b-iconbtn" onClick={close} aria-label={t('common.close')}>
             <IonIcon icon={closeOutline} />
           </button>
           <h2>{t(group?.flow === 'income' ? 'transactions.groupReceived' : 'transactions.groupSpent')}</h2>
@@ -111,13 +123,27 @@ export default function GroupSheet({ groupId, onClose }: Props) {
               {category && <IonIcon icon={iconFor(category.icon)} />}
               {categoryName(category)}
             </button>
+            {category && subcategories.length > 0 && (
+              <div className="b-subchips" style={{ '--c': category.color } as CSSProperties}>
+                {subcategories.map((s) => (
+                  <button
+                    key={s.id}
+                    className={`b-subchip ${s.id === subcategoryId ? 'is-on' : ''}`}
+                    onClick={() => groupId && void setGroupCategory(groupId, category.id!, s.id === subcategoryId ? undefined : s.id)}
+                  >
+                    <IonIcon icon={iconFor(s.icon)} />
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
             <input
               className="b-note"
               placeholder={t('editor.notePlaceholder')}
               value={note}
               maxLength={120}
               onChange={(e) => setNote(e.target.value)}
-              onBlur={() => groupId && note !== firstNote && void setGroupNote(groupId, note)}
+              onBlur={saveNote}
             />
           </div>
           {rows?.map((x) => {

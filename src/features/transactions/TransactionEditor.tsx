@@ -431,7 +431,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
           {toBox}
         </div>
 
-        {subcategories.length > 0 && (
+        {/* A grouped transaction's subcategory, like its category, is the group's: it's changed there. */}
+        {subcategories.length > 0 && !grouped && (
           <div className="b-subchips b-subchips--row" style={{ '--c': accent } as CSSProperties}>
             {subcategories.map((s) => (
               <button
