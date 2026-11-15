@@ -159,6 +159,21 @@ describe('combineTexts', () => {
     expect(await all()).toHaveLength(0);
   });
 
+  it('skips the texts already added only when the combined entry is saved', async () => {
+    const parts = [{ item: out(), accountId: 'card' }, { item: item(), accountId: 'bank' }];
+    const dupe = item({ fingerprint: 'dupe' });
+    await database.smsPending.bulkPut([...parts.map((p) => p.item), dupe]);
+    await database.smsSeen.clear();
+
+    await expect(combineTexts(parts, { categoryId: 'salary', moneyBack: false }, conv, database, [dupe])).rejects.toThrow();
+    expect(await database.smsPending.get('dupe')).toBeTruthy();
+    expect(await database.smsSeen.count()).toBe(0);
+
+    await combineTexts(parts, { categoryId: 'food', moneyBack: false }, conv, database, [dupe]);
+    expect(await database.smsPending.get('dupe')).toBeUndefined();
+    expect(await database.smsSeen.get('dupe')).toMatchObject({ outcome: 'duplicate' });
+  });
+
   it('saves texts only once when run twice', async () => {
     const parts = [{ item: out(), accountId: 'card' }, { item: item(), accountId: 'bank' }];
     await combineTexts(parts, { categoryId: 'food', moneyBack: false }, conv, database);

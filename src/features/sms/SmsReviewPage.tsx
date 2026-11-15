@@ -304,6 +304,7 @@ export default function SmsReviewPage() {
     setBusy(true);
     try {
       let parts = combineParts as TextPart[];
+      let skipped: SmsPending[] = [];
       const dupes = await duplicatesOf(
         parts.map(({ item, accountId }) => ({
           fingerprint: item.fingerprint,
@@ -315,11 +316,12 @@ export default function SmsReviewPage() {
         if (answer === 'cancel') return;
         if (answer === 'skip') {
           if (parts.length - dupes.size < 2) return toast(t('sms.combineNeedsTwo'));
-          await Promise.all(parts.filter((p) => dupes.has(p.item.fingerprint)).map((p) => resolveSkipped(p.item, 'duplicate')));
+          // Set aside together with the save, so a failed combine leaves them pending too.
+          skipped = parts.filter((p) => dupes.has(p.item.fingerprint)).map((p) => p.item);
           parts = parts.filter((p) => !dupes.has(p.item.fingerprint));
         }
       }
-      await combineTexts(parts, { categoryId, moneyBack, note: combineNote }, conv);
+      await combineTexts(parts, { categoryId, moneyBack, note: combineNote }, conv, undefined, skipped);
       setCombineOpen(false);
       setSelected(new Set());
       toast(t('sms.combined', { count: parts.length }));
@@ -420,6 +422,8 @@ export default function SmsReviewPage() {
 
       {selecting && (
         <IonFooter className="b-smsbatch">
+          {/* Only texts that all go the same way can share a category: say so rather than just greying it out. */}
+          {chosen.length > 0 && !actions.sameCategory && <p className="b-smsbatch__hint">{t('sms.sameCategoryHint')}</p>}
           <button className="b-btn b-btn--primary" onClick={sameCategory} disabled={busy || !actions.sameCategory}>
             {t('sms.sameCategory')}
           </button>

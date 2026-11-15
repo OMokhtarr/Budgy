@@ -67,7 +67,8 @@ function saveTexts(
   database: BudgyDB,
   first?: () => Promise<void>,
 ): Promise<Transaction[]> {
-  return database.transaction('rw', database.transactions, database.smsLinks, database.merchantRules, database.smsPending, async () => {
+  const tables = [database.transactions, database.smsLinks, database.merchantRules, database.smsPending, database.smsSeen];
+  return database.transaction('rw', tables, async () => {
     await first?.();
     const saved: Transaction[] = [];
     for (const [i, record] of records.entries()) {
@@ -100,9 +101,16 @@ export function defaultNote(items: SmsPending[]): string | undefined {
  * Saves several texts as one entry: rows on their own accounts, sharing a new group, the category, subcategory and
  * note. Money out is spending; money in is money back on it (or, when every text is money in, income, or money
  * back when `moneyBack`). The category must take that spending or income. Merchant categories are learned from the
- * payments only; every sender's link is learned. All or nothing; a text saved before isn't saved again.
+ * payments only; every sender's link is learned. `skipped` (texts the user said were already added) are set aside
+ * as duplicates in the same go. All or nothing; a text saved before isn't saved again.
  */
-export async function combineTexts(parts: TextPart[], choice: CombineChoice, conv: Conv, database: BudgyDB = db): Promise<Transaction[]> {
+export async function combineTexts(
+  parts: TextPart[],
+  choice: CombineChoice,
+  conv: Conv,
+  database: BudgyDB = db,
+  skipped: SmsPending[] = [],
+): Promise<Transaction[]> {
   if (parts.length < 2 || parts.some((p) => !understood(p.item) || !p.accountId)) {
     throw new Error('Combining needs two or more texts that were read, each with an account');
   }
@@ -136,7 +144,13 @@ export async function combineTexts(parts: TextPart[], choice: CombineChoice, con
       return r.type === 'expense' ? ids : { linkId: ids.linkId };
     }),
   );
-  return saveTexts(parts, records, lessons, database);
+  const at = new Date().toISOString();
+  return saveTexts(parts, records, lessons, database, async () => {
+    for (const item of skipped) {
+      await database.smsSeen.put({ fingerprint: item.fingerprint, outcome: 'duplicate', at });
+      await database.smsPending.delete(item.fingerprint);
+    }
+  });
 }
 
 /** The live expenses of the last `days` days, newest first: the purchases money can come back on. */

@@ -567,6 +567,7 @@
     "combined_one": "Combined 1 text",
     "combined_other": "Combined {{count}} texts into one",
     "paidFromParts_one": "Paid from 1 account",
-    "paidFromParts_other": "Paid from {{count}} accounts"
+    "paidFromParts_other": "Paid from {{count}} accounts",
+    "sameCategoryHint": "One category needs texts that are all money in, or all money out."
   }
 }

@@ -675,6 +675,7 @@
     "paidFromParts_two": "مدفوعة من حسابين",
     "paidFromParts_few": "مدفوعة من {{count}} حسابات",
     "paidFromParts_many": "مدفوعة من {{count}} حسابًا",
-    "paidFromParts_other": "مدفوعة من {{count}} حساب"
+    "paidFromParts_other": "مدفوعة من {{count}} حساب",
+    "sameCategoryHint": "الفئة الواحدة تحتاج إلى رسائل كلها مبالغ واردة أو كلها مبالغ صادرة."
   }
 }
