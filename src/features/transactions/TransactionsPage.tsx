@@ -5,9 +5,10 @@ import {
 } from '@ionic/react';
 import {
   addOutline, arrowDownOutline, arrowUpOutline, checkboxOutline, checkmarkOutline, closeCircle,
-  ellipsisVertical, receiptOutline, squareOutline, swapHorizontalOutline, trashOutline,
+  ellipsisVertical, linkOutline, receiptOutline, squareOutline, swapHorizontalOutline, trashOutline,
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
@@ -16,6 +17,7 @@ import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/context
 import { spentOnTile } from '@/core/utils/accountTiles';
 import { flowOfTx, isMoneyBack } from '@/core/utils/flow';
 import { txInBase } from '@/core/utils/txRate';
+import { alive, db } from '@/core/db/db';
 import { categoryFits, totalsOf, useAccounts, useCategories, useLookups, useNames } from '@/core/db/hooks';
 import { addDays, dayKey, isSameDay, parseDayKey } from '@/core/utils/period';
 import { subcategoryName } from '@/core/utils/subcategories';
@@ -27,6 +29,8 @@ import PeriodBar from '@/shared/components/PeriodBar';
 import Avatar from '@/shared/components/Avatar';
 import MoneyText from '@/shared/components/MoneyText';
 import { deleteMany, moveToAccount, moveToCategory, moveToDay } from './bulk';
+import GroupSheet from './GroupSheet';
+import { foldGroups, type ListEntry } from './groups';
 import type { Transaction } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
 
@@ -94,15 +98,28 @@ export default function TransactionsPage() {
   const totals = useMemo(() => totalsOf(filtered, conv, tiles), [filtered, conv, tiles]);
   const chosen = useMemo(() => filtered.filter((x) => selected.has(x.id!)), [filtered, selected]);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, Transaction[]>();
-    for (const x of filtered) {
-      const k = dayKey(new Date(x.date));
+  // Each day's entries: transactions, and the rows of a group in view folded into one (on its first row's day).
+  const days = useMemo(() => {
+    const map = new Map<string, ListEntry[]>();
+    for (const e of foldGroups(filtered, conv)) {
+      const k = dayKey(new Date(e.kind === 'tx' ? e.tx.date : e.date));
       if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(x);
+      map.get(k)!.push(e);
     }
     return [...map.entries()];
-  }, [filtered]);
+  }, [filtered, conv]);
+
+  // How many live rows each group on screen has in all, to say when some are out of view.
+  const groupKey = useMemo(() => [...new Set(filtered.map((x) => x.groupId).filter((g) => g != null))].sort().join('|'), [filtered]);
+  const groupSizes = useLiveQuery(async () => {
+    const ids = new Set(groupKey ? groupKey.split('|') : []);
+    const sizes = new Map<string, number>();
+    if (!ids.size) return sizes;
+    const rows = await db.transactions.filter((x) => x.groupId != null && ids.has(x.groupId) && alive(x)).toArray();
+    for (const x of rows) sizes.set(x.groupId!, (sizes.get(x.groupId!) ?? 0) + 1);
+    return sizes;
+  }, [groupKey]);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   // ── selection mode (long-press a transaction) ──
   const clearSelection = () => setSelected(new Set());
@@ -119,6 +136,26 @@ export default function TransactionsPage() {
       setSelected((s) => new Set(s).add(x.id!));
     },
     (x) => (selecting ? toggle(x) : openEditor({ tx: x })),
+  );
+  // A group's entry selects and toggles all its rows in view; a tap outside selection opens the group.
+  type GroupEntry = Extract<ListEntry, { kind: 'group' }>;
+  const allIn = (e: GroupEntry) => e.rows.every((x) => selected.has(x.id!));
+  const toggleGroup = (e: GroupEntry) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      const on = !e.rows.every((x) => next.has(x.id!));
+      for (const x of e.rows) {
+        if (on) next.add(x.id!);
+        else next.delete(x.id!);
+      }
+      return next;
+    });
+  const bindGroup = useLongPress<GroupEntry>(
+    (e) => {
+      Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
+      setSelected((s) => new Set([...s, ...e.rows.map((x) => x.id!)]));
+    },
+    (e) => (selecting ? toggleGroup(e) : setOpenGroup(e.groupId)),
   );
   const allSelected = filtered.length > 0 && chosen.length === filtered.length;
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(filtered.map((x) => x.id!)));
@@ -345,14 +382,15 @@ export default function TransactionsPage() {
             </div>
           )}
 
-          {txs && groups.length === 0 && (
+          {txs && days.length === 0 && (
             <div className="b-empty">
               <IonIcon icon={receiptOutline} />
               {query || filter.size ? t('transactions.noMatches') : t('transactions.empty')}
             </div>
           )}
 
-          {groups.map(([k, list]) => {
+          {days.map(([k, entries]) => {
+            const list = entries.flatMap((e) => (e.kind === 'tx' ? [e.tx] : e.rows));
             const net = list.reduce((s, x) => {
               const v = txInBase(x, conv);
               return s + (x.type === 'income' ? v : x.type === 'expense' ? -v : -spentOnTile(x, tiles, conv));
@@ -370,7 +408,39 @@ export default function TransactionsPage() {
                     <SignedMoney plus={net > 0} currency={conv.base} text={money.plain(Math.abs(net))} />
                   </span>
                 </div>
-                {list.map((x) => {
+                {entries.map((e) => {
+                  if (e.kind === 'group') {
+                    const cat = categories.get(e.categoryId!);
+                    const spent = e.flow === 'expense';
+                    const elsewhere = (groupSizes?.get(e.groupId) ?? e.rows.length) - e.rows.length;
+                    const amount = e.currency && e.netInCurrency != null ? e.netInCurrency : e.net;
+                    const shownIn = e.currency ?? conv.base;
+                    const note = e.rows.find((x) => x.note)?.note;
+                    return (
+                      <button key={e.groupId} className={`b-row ${allIn(e) ? 'is-selected' : ''}`} {...bindGroup(e)}>
+                        {allIn(e) ? (
+                          <span className="b-avatar b-avatar--check">
+                            <IonIcon icon={checkmarkOutline} />
+                          </span>
+                        ) : (
+                          <Avatar icon={cat?.icon ?? 'other'} color={cat?.color ?? '#64748b'} />
+                        )}
+                        <div className="b-row__main">
+                          <div className="b-row__title">{note ? `${categoryName(cat)} · ${note}` : categoryName(cat)}</div>
+                          <div className="b-row__sub b-row__parts">
+                            {e.rows
+                              .map((x) => `${accountName(accounts.get(x.accountId))} ${x.type === 'income' ? '+' : '−'}${money.plain(x.amount, x.currency)}`)
+                              .join(' · ')}
+                          </div>
+                          {elsewhere > 0 && <div className="b-row__note">{t('transactions.moreInGroup', { count: elsewhere })}</div>}
+                        </div>
+                        <div className={`b-row__amount b-num ${spent ? 'b-expense' : 'b-income'}`}>
+                          <SignedMoney plus={!spent} currency={shownIn} text={money.plain(Math.abs(amount), shownIn)} />
+                        </div>
+                      </button>
+                    );
+                  }
+                  const x = e.tx;
                   const acc = accounts.get(x.accountId);
                   const cls = `b-row ${selected.has(x.id!) ? 'is-selected' : ''}`;
                   const note = x.note && <div className="b-row__note">{x.note}</div>;
@@ -408,6 +478,7 @@ export default function TransactionsPage() {
                         <div className="b-row__title">
                           {categoryName(cat)}{sub ? ` · ${sub}` : ''}
                           {back && <span className="b-row__tag">{t('transactions.moneyBack')}</span>}
+                          {x.groupId && <IonIcon className="b-row__link" icon={linkOutline} aria-label={t('transactions.inGroup')} />}
                         </div>
                         <div className="b-row__sub">
                           <IonIcon icon={iconFor(acc?.icon)} />
@@ -473,6 +544,8 @@ export default function TransactionsPage() {
           </IonItem>
         </IonList>
       </IonPopover>
+
+      <GroupSheet groupId={openGroup} onClose={() => setOpenGroup(null)} />
 
       <IonModal className="b-date-modal" isOpen={dateOpen} onDidDismiss={() => setDateOpen(false)}>
         <IonDatetime

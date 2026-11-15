@@ -246,7 +246,24 @@
     "noCategory": "التحويلات ليس لها فئة",
     "filterBySelection": "عرض هذه الفئات فقط",
     "removeFilter": "إزالة التصفية",
-    "moneyBack": "مبلغ مُسترد"
+    "moneyBack": "مبلغ مُسترد",
+    "moreInGroup_zero": "",
+    "moreInGroup_one": "+1 أخرى في فترة أو حساب آخر",
+    "moreInGroup_two": "+2 أخريان في فترة أو حساب آخر",
+    "moreInGroup_few": "+{{count}} أخرى في فترة أو حساب آخر",
+    "moreInGroup_many": "+{{count}} أخرى في فترة أو حساب آخر",
+    "moreInGroup_other": "+{{count}} أخرى في فترة أو حساب آخر",
+    "inGroup": "جزء من مجموعة",
+    "removeFromGroup": "إخراجها من المجموعة",
+    "deleteGroup_zero": "حذف المعاملات؟",
+    "deleteGroup_one": "حذف هذه المعاملة؟",
+    "deleteGroup_two": "حذف هاتين المعاملتين؟",
+    "deleteGroup_few": "حذف هذه المعاملات الـ{{count}}؟",
+    "deleteGroup_many": "حذف هذه المعاملات الـ{{count}}؟",
+    "deleteGroup_other": "حذف هذه المعاملات الـ{{count}}؟",
+    "deleteGroupButton": "حذف الكل",
+    "groupSpent": "مشتريات مُجمّعة",
+    "groupReceived": "مبالغ مُستلمة مُجمّعة"
   },
   "icons": {
     "groups": {

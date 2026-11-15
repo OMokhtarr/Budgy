@@ -35,6 +35,12 @@
     - Combine two card payments for one purchase, and a payment with two friends paying back: one entry each,
       with the net shown in the sheet matching the transactions list.
     - Arabic (RTL) layout and dark mode of the selection bar, the purchase picker, the texts and combine sheets.
+    - Transactions list: a combined entry shows once with the net; with a payback in the next month it shows
+      "+1 more…", and with the account filter only that account's part shows.
+    - Group sheet: change category and note (all rows follow), take a row out, delete all; long-press a group
+      entry selects all its rows.
+    - When SMS import ships, add a `RELEASE-NOTES.md` section for money back, several texts at once and
+      combining (needs the `versionCode` bump).
   - [ ] **Stage 3, before the SMS release:**
     - Recheck Play's live SMS policy.
     - Add `READ_SMS` to the main manifest.

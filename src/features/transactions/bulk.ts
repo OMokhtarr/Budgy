@@ -1,4 +1,4 @@
-import { db, softDelete } from '@/core/db/db';
+import { alive, db, softDelete } from '@/core/db/db';
 import { categoryFits } from '@/core/db/hooks';
 import { currenciesOf } from '@/core/utils/currency';
 import { flowOfTx } from '@/core/utils/flow';
@@ -61,4 +61,35 @@ export async function moveToCategory(txs: Transaction[], category: Category): Pr
 
 export async function deleteMany(txs: Transaction[]): Promise<void> {
   await softDelete(db.transactions, txs.map((x) => x.id!));
+}
+
+/** The live rows of a group, in any period, oldest first. */
+export async function groupRows(groupId: string): Promise<Transaction[]> {
+  const rows = await db.transactions.filter((x) => x.groupId === groupId && alive(x)).toArray();
+  return rows.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Gives every row of a group one category (a group has one), clearing the subcategory unless it's kept. */
+export async function setGroupCategory(groupId: string, categoryId: string, subcategoryId?: string): Promise<void> {
+  await db.transaction('rw', db.transactions, async () => {
+    for (const x of await groupRows(groupId)) await db.transactions.update(x.id!, { categoryId, subcategoryId });
+  });
+}
+
+/** Takes a transaction out of its group; money back stays money back on its category. */
+export async function ungroup(tx: Transaction): Promise<void> {
+  await db.transactions.update(tx.id!, { groupId: undefined });
+}
+
+/** Deletes every row of a group. */
+export async function deleteGroup(groupId: string): Promise<void> {
+  await softDelete(db.transactions, (await groupRows(groupId)).map((x) => x.id!));
+}
+
+/** Gives every row of a group the note (trimmed to the editor's 120 characters; empty removes it). */
+export async function setGroupNote(groupId: string, note: string): Promise<void> {
+  const text = note.trim().slice(0, 120).trim() || undefined;
+  await db.transaction('rw', db.transactions, async () => {
+    for (const x of await groupRows(groupId)) await db.transactions.update(x.id!, { note: text });
+  });
 }

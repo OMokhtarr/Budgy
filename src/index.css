@@ -1647,6 +1647,11 @@ ion-menu.b-menu { --background: var(--b-bg); --width: min(320px, 85vw); }
   background: var(--b-track);
   vertical-align: 1px;
 }
+/* A group's entry lists its rows: "Card −600 · Bank +200" */
+.b-row__parts { white-space: normal; }
+.b-row__link { margin-inline-start: 6px; font-size: 14px; color: var(--b-muted); vertical-align: -2px; }
+.b-groupsheet__row { flex: 1; min-width: 0; text-align: start; background: none; border: 0; padding: 0; color: inherit; font: inherit; }
+.b-groupsheet .b-combine { padding: 10px 0 6px; }
 .b-avatar--check { background: var(--ion-color-primary); color: var(--ion-color-primary-contrast); }
 
 /* The selection summary takes the tab bar's place */
@@ -1848,7 +1853,7 @@ ion-popover.b-popmenu { --width: 230px; }
 .b-combine { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 12px; }
 .b-combine__net { display: flex; justify-content: space-between; align-items: baseline; width: 100%; font-weight: 600; }
 .b-combine__net strong { font-size: 20px; }
-.b-combine .b-note { width: 100%; }
+.b-combine .b-note { width: 100%; margin: 0; }
 .b-textssheet__text small { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .b-pickersheet__section {
   margin: 18px 4px 10px;

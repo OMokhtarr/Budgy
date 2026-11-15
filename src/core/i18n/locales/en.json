@@ -198,7 +198,16 @@
     "noCategory": "Transfers don't have a category",
     "filterBySelection": "Show only these categories",
     "removeFilter": "Remove filter",
-    "moneyBack": "money back"
+    "moneyBack": "money back",
+    "moreInGroup_one": "+1 more in another period or account",
+    "moreInGroup_other": "+{{count}} more in another period or account",
+    "inGroup": "Part of a group",
+    "removeFromGroup": "Take out of the group",
+    "deleteGroup_one": "Delete this transaction?",
+    "deleteGroup_other": "Delete these {{count}} transactions?",
+    "deleteGroupButton": "Delete all",
+    "groupSpent": "Combined purchase",
+    "groupReceived": "Combined money in"
   },
   "icons": {
     "groups": {
