@@ -91,7 +91,7 @@ export default function SmsItemCard({ item, choice, account, category, person, o
     // With a person picked it opens as the transfer Confirm would save: account → person, or person → account.
     const fromTo = person
       ? { type: 'transfer' as const, accountId: lent ? choice.accountId : person.id, toAccountId: lent ? person.id : choice.accountId }
-      : { type: flowOf(item), accountId: choice.accountId, categoryId: choice.categoryId };
+      : { type: flowOf(item), accountId: choice.accountId, categoryId: choice.categoryId, moneyBack: choice.moneyBack };
     openEditor({
       ...fromTo,
       amount: item.amount,
@@ -160,6 +160,9 @@ export default function SmsItemCard({ item, choice, account, category, person, o
               ? chip(t('sms.pickCategory'), { name: accountName(person), icon: person.icon, color: person.color }, onPickCategory)
               : chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
           </div>
+          {choice.moneyBack && category && !person && (
+            <p className="b-smscard__note">{t('sms.moneyBackNote', { category: categoryName(category) })}</p>
+          )}
           {person && (
             <p className="b-smscard__note">
               {personNotHeld

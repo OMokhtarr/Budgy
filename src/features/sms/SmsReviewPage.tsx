@@ -30,6 +30,9 @@ type Picking = { item: SmsPending; kind: 'account' | 'category' } | { kind: 'bat
 
 const toItem = (x: { id?: string; icon: string; color: string }, name: string): PickerItem => ({ id: x.id!, name, icon: x.icon, color: x.color });
 
+/** Money-back items get their own ids: a category that takes both flows shows in both groups of the picker. */
+const BACK = 'back:';
+
 /** "Bank texts": the scanned texts waiting for review, newest first. Long-press a card to act on several at once. */
 export default function SmsReviewPage() {
   const { t } = useTranslation();
@@ -84,6 +87,10 @@ export default function SmsReviewPage() {
   }, [picking, accounts, categories, accountName, categoryName]);
 
   const people = useMemo(() => (accounts ?? []).filter(isPerson).map((a) => toItem(a, accountName(a))), [accounts, accountName]);
+  const moneyBackSection = (): PickerSection => ({
+    title: t('sms.moneyBackOn'),
+    items: categoriesFor('expense').map((c) => ({ ...c, id: BACK + c.id })),
+  });
 
   // Waits for the availability check; and since hidden pages stay mounted in Ionic's stack, only
   // leaves while this page is the one showing.
@@ -138,8 +145,8 @@ export default function SmsReviewPage() {
    * "Same category": every selected text gets the category and the complete ones are saved together, after one
    * question about any that look already added. Texts still missing an account stay, selected, with the category set.
    */
-  const applyCategory = async (categoryId: string) => {
-    const patch: CardPick = { categoryId, personId: undefined };
+  const applyCategory = async (categoryId: string, moneyBack: boolean) => {
+    const patch: CardPick = { categoryId, personId: undefined, moneyBack: moneyBack || undefined };
     const batch = chosen;
     setPicks((p) => Object.fromEntries([...Object.entries(p), ...batch.map((x) => [x.fingerprint, { ...p[x.fingerprint], ...patch }])]));
     const complete: { item: SmsPending; draft: TxDraft }[] = [];
@@ -175,14 +182,16 @@ export default function SmsReviewPage() {
     }
   };
 
-  // A category and a person take the same place on the card: picking one clears the other.
+  // A category (as money back or not) and a person take the same place on the card: picking one clears the other.
   const pick = (id: string) => {
     if (!picking) return;
-    if (picking.kind === 'batch') return void applyCategory(id);
+    const moneyBack = id.startsWith(BACK);
+    const categoryId = moneyBack ? id.slice(BACK.length) : id;
+    if (picking.kind === 'batch') return void applyCategory(categoryId, moneyBack);
     const fp = picking.item.fingerprint;
     if (picking.kind === 'account') setPick(fp, { accountId: id });
-    else if (people.some((p) => p.id === id)) setPick(fp, { personId: id, categoryId: undefined });
-    else setPick(fp, { categoryId: id, personId: undefined });
+    else if (people.some((p) => p.id === id)) setPick(fp, { personId: id, categoryId: undefined, moneyBack: undefined });
+    else setPick(fp, { categoryId, personId: undefined, moneyBack: moneyBack || undefined });
   };
 
   /** Asks for a name, adds them as a debt and picks them for the card. */
@@ -205,6 +214,7 @@ export default function SmsReviewPage() {
       ],
     });
 
+  // Money in can also be money back on an expense category, for a card or for every selected text.
   const sections: PickerSection[] =
     picking?.kind === 'category'
       ? [
@@ -214,8 +224,11 @@ export default function SmsReviewPage() {
             addLabel: t('sms.newPerson'),
             onAdd: () => askNewPerson(picking.item),
           },
+          ...(flowOf(picking.item) === 'income' ? [moneyBackSection()] : []),
         ]
-      : [];
+      : picking?.kind === 'batch' && picking.flow === 'income'
+        ? [moneyBackSection()]
+        : [];
 
   const sameCategory = () => {
     const first = chosen[0];
@@ -234,7 +247,11 @@ export default function SmsReviewPage() {
   const pickedChoice = picking && picking.kind !== 'batch' ? choices.get(picking.item.fingerprint) : undefined;
   const pickerTitle = picking?.kind === 'account' ? t('sms.pickAccount') : picking?.kind === 'batch' ? t('sms.sameCategory') : t('sms.pickCategory');
   const pickerSelected =
-    picking?.kind === 'account' ? pickedChoice?.accountId : picking?.kind === 'category' ? pickedChoice?.personId ?? pickedChoice?.categoryId : undefined;
+    picking?.kind === 'account'
+      ? pickedChoice?.accountId
+      : picking?.kind === 'category'
+        ? pickedChoice?.personId ?? (pickedChoice?.moneyBack ? BACK + pickedChoice.categoryId : pickedChoice?.categoryId)
+        : undefined;
 
   return (
     <IonPage>

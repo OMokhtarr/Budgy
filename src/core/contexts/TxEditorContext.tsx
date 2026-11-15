@@ -18,6 +18,8 @@ export interface EditorInit {
   currency?: string;
   /** Full ISO time; kept when the user doesn't change the day. */
   date?: string;
+  /** A new income that is money back on the (expense) category it's given, e.g. from a bank text. */
+  moneyBack?: boolean;
   /** Shown above the sheet, e.g. the bank text. */
   header?: ReactNode;
   /** Set when the editor opens from a bank text: saved on the transaction, offers all three types, runs the duplicate check. */

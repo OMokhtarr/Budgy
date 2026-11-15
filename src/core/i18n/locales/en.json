@@ -540,6 +540,8 @@
     "batchDuplicateBody_one": "1 of these has the same amount, account and day as a transaction you entered yourself.",
     "batchDuplicateBody_other": "{{count}} of these have the same amount, account and day as transactions you entered yourself.",
     "skipThose": "Skip those",
-    "keepAll": "Keep all"
+    "keepAll": "Keep all",
+    "moneyBackOn": "Money back on",
+    "moneyBackNote": "Lowers {{category}} spending — it isn't counted as income."
   }
 }

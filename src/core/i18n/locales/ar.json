@@ -624,6 +624,8 @@
     "batchDuplicateBody_many": "{{count}} رسالة لها نفس المبلغ والحساب واليوم لعمليات أدخلتها بنفسك.",
     "batchDuplicateBody_other": "{{count}} رسالة لها نفس المبلغ والحساب واليوم لعمليات أدخلتها بنفسك.",
     "skipThose": "تخطَّ هذه",
-    "keepAll": "احتفظ بالكل"
+    "keepAll": "احتفظ بالكل",
+    "moneyBackOn": "مبلغ مُسترد من",
+    "moneyBackNote": "يُخصم من مصروفات {{category}} — ولا يُحسب دخلًا."
   }
 }
