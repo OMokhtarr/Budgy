@@ -590,7 +590,8 @@
       "chooseLanguage": "Choose your language",
       "english": "English",
       "arabic": "العربية",
-      "whatsNew": "What's new"
+      "whatsNew": "What's new",
+      "currencyFailed": "Couldn't set the currency. Try again."
     },
     "settings": {
       "title": "Tours and tips",

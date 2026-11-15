@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useIonToast } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '@/core/contexts/SettingsContext';
 import { guessCurrency } from './currencyGuess';
@@ -20,6 +21,9 @@ export default function WelcomeSlides({ withCurrency, onDone }: { withCurrency: 
   const applyCurrency = useApplyCurrency();
   const [pick, setPick] = useState(() => guessCurrency(navigator.language ?? '', currency));
   const [busy, setBusy] = useState(false);
+  // Set at once, so a second tap in the same tick cannot apply the currency twice.
+  const applying = useRef(false);
+  const [presentToast] = useIonToast();
 
   const langPick = (
     <div className="ob-lang-row" role="group" aria-label={t('onboarding.controls.chooseLanguage')}>
@@ -54,11 +58,19 @@ export default function WelcomeSlides({ withCurrency, onDone }: { withCurrency: 
     return <SlideDeck slides={slides} finishLabel={t('onboarding.controls.getStarted')} onFinish={onDone} onSkip={onDone} />;
   }
 
+  // On failure the user stays on the currency slide and can try again.
   const finish = async () => {
+    if (applying.current) return;
+    applying.current = true;
     setBusy(true);
     try {
       await applyCurrency(pick);
+    } catch (err) {
+      console.error('Could not apply the picked currency', err);
+      void presentToast({ message: t('onboarding.controls.currencyFailed'), duration: 3000, position: 'top', color: 'medium' });
+      return;
     } finally {
+      applying.current = false;
       setBusy(false);
     }
     onDone();
@@ -70,6 +82,7 @@ export default function WelcomeSlides({ withCurrency, onDone }: { withCurrency: 
       skipTo={slides.length - 1}
       finishLabel={t('onboarding.continue', { currency: pick })}
       finishDisabled={busy}
+      locked={busy}
       onFinish={() => void finish()}
       onSkip={onDone}
     />

@@ -51,7 +51,7 @@ describe('tour copy', () => {
   });
   it('every welcome slide and control has both languages', () => {
     for (const s of WELCOME_SLIDES) for (const f of ['title', 'body']) both(`onboarding.slides.${s.id}.${f}`);
-    for (const k of ['skip', 'next', 'previous', 'done', 'getStarted', 'showMe', 'step', 'chooseLanguage', 'english', 'arabic', 'whatsNew']) {
+    for (const k of ['skip', 'next', 'previous', 'done', 'getStarted', 'showMe', 'step', 'chooseLanguage', 'english', 'arabic', 'whatsNew', 'currencyFailed']) {
       both(`onboarding.controls.${k}`);
     }
     for (const k of ['title', 'welcome', 'replay', 'replayToast', 'whatsNew']) both(`onboarding.settings.${k}`);

@@ -666,7 +666,8 @@
       "chooseLanguage": "اختر لغتك",
       "english": "English",
       "arabic": "العربية",
-      "whatsNew": "ما الجديد"
+      "whatsNew": "ما الجديد",
+      "currencyFailed": "تعذّر ضبط العملة. حاول مرة أخرى."
     },
     "settings": {
       "title": "الجولات والنصائح",

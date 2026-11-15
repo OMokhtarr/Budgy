@@ -1,8 +1,9 @@
 /**
- * Full-screen slide shell shared by the welcome and "What's new" decks. It sits above everything,
- * Ionic's own overlays included. The back button acts as Skip.
+ * Full-screen slide shell shared by the welcome and "What's new" decks. It sits above the app and
+ * Ionic's sheets and popups, but below toasts, so a toast raised from a slide still shows. The back
+ * button acts as Skip.
  */
-import { useEffect, useId, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { swipeStep } from '@/core/utils/swipe';
@@ -40,9 +41,11 @@ interface Props {
   /** Skip and back jump to this slide instead of leaving. On it, Skip is hidden and back does nothing. */
   skipTo?: number;
   finishDisabled?: boolean;
+  /** Keeps the user on the current slide (no Skip, back, Previous or swipe), e.g. while finishing. */
+  locked?: boolean;
 }
 
-export function SlideDeck({ slides, eyebrow, finishLabel, onFinish, onSkip, skipTo, finishDisabled }: Props) {
+export function SlideDeck({ slides, eyebrow, finishLabel, onFinish, onSkip, skipTo, finishDisabled, locked }: Props) {
   const { t, i18n } = useTranslation();
   const rtl = i18n.dir() === 'rtl';
   const [index, setIndex] = useState(0);
@@ -57,31 +60,38 @@ export function SlideDeck({ slides, eyebrow, finishLabel, onFinish, onSkip, skip
   const onSkipTarget = skipTo !== undefined && current === skipTo;
 
   const skip = () => {
+    if (locked) return;
     if (skipTo === undefined) onSkip();
     else if (!onSkipTarget) setIndex(skipTo);
   };
   useBackToSkip(skip);
 
+  // Inside ion-app, like Ionic's own overlays: a toast (z-index 60000+) then stacks above the deck,
+  // which it could not from outside ion-app. Resolved after mount, when ion-app is in the document.
+  const [host, setHost] = useState<Element | null>(null);
+  useLayoutEffect(() => setHost(document.querySelector('ion-app') ?? document.body), []);
+
   useEffect(() => {
     titleRef.current?.focus();
-  }, [current]);
+  }, [current, host]);
 
   const onPointerUp = (e: PointerEvent) => {
     if (!start.current) return;
     const { x, y, time } = start.current;
     start.current = null;
+    if (locked) return;
     const step = swipeStep(e.clientX - x, e.clientY - y, e.timeStamp - time, rtl);
     if (step === 1 && !isLast) setIndex(current + 1);
     if (step === -1 && current > 0) setIndex(current - 1);
   };
 
-  if (!slide) return null;
+  if (!slide || !host) return null;
 
   return createPortal(
     <div className="ob-deck" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className="ob-deck-inner">
         <div className="ob-deck-top">
-          {!onSkipTarget && (
+          {!onSkipTarget && !locked && (
             <button type="button" className="ob-btn ob-btn--link" onClick={skip}>
               {t('onboarding.controls.skip')}
             </button>
@@ -118,7 +128,7 @@ export function SlideDeck({ slides, eyebrow, finishLabel, onFinish, onSkip, skip
         </p>
         <Dots count={slides.length} active={current} />
         <div className="ob-deck-nav">
-          {current > 0 ? (
+          {current > 0 && !locked ? (
             <button type="button" className="ob-btn ob-btn--link" onClick={() => setIndex(current - 1)}>
               {t('onboarding.controls.previous')}
             </button>
@@ -136,6 +146,6 @@ export function SlideDeck({ slides, eyebrow, finishLabel, onFinish, onSkip, skip
         </div>
       </div>
     </div>,
-    document.body,
+    host,
   );
 }

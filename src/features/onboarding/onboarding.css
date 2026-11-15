@@ -1,5 +1,5 @@
-/* Welcome / What's new decks. Above every app surface, Ionic overlays included; colours only from
-   theme tokens so light and dark both work. */
+/* Welcome / What's new decks. Inside ion-app, above the app and Ionic's sheets and popups (20000+)
+   but below toasts (60000+); colours only from theme tokens so light and dark both work. */
 
 /* ─── Shared ───────────────────────────────────────────────────────────────── */
 .ob-btn {
