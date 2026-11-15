@@ -14,6 +14,7 @@ import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsConte
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
 import { spentOnTile } from '@/core/utils/accountTiles';
+import { flowOfTx, isMoneyBack } from '@/core/utils/flow';
 import { txInBase } from '@/core/utils/txRate';
 import { categoryFits, totalsOf, useAccounts, useCategories, useLookups, useNames } from '@/core/db/hooks';
 import { addDays, dayKey, isSameDay, parseDayKey } from '@/core/utils/period';
@@ -183,10 +184,10 @@ export default function TransactionsPage() {
     });
 
   const changeCategory = () => {
-    const flows = chosen.filter((x) => x.type !== 'transfer');
+    const flows = chosen.map(flowOfTx).filter((f) => f != null);
     if (!flows.length) return toast(t('transactions.noCategory'));
-    // Only categories every selected expense/income can go into.
-    const fits = (activeCategories ?? []).filter((c) => flows.every((x) => x.type !== 'transfer' && categoryFits(c, x.type)));
+    // Only categories every selected expense/income can go into (money back goes in expense categories).
+    const fits = (activeCategories ?? []).filter((c) => flows.every((f) => categoryFits(c, f)));
     presentSheet({
       header: t('transactions.changeCategory'),
       buttons: [
@@ -222,10 +223,13 @@ export default function TransactionsPage() {
     return { day: format({ day: '2-digit' }), weekday, month: format({ month: 'long', year: 'numeric' }) };
   };
 
-  /** Expenses (2) · EGP 320 — the selection's or the filtered list's totals, in the main currency. */
+  /**
+   * Expenses (2) · EGP 320 — the selection's or the filtered list's totals, in the main currency. Money back
+   * counts with the expenses, taking its amount off them.
+   */
   const sumOf = (list: Transaction[], type: Transaction['type']) => {
-    const of = list.filter((x) => x.type === type);
-    return { count: of.length, value: of.reduce((s, x) => s + txInBase(x, conv), 0) };
+    const of = list.filter((x) => (type === 'transfer' ? x.type === 'transfer' : flowOfTx(x) === type));
+    return { count: of.length, value: of.reduce((s, x) => s + (isMoneyBack(x) ? -1 : 1) * txInBase(x, conv), 0) };
   };
   const filteredNet = totals.income - totals.expense;
 
@@ -393,13 +397,18 @@ export default function TransactionsPage() {
                     );
                   }
                   const cat = categories.get(x.categoryId!);
-                  const isExp = x.type === 'expense';
+                  // Money back is money in, shown with the spending it lowers.
+                  const back = isMoneyBack(x);
+                  const isExp = x.type === 'expense' || back;
                   const sub = subcategoryName(cat, x.subcategoryId);
                   return (
                     <button key={x.id} className={cls} {...bind(x)}>
                       {avatarFor(x)}
                       <div className="b-row__main">
-                        <div className="b-row__title">{categoryName(cat)}{sub ? ` · ${sub}` : ''}</div>
+                        <div className="b-row__title">
+                          {categoryName(cat)}{sub ? ` · ${sub}` : ''}
+                          {back && <span className="b-row__tag">{t('transactions.moneyBack')}</span>}
+                        </div>
                         <div className="b-row__sub">
                           <IonIcon icon={iconFor(acc?.icon)} />
                           <span>{accountName(acc)}</span>
@@ -407,7 +416,7 @@ export default function TransactionsPage() {
                         {note}
                       </div>
                       <div className={`b-row__amount b-num ${isExp ? 'b-expense' : 'b-income'}`}>
-                        <SignedMoney plus={!isExp} currency={x.currency} text={money.plain(x.amount, x.currency)} />
+                        <SignedMoney plus={x.type === 'income'} currency={x.currency} text={money.plain(x.amount, x.currency)} />
                       </div>
                     </button>
                   );

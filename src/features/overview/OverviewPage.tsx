@@ -9,6 +9,7 @@ import { useConverter, useLocale, useMoney, useSettings } from '@/core/contexts/
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
 import { subcategoryBreakdown, totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import { spentOnTile } from '@/core/utils/accountTiles';
+import { isMoneyBack } from '@/core/utils/flow';
 import { txInBase } from '@/core/utils/txRate';
 import AppHeader from '@/shared/components/AppHeader';
 import { rangeFor, shiftBy, shiftRange } from '@/core/utils/period';
@@ -66,7 +67,9 @@ export default function OverviewPage() {
       let exp = 0;
       for (const r of rows) {
         if (r.date < bs || r.date >= be || !matches(r)) continue;
-        if (r.type === 'income') inc += txInBase(r, conv);
+        // Money back lowers the spending; it isn't income.
+        if (isMoneyBack(r)) exp -= txInBase(r, conv);
+        else if (r.type === 'income') inc += txInBase(r, conv);
         else if (r.type === 'expense') exp += txInBase(r, conv);
         else exp += spentOnTile(r, tiles, conv);
       }
@@ -181,7 +184,7 @@ export default function OverviewPage() {
                   </span>
                 </div>
                 <div className="b-bar" style={{ marginBottom: 16 }}>
-                  <span style={{ width: `${Math.min(100, (budgetSpent / budgetTotal) * 100)}%`, background: budgetSpent > budgetTotal ? 'var(--b-expense)' : 'var(--ion-color-primary)' }} />
+                  <span style={{ width: `${Math.min(100, (Math.max(0, budgetSpent) / budgetTotal) * 100)}%`, background: budgetSpent > budgetTotal ? 'var(--b-expense)' : 'var(--ion-color-primary)' }} />
                 </div>
                 {budgets.map((c) => {
                   const spent = totals.byCategory.expense.get(c.id!) ?? 0;
@@ -198,7 +201,7 @@ export default function OverviewPage() {
                           </span>
                         </div>
                         <div className="b-bar">
-                          <span style={{ width: `${Math.min(100, (spent / (c.budget ?? 1)) * 100)}%`, background: over ? 'var(--b-expense)' : c.color }} />
+                          <span style={{ width: `${Math.min(100, (Math.max(0, spent) / (c.budget ?? 1)) * 100)}%`, background: over ? 'var(--b-expense)' : c.color }} />
                         </div>
                       </div>
                     </div>

@@ -197,7 +197,8 @@
     "skipped_other": "{{count}} transactions weren't changed because the change doesn't fit them",
     "noCategory": "Transfers don't have a category",
     "filterBySelection": "Show only these categories",
-    "removeFilter": "Remove filter"
+    "removeFilter": "Remove filter",
+    "moneyBack": "money back"
   },
   "icons": {
     "groups": {

@@ -1,6 +1,7 @@
 import { db, softDelete } from '@/core/db/db';
 import { categoryFits } from '@/core/db/hooks';
 import { currenciesOf } from '@/core/utils/currency';
+import { flowOfTx } from '@/core/utils/flow';
 import type { Account, Category, Transaction } from '@/shared/models';
 
 /** Changes for several selected transactions at once. Each returns how many had to be skipped. */
@@ -39,14 +40,16 @@ export async function moveToAccount(txs: Transaction[], account: Account): Promi
 }
 
 /**
- * Recategorises expenses/income; skips transfers and transactions of a type the category doesn't accept.
+ * Recategorises expenses/income; skips transfers and transactions of a flow the category doesn't accept
+ * (money back goes in expense categories).
  * A subcategory belongs to its category, so moving to a different one clears it.
  */
 export async function moveToCategory(txs: Transaction[], category: Category): Promise<number> {
   let skipped = 0;
   await db.transaction('rw', db.transactions, async () => {
     for (const x of txs) {
-      if (x.type === 'transfer' || !categoryFits(category, x.type)) {
+      const flow = flowOfTx(x);
+      if (!flow || !categoryFits(category, flow)) {
         skipped++;
         continue;
       }

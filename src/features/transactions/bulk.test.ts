@@ -28,3 +28,29 @@ describe('moveToCategory', () => {
     expect((await db.transactions.get(x.id!))?.subcategoryId).toBe('akl');
   });
 });
+
+describe('moveToCategory with money back', () => {
+  const income = (over: object = {}) =>
+    db.transactions.add({ type: 'income', amount: 10, currency: 'EGP', accountId: 'cash', categoryId: 'food', date: '2026-11-01T10:00:00.000Z', createdAt: 'x', ...over })
+      .then(async (id) => (await db.transactions.get(id))!);
+  const of = (id: string, kind: Category['kind']): Category => ({ ...category(id), kind });
+
+  it('moves money back to another expense category and keeps it money back', async () => {
+    const x = await income({ moneyBack: true });
+    expect(await moveToCategory([x], of('family', 'expense'))).toBe(0);
+    const moved = await db.transactions.get(x.id!);
+    expect(moved?.categoryId).toBe('family');
+    expect(moved?.moneyBack).toBe(true);
+  });
+
+  it('skips money back for an income-only category', async () => {
+    const x = await income({ moneyBack: true });
+    expect(await moveToCategory([x], of('salary', 'income'))).toBe(1);
+    expect((await db.transactions.get(x.id!))?.categoryId).toBe('food');
+  });
+
+  it('still skips plain income for an expense-only category', async () => {
+    const x = await income();
+    expect(await moveToCategory([x], of('family', 'expense'))).toBe(1);
+  });
+});

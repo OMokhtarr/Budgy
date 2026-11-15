@@ -1637,6 +1637,16 @@ ion-menu.b-menu { --background: var(--b-bg); --width: min(320px, 85vw); }
 /* Long-pressing a row selects it, so don't start a text selection or the native callout. */
 .b-row { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .b-row.is-selected { background: rgba(var(--ion-color-primary-rgb), 0.14); }
+.b-row__tag {
+  margin-inline-start: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--b-muted);
+  background: var(--b-track);
+  vertical-align: 1px;
+}
 .b-avatar--check { background: var(--ion-color-primary); color: var(--ion-color-primary-contrast); }
 
 /* The selection summary takes the tab bar's place */

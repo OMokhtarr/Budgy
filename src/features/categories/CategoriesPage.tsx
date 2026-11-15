@@ -138,7 +138,7 @@ export default function CategoriesPage() {
 
             {shown.map((c) => {
               const spent = totals.byCategory[kind].get(c.id!) ?? 0;
-              const progress = isExpense && mode === 'month' && c.budget ? spent / c.budget : undefined;
+              const progress = isExpense && mode === 'month' && c.budget ? Math.max(0, spent) / c.budget : undefined;
               return (
                 <Bubble
                   key={c.id}

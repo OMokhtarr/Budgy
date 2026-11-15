@@ -245,7 +245,8 @@
     "skipped_other": "لم يتم تغيير {{count}} معاملة لأن التغيير لا يناسبها",
     "noCategory": "التحويلات ليس لها فئة",
     "filterBySelection": "عرض هذه الفئات فقط",
-    "removeFilter": "إزالة التصفية"
+    "removeFilter": "إزالة التصفية",
+    "moneyBack": "مبلغ مُسترد"
   },
   "icons": {
     "groups": {
