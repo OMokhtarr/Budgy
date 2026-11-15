@@ -10,6 +10,7 @@ import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import { cleanSubcategories } from '@/core/utils/subcategories';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
+import { usesOfOtherFlow } from './kindInUse';
 import SubcategoriesField from './SubcategoriesField';
 import type { Category, CategoryKind, Flow, Subcategory } from '@/shared/models';
 
@@ -55,7 +56,7 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
     const b = parseNumber(budget);
     // Narrowing to expense-only or income-only isn't allowed while transactions of the other type use it.
     if (category?.id != null && catKind !== 'both' && catKind !== category.kind) {
-      const used = await db.transactions.where('categoryId').equals(category.id).filter((x) => alive(x) && x.type !== catKind).count();
+      const used = await usesOfOtherFlow(category.id, catKind);
       if (used) {
         const other = catKind === 'expense' ? 'income' : 'expense';
         presentToast({ message: t('categories.kindInUse', { count: used, type: t(`type.${other}`) }), duration: 3500, position: 'top', color: 'medium' });
