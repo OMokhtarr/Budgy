@@ -79,6 +79,42 @@ describe('parseSms review cases', () => {
     expect(t('Your OTP for purchase of EGP 450.00 at AMAZON is 482913')).toEqual({ status: 'ignored', reason: 'otp' });
     expect(t('رمز التحقق لعملية شراء بمبلغ 450 جنيه هو 4821')).toEqual({ status: 'ignored', reason: 'otp' });
   });
+  it('drops OTPs for a payment, whatever the wording or order', () => {
+    for (const body of [
+      '482913 is your OTP for purchase of EGP 450.00 at AMAZON. Do not share it',
+      'Your OTP for the purchase of EGP 1,250.00 at AMAZON.EG on your card is 482913',
+      'Use 482913 to confirm your payment of EGP 450.00 at NOON',
+      'Your security code for the transfer of EGP 2,000.00 to AHMED is 482913',
+      'Enter 482913 to complete your InstaPay transfer of EGP 500.00',
+      'Payment of EGP 450.00 at NOON needs confirmation. This code is valid for 5 minutes',
+      'كلمة المرور لمرة واحدة لعملية شراء بمبلغ 450 جنيه لدى امازون هي 482913',
+      '482913 هو رمز التحقق لعملية سحب 1000 جنيه',
+      'استخدم 482913 لتأكيد تحويل مبلغ 500 جنيه',
+      'كود التأكيد الخاص بك هو 4821 لعملية دفع 300 جنيه',
+      'لإتمام عملية دفع 300 جنيه لدى نون، الرمز صالح لمدة 5 دقائق',
+      '4821 هو الرمز الخاص بك لعملية دفع 300 جنيه',
+      'OTP:482913 for purchase of EGP 450.00 at AMAZON',
+    ]) expect(t(body), body).toEqual({ status: 'ignored', reason: 'otp' });
+  });
+  it('keeps debits whose footer mentions OTPs next to a hotline, year or approval code', () => {
+    for (const body of [
+      'Card **4821 debited EGP 450.00 at UBER. Never share your OTP. Call 19666',
+      'Never share your OTP. Card 4821 debited EGP 450.00 at UBER',
+      'تم خصم 450 جنيه من بطاقتك. لا تشارك رمز التحقق مع أحد. للاستفسار 19623',
+      'EGP 4500 debited from your account. Do not share your OTP with anyone 2026',
+      'Card **4821 debited EGP 450.00 at UBER, auth code 123456. Never share your OTP',
+      'Card **4821 debited EGP 450.00 at UBER. Never share your OTP, Avl Bal: 5000',
+      'Card **4821 debited EGP 450.00 at UBER. Never share your OTP, Ref: 123456',
+      'تم خصم 450 جنيه من بطاقتك، لا تشارك رمز التحقق مع أحد، للاستفسار: 19623',
+      'Your account 123456 is debited by EGP 450, ref code 9981',
+    ]) expect(t(body), body).toMatchObject({ status: 'understood', direction: 'out' });
+  });
+  it('keeps completed payments whose receipt carries a confirmation code', () => {
+    for (const body of [
+      'Payment of EGP 300.00 to WE was successful. Confirmation code: 837261',
+      'تم سداد 300 جنيه لفاتورة WE بنجاح. كود التأكيد 837261',
+    ]) expect(t(body), body).toMatchObject({ status: 'understood', direction: 'out', amount: 300 });
+  });
   it('reads decimal commas', () => {
     expect(t('EGP 450,50 debited')).toMatchObject({ amount: 450.5 });
     expect(t('EGP 1.500,00 debited')).toMatchObject({ amount: 1500 });

@@ -1,4 +1,5 @@
 import { parseNumber } from '@/core/utils/number';
+import { isOtp, OTP_MENTION } from './otp';
 import { BANK_TEMPLATES } from './templates';
 import { currencyNear, currencyOf, findAmounts, findDigits, toLatinDigits, type FoundAmount } from './text';
 import type { BankTemplate, IgnoreReason, ParsedSms, SmsDirection } from './types';
@@ -6,10 +7,6 @@ import type { BankTemplate, IgnoreReason, ParsedSms, SmsDirection } from './type
 /** An Arabic word on its own, not inside a longer one ("عرض" but not "معرض"). */
 const ar = (w: string) => `(?<![\\u0621-\\u064A])${w}(?![\\u0621-\\u064A])`;
 
-/** An OTP with its code: always dropped, even when it quotes the purchase it's for. */
-const OTP_CODE = /(\b(otp|one[- ]time password|verification code|passcode)\b|(رمز|كود) التحقق).{0,60}?(?<![*xX\d.,])\d{4,8}(?![\d.,]\d)/i;
-/** OTP wording without a code, e.g. a "never share your OTP" footer: dropped only when no transaction was read. */
-const OTP = /\b(otp|one[- ]time|verification code|passcode)\b|رمز التحقق|كود التحقق|كلمة المرور|لا تشارك/i;
 // "تم خصم" is a debit; "خصم 20%" is an offer, caught by the percent sign.
 const PROMO = new RegExp(`https?://|www\\.|\\d\\s*[%٪]|\\b(offers?|cashback|win)\\b|${ar('عرض')}|${ar('اربح')}`, 'i');
 const BALANCE = /\bbalance\b|رصيد/i;
@@ -31,11 +28,11 @@ function result(r: ParsedSms): ParsedSms {
   return Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined)) as ParsedSms;
 }
 
-/** Why a text isn't worth reviewing; texts with a readable transaction are only dropped for an OTP code. */
+/** Why a text isn't worth reviewing; texts with a readable transaction are only dropped when they send a code. */
 function ignoreReason(text: string, isTransaction: boolean, notDone: boolean): IgnoreReason | undefined {
-  if (OTP_CODE.test(text)) return 'otp';
+  if (isOtp(text)) return 'otp';
   if (isTransaction) return undefined;
-  if (OTP.test(text)) return 'otp';
+  if (OTP_MENTION.test(text)) return 'otp';
   if (PROMO.test(text)) return 'promo';
   if (BALANCE.test(text) && !notDone && !TOP_UP.test(text)) return 'balance';
   return undefined;
