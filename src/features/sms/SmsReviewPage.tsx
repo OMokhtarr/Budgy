@@ -11,15 +11,18 @@ import { useConverter, useLocale, useSettings } from '@/core/contexts/SettingsCo
 import { categoryFits, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import { dayTimeLabel } from '@/core/utils/period';
 import { closeIcon } from '@/shared/icons';
-import type { Flow, SmsPending } from '@/shared/models';
+import type { Flow, SmsPending, Transaction } from '@/shared/models';
 import type { TxDraft } from '@/features/transactions/txRecord';
 import { actionsFor, duplicatesOf, importMany } from './batch';
 import { useLearned, usePendingSms } from './hooks';
+import { takeOff, type TextPart } from './grouping';
 import { flowOf, resolveSkipped, suggestFor } from './learning';
 import PickerSheet, { type PickerItem, type PickerSection } from './PickerSheet';
+import PurchasePickerSheet from './PurchasePickerSheet';
 import { addPerson, cardDraft, choiceOf, isPerson, usablePick, type CardChoice, type CardPick } from './review';
 import ScanSheet from './ScanSheet';
 import SmsItemCard from './SmsItemCard';
+import TextsSheet from './TextsSheet';
 import { useBatchDuplicatePrompt } from './useBatchDuplicatePrompt';
 import { useSmsAvailability } from './useSmsAvailable';
 
@@ -55,6 +58,11 @@ export default function SmsReviewPage() {
   // Fingerprints of the texts picked for a batch action.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  // "Take off a purchase": the texts (the selection, or one card), then the purchase they come back on.
+  const [takeOffFps, setTakeOffFps] = useState<string[]>([]);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [target, setTarget] = useState<Transaction | null>(null);
+  const [textsOpen, setTextsOpen] = useState(false);
   const [presentAlert] = useIonAlert();
   const [presentToast] = useIonToast();
   const askDuplicates = useBatchDuplicatePrompt();
@@ -224,11 +232,41 @@ export default function SmsReviewPage() {
             addLabel: t('sms.newPerson'),
             onAdd: () => askNewPerson(picking.item),
           },
-          ...(flowOf(picking.item) === 'income' ? [moneyBackSection()] : []),
+          ...(flowOf(picking.item) === 'income'
+            ? [
+                moneyBackSection(),
+                { title: t('sms.takeOff'), items: [], addLabel: t('sms.pickPurchase'), onAdd: () => startTakeOff([picking.item.fingerprint]) },
+              ]
+            : []),
         ]
       : picking?.kind === 'batch' && picking.flow === 'income'
         ? [moneyBackSection()]
         : [];
+
+  const startTakeOff = (fingerprints: string[]) => {
+    setTakeOffFps(fingerprints);
+    setPurchaseOpen(true);
+  };
+  const takeOffParts = takeOffFps
+    .map((fp) => (items ?? []).find((x) => x.fingerprint === fp))
+    .filter((x) => x != null)
+    .map((item) => ({ item, accountId: choices.get(item.fingerprint)?.accountId }));
+  const takeOffReady = !!target && takeOffParts.length > 0 && takeOffParts.every((p) => p.accountId);
+
+  const saveTakeOff = async () => {
+    if (!target || !takeOffReady || busy) return;
+    setBusy(true);
+    try {
+      const rows = await takeOff(takeOffParts as TextPart[], target, conv);
+      setTextsOpen(false);
+      setSelected(new Set());
+      toast(t('sms.takenOff', { count: rows.length }));
+    } catch {
+      failed();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const sameCategory = () => {
     const first = chosen[0];
@@ -324,13 +362,36 @@ export default function SmsReviewPage() {
           <button className="b-btn b-btn--muted" onClick={() => toast(t('sms.comingSoon'))} disabled={busy || !actions.combine}>
             {t('sms.combine')}
           </button>
-          <button className="b-btn b-btn--muted" onClick={() => toast(t('sms.comingSoon'))} disabled={busy || !actions.takeOff}>
+          <button className="b-btn b-btn--muted" onClick={() => startTakeOff(chosen.map((x) => x.fingerprint))} disabled={busy || !actions.takeOff}>
             {t('sms.takeOff')}
           </button>
         </IonFooter>
       )}
 
       <ScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} />
+      <PurchasePickerSheet
+        isOpen={purchaseOpen}
+        onPick={(tx) => {
+          setTarget(tx);
+          setTextsOpen(true);
+        }}
+        onClose={() => setPurchaseOpen(false)}
+      />
+      <TextsSheet
+        isOpen={textsOpen}
+        title={t('sms.takeOffFrom', { name: target?.note || categoryName(categories?.find((c) => c.id === target?.categoryId)) })}
+        parts={takeOffParts}
+        onPickAccount={(fp) => {
+          const item = items?.find((x) => x.fingerprint === fp);
+          if (item) openPicker(item, 'account');
+        }}
+        footer={
+          <button className="b-btn b-btn--primary" onClick={() => void saveTakeOff()} disabled={busy || !takeOffReady}>
+            {t('common.save')}
+          </button>
+        }
+        onClose={() => setTextsOpen(false)}
+      />
       <PickerSheet
         isOpen={pickerOpen}
         title={pickerTitle}

@@ -626,6 +626,16 @@
     "skipThose": "تخطَّ هذه",
     "keepAll": "احتفظ بالكل",
     "moneyBackOn": "مبلغ مُسترد من",
-    "moneyBackNote": "يُخصم من مصروفات {{category}} — ولا يُحسب دخلًا."
+    "moneyBackNote": "يُخصم من مصروفات {{category}} — ولا يُحسب دخلًا.",
+    "takeOffFrom": "خصم من {{name}}",
+    "pickPurchase": "اختر المشتريات",
+    "searchPurchases": "ابحث في المشتريات",
+    "noPurchases": "لا مشتريات في آخر {{count}} يومًا",
+    "takenOff_zero": "لم يُخصم شيء",
+    "takenOff_one": "خُصمت من المشتريات",
+    "takenOff_two": "خُصمت رسالتان من المشتريات",
+    "takenOff_few": "خُصمت {{count}} رسائل من المشتريات",
+    "takenOff_many": "خُصمت {{count}} رسالة من المشتريات",
+    "takenOff_other": "خُصمت {{count}} رسالة من المشتريات"
   }
 }

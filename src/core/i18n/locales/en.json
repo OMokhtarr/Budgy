@@ -542,6 +542,12 @@
     "skipThose": "Skip those",
     "keepAll": "Keep all",
     "moneyBackOn": "Money back on",
-    "moneyBackNote": "Lowers {{category}} spending — it isn't counted as income."
+    "moneyBackNote": "Lowers {{category}} spending — it isn't counted as income.",
+    "takeOffFrom": "Take off {{name}}",
+    "pickPurchase": "Pick the purchase",
+    "searchPurchases": "Search purchases",
+    "noPurchases": "No purchases in the last {{count}} days",
+    "takenOff_one": "Taken off the purchase",
+    "takenOff_other": "{{count}} taken off the purchase"
   }
 }

@@ -29,7 +29,10 @@
     - Long-press a card to select it; tap toggles; ✕ and the back button leave selection.
     - Same category with one text missing an account: the others save, it stays selected with the category set.
     - The "some look already added" prompt: Skip those, Keep all, and closing it (nothing saved).
-    - Arabic (RTL) layout and dark mode of the selection bar.
+    - Money in picked as "Money back on" Food: the card's note shows, and after Confirm Food's spending drops.
+    - Take off a purchase from a hand-entered dinner, and from one in another currency: the category drops by
+      the texts' value and each account's balance moves by its own text.
+    - Arabic (RTL) layout and dark mode of the selection bar, the purchase picker and the texts sheet.
   - [ ] **Stage 3, before the SMS release:**
     - Recheck Play's live SMS policy.
     - Add `READ_SMS` to the main manifest.

@@ -1834,6 +1834,18 @@ ion-popover.b-popmenu { --width: 230px; }
 
 /* Account / category picker sheet: the selection ring in the app colour */
 .b-pickersheet { --accent: var(--ion-color-primary); }
+
+/* Several bank texts saved together: each with its account */
+.b-textssheet__part {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--b-border);
+}
+.b-textssheet__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-weight: 700; }
+.b-textssheet__text small { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .b-pickersheet__section {
   margin: 18px 4px 10px;
   font-size: 12px;
