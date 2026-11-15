@@ -27,6 +27,7 @@
     - Arabic (RTL) layout and dark mode of the new screens.
   - [ ] **Several texts at once, money back and combining — checks (need a debug build on a device):**
     - Long-press a card to select it; tap toggles; ✕ and the back button leave selection.
+    - Selecting money in and money out together shows the "one category needs…" hint under the buttons.
     - Same category with one text missing an account: the others save, it stays selected with the category set.
     - The "some look already added" prompt: Skip those, Keep all, and closing it (nothing saved).
     - Money in picked as "Money back on" Food: the card's note shows, and after Confirm Food's spending drops.

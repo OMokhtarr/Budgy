@@ -50,23 +50,28 @@ export function useTransactionsInRange(range: DateRange): Transaction[] | undefi
 export function useBalances(): Map<string, Amounts> | undefined {
   return useLiveQuery(async () => {
     const [accounts, txs] = await Promise.all([db.accounts.filter(alive).toArray(), db.transactions.filter(alive).toArray()]);
-    const map = new Map<string, Amounts>();
-    accounts.forEach((a) => map.set(a.id!, openingOf(a)));
-    const add = (id: string | undefined, cur: string, v: number) => {
-      const m = id == null ? undefined : map.get(id);
-      if (!m) return;
-      m[cur] = roundTo((m[cur] ?? 0) + v, cur);
-    };
-    for (const t of txs) {
-      if (t.type === 'expense') add(t.accountId, t.currency, -t.amount);
-      else if (t.type === 'income') add(t.accountId, t.currency, t.amount);
-      else {
-        add(t.accountId, t.currency, -t.amount);
-        add(t.toAccountId, t.toCurrency ?? t.currency, t.toAmount ?? t.amount);
-      }
-    }
-    return map;
+    return balancesOf(accounts, txs);
   });
+}
+
+/** Each account's balance per currency: its opening balances plus every transaction's movement on it. */
+export function balancesOf(accounts: Account[], txs: Transaction[]): Map<string, Amounts> {
+  const map = new Map<string, Amounts>();
+  accounts.forEach((a) => map.set(a.id!, openingOf(a)));
+  const add = (id: string | undefined, cur: string, v: number) => {
+    const m = id == null ? undefined : map.get(id);
+    if (!m) return;
+    m[cur] = roundTo((m[cur] ?? 0) + v, cur);
+  };
+  for (const t of txs) {
+    if (t.type === 'expense') add(t.accountId, t.currency, -t.amount);
+    else if (t.type === 'income') add(t.accountId, t.currency, t.amount);
+    else {
+      add(t.accountId, t.currency, -t.amount);
+      add(t.toAccountId, t.toCurrency ?? t.currency, t.toAmount ?? t.amount);
+    }
+  }
+  return map;
 }
 
 /** How much of each transfer to or from a debt was lending, over each debt's whole history. */

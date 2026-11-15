@@ -1,7 +1,8 @@
 import '@/test/setup-db';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { alive, BudgyDB } from '@/core/db/db';
-import { totalsOf } from '@/core/db/hooks';
+import { balancesOf, totalsOf } from '@/core/db/hooks';
+import { cardStatus } from '@/core/utils/creditCard';
 import type { SmsPending, Transaction } from '@/shared/models';
 import { changeOn } from '@/core/utils/lending';
 import { combineFlow, combineTexts, defaultNote, purchaseChoices, recentExpenses, takeOff } from './grouping';
@@ -172,6 +173,22 @@ describe('combineTexts', () => {
     await combineTexts(parts, { categoryId: 'food', moneyBack: false }, conv, database, [dupe]);
     expect(await database.smsPending.get('dupe')).toBeUndefined();
     expect(await database.smsSeen.get('dupe')).toMatchObject({ outcome: 'duplicate' });
+  });
+
+  it('leaves each account and card statement moving by exactly its own texts', async () => {
+    const card = { id: 'card', name: 'Card', type: 'card' as const, icon: 'card', color: '#000', currency: 'EGP', initialBalance: 0, order: 0, createdAt: 'x', credit: { statementDay: 1, dueDay: 20 } };
+    const bank = { ...card, id: 'bank', name: 'Bank', type: 'bank' as const, credit: undefined };
+    const parts = [
+      { item: out({ date: '2026-11-06T20:00:00.000Z' }), accountId: 'card' },
+      { item: item({ date: '2026-11-06T21:00:00.000Z' }), accountId: 'bank' },
+      { item: item({ fingerprint: 'refund', amount: 100, date: '2026-11-06T22:00:00.000Z' }), accountId: 'card' },
+    ];
+    const rows = await combineTexts(parts, { categoryId: 'food', moneyBack: false }, conv, database);
+
+    const balances = balancesOf([card, bank], rows);
+    expect(balances.get('card')).toEqual({ EGP: -500 });
+    expect(balances.get('bank')).toEqual({ EGP: 200 });
+    expect(cardStatus(card, rows, new Date('2026-11-10T12:00:00.000Z')).byCurrency.EGP).toMatchObject({ owed: 500, paid: 100 });
   });
 
   it('saves texts only once when run twice', async () => {
