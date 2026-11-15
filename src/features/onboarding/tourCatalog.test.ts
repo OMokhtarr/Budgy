@@ -90,16 +90,24 @@ const walk = (dir: string): string[] =>
   });
 
 describe('tour targets', () => {
-  it('every tour step has a target in the code', () => {
-    const src = walk('src')
+  // Refs named in a tourAttr(...) call; a plain string like t('accounts.add') does not count.
+  const targeted = new Set(
+    walk('src')
       .filter((f) => f.endsWith('.tsx'))
-      .map((f) => readFileSync(f, 'utf8'))
-      .join('\n');
-    const later = ['settings.tours']; // Task 7
+      .flatMap((f) => [...readFileSync(f, 'utf8').matchAll(/tourAttr\(([^)]*)\)/g)])
+      .flatMap((m) => [...m[1].matchAll(/'([^']+)'/g)].map((q) => q[1])),
+  );
+  const later = ['settings.tours']; // Task 7 adds it; drop the allow-list then
+
+  it('every tour step has a target in the code', () => {
     for (const [id, steps] of Object.entries(TOURS))
       for (const s of steps) {
-        if (later.includes(`${id}.${s.key}`)) continue;
-        expect(src.includes(`'${id}.${s.key}'`), `${id}.${s.key}`).toBe(true);
+        const ref = `${id}.${s.key}`;
+        if (later.includes(ref)) continue;
+        expect(targeted.has(ref), ref).toBe(true);
       }
+  });
+  it('the allow-list holds only refs that are still missing', () => {
+    for (const ref of later) expect(targeted.has(ref), `${ref} now has a target: drop it from the allow-list`).toBe(false);
   });
 });

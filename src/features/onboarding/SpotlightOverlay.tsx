@@ -157,6 +157,7 @@ export function SpotlightOverlay({
     // A sheet still sliding in focuses itself just after it lands, which would take focus from the card.
     let later: number | undefined;
     const refocus = () => {
+      window.clearTimeout(later);
       later = window.setTimeout(() => cardRef.current?.focus(), 50);
     };
     document.addEventListener('ionModalDidPresent', refocus);

@@ -45,7 +45,6 @@ const BACK = 'back:';
 /** "Bank texts": the scanned texts waiting for review, newest first. Long-press a card to act on several at once. */
 export default function SmsReviewPage() {
   const { t } = useTranslation();
-  usePageTour(['sms']);
   const locale = useLocale();
   const { pathname } = useLocation();
   const router = useIonRouter();
@@ -115,6 +114,7 @@ export default function SmsReviewPage() {
   // Waits for the availability check; and since hidden pages stay mounted in Ionic's stack, only
   // leaves while this page is the one showing.
   const allowed = available === true && smsImport.enabled;
+  usePageTour(['sms'], { ready: allowed && !!items });
   const blocked = available === false || (available === true && !smsImport.enabled);
   useEffect(() => {
     if (blocked && pathname === PATH) router.push('/categories', 'root', 'replace');
