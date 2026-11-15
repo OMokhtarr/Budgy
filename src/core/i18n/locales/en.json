@@ -440,7 +440,165 @@
   "onboarding": {
     "currencyTitle": "Which currency do you use?",
     "currencyHint": "Your accounts, totals and reports will use it. You can change it later in Settings.",
-    "continue": "Continue with {{currency}}"
+    "continue": "Continue with {{currency}}",
+    "slides": {
+      "welcome": {
+        "title": "Welcome to Budgy",
+        "body": "Track your money simply. Pick your language to begin."
+      },
+      "log": {
+        "title": "Log in two taps",
+        "body": "Tap a category, type the amount. Your budgets fill as you spend."
+      },
+      "money": {
+        "title": "All your money, one place",
+        "body": "Accounts, credit cards, debts and several currencies together."
+      },
+      "insight": {
+        "title": "See where it goes",
+        "body": "Transactions by day, the trend, and your budgets."
+      },
+      "private": {
+        "title": "Yours, on your phone",
+        "body": "No ads, and it works offline. Sign in to sync and back up."
+      },
+      "currency": {
+        "title": "Which currency do you use?",
+        "body": "Your accounts, totals and reports will use it. You can change it later in Settings."
+      }
+    },
+    "tours": {
+      "categories": {
+        "bubble": {
+          "title": "Tap to log spending",
+          "body": "Tap a category, type the amount, and it is saved."
+        },
+        "center": {
+          "title": "Expenses or income",
+          "body": "Tap the middle to switch between spending and income."
+        },
+        "period": {
+          "title": "Pick a period",
+          "body": "Tap to choose a period. Swipe the page to move between months."
+        },
+        "balance": {
+          "title": "Your balance",
+          "body": "Tap to choose which accounts count toward it."
+        },
+        "edit": {
+          "title": "Edit your categories",
+          "body": "Add or edit categories. In edit mode, drag to reorder them."
+        },
+        "menu": {
+          "title": "Your menu",
+          "body": "Profile, Settings, Data and Bank texts live here."
+        }
+      },
+      "accounts": {
+        "tabs": {
+          "title": "Accounts, Debts, Finances",
+          "body": "Swipe to move between the three tabs."
+        },
+        "transfer": {
+          "title": "Move money",
+          "body": "Transfer between your own accounts."
+        },
+        "add": {
+          "title": "Add an account",
+          "body": "Create a new account in any currency."
+        },
+        "row": {
+          "title": "Open an account",
+          "body": "Tap to edit it. A credit card opens its statement."
+        }
+      },
+      "transactions": {
+        "add": {
+          "title": "Add a transaction",
+          "body": "Tap here to log a new one."
+        },
+        "row": {
+          "title": "Select several",
+          "body": "Long-press a row to select more. Then delete, change, filter or see their sum."
+        },
+        "search": {
+          "title": "Search",
+          "body": "Find transactions by note, category or amount."
+        }
+      },
+      "overview": {
+        "tiles": {
+          "title": "Your totals",
+          "body": "Income, spending and what is left this period."
+        },
+        "trend": {
+          "title": "The trend",
+          "body": "See how your spending moves over time."
+        },
+        "budgets": {
+          "title": "Your budgets",
+          "body": "Watch each budget fill as you spend."
+        }
+      },
+      "editor": {
+        "fromto": {
+          "title": "From and to",
+          "body": "Where the money comes from and where it goes."
+        },
+        "keypad": {
+          "title": "Type the amount",
+          "body": "You can type sums too, like 120+35."
+        },
+        "date": {
+          "title": "Pick the date",
+          "body": "Tap to log it on another day."
+        },
+        "note": {
+          "title": "Add a note",
+          "body": "Optional, but it makes searching easier."
+        }
+      },
+      "settings": {
+        "currency": {
+          "title": "Main currency",
+          "body": "Totals use it. Rates for other currencies are below."
+        },
+        "tours": {
+          "title": "Tours and tips",
+          "body": "Replay the welcome and the page tips any time."
+        }
+      },
+      "sms": {
+        "scan": {
+          "title": "Scan bank texts",
+          "body": "Find spending in your bank messages."
+        },
+        "card": {
+          "title": "Handle texts in bulk",
+          "body": "Long-press to select several. File them in one category, combine them, or take money off a purchase."
+        }
+      }
+    },
+    "controls": {
+      "skip": "Skip",
+      "next": "Next",
+      "previous": "Previous",
+      "done": "Done",
+      "getStarted": "Get started",
+      "showMe": "Show me",
+      "step": "Step {{n}} of {{total}}",
+      "chooseLanguage": "Choose your language",
+      "english": "English",
+      "arabic": "العربية",
+      "whatsNew": "What's new"
+    },
+    "settings": {
+      "title": "Tours and tips",
+      "welcome": "Show the welcome again",
+      "replay": "Replay page tips",
+      "replayToast": "Tips will show again as you visit each page.",
+      "whatsNew": "What's new"
+    }
   },
   "reminder": {
     "never": "Your data is only on this phone. Back it up so you don't lose it.",
