@@ -14,7 +14,8 @@
     "edit": "تعديل",
     "save": "حفظ",
     "deleted": "حساب محذوف",
-    "uncategorized": "بدون فئة"
+    "uncategorized": "بدون فئة",
+    "pressBackToExit": "اضغط رجوع مرة أخرى للخروج"
   },
   "type": {
     "expense": "مصروف",
