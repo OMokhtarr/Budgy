@@ -20,8 +20,10 @@ import { TourProvider } from '@/features/onboarding/TourProvider';
 import type { OnboardingState } from '@/features/onboarding/onboardingStore';
 import BackupReminder from '@/features/data/BackupReminder';
 import AutoScan from '@/features/sms/AutoScan';
+import BackToExit from '@/features/navigation/BackToExit';
 
-setupIonicReact({ mode: 'ios' });
+// No edge-swipe back between pages: back only leaves the app (BackToExit) or the on-screen back arrows.
+setupIonicReact({ mode: 'ios', swipeBackEnabled: false });
 
 export default function App({ onboarding }: { onboarding: OnboardingState | null }) {
   const { t } = useTranslation();
@@ -74,6 +76,7 @@ export default function App({ onboarding }: { onboarding: OnboardingState | null
         </div>
         <BackupReminder />
         <AutoScan />
+        <BackToExit />
       </TxEditorProvider>
       </TourProvider>
       </IonReactRouter>

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
 import type { Transaction } from '@/shared/models';
 import type { SmsMessage } from './parser/types';
-import { autoScanDue, fingerprintOf, scanInbox, sinceOf } from './scan';
+import { autoScanDue, fingerprintOf, hasUnseenPending, markPendingSeen, scanInbox, sinceOf } from './scan';
 
 const database = new BudgyDB('t-scan');
 
@@ -66,6 +66,20 @@ describe('scanInbox', () => {
     await run([msg({ body: 'Payment of EGP 99.00 pending review' })]);
     const [row] = await database.smsPending.toArray();
     expect(row).toMatchObject({ status: 'unreadable', smsId: '1', address: 'CIB', date: '2026-11-03T10:15:00.000Z', amount: 99, currency: 'EGP' });
+  });
+
+  it('marks new texts unseen until the list is opened', async () => {
+    expect(await hasUnseenPending(database)).toBe(false);
+    await run([msg()]);
+    expect(await hasUnseenPending(database)).toBe(true);
+    await markPendingSeen(database);
+    expect(await hasUnseenPending(database)).toBe(false);
+    expect(await database.smsPending.count()).toBe(1);
+  });
+
+  it('counts texts pending from before the unseen mark as seen', async () => {
+    await database.smsPending.put({ fingerprint: 'old', smsId: '1', address: 'CIB', date: 'x', body: DEBIT, status: 'understood' });
+    expect(await hasUnseenPending(database)).toBe(false);
   });
 });
 

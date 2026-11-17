@@ -1,5 +1,5 @@
 export type SmsDirection = 'out' | 'in';
-export type IgnoreReason = 'otp' | 'promo' | 'balance';
+export type IgnoreReason = 'otp' | 'security' | 'promo' | 'balance';
 
 /** A text as read from the inbox (the native plugin returns this shape). */
 export interface SmsMessage {

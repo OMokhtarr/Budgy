@@ -91,10 +91,23 @@ export async function scanInbox(opts: { since: number; senders: string[] }, deps
       const { status, amount, currency, direction, merchant, digits } = parsed;
       rows.push({
         fingerprint, smsId: msg.id, address: msg.address, date: new Date(msg.date).toISOString(), body: msg.body,
-        status, amount, currency, direction, merchant, digits,
+        status, amount, currency, direction, merchant, digits, unseen: true,
       });
     }
     await database.smsPending.bulkPut(rows);
     return { added: rows.length };
+  });
+}
+
+/** Whether a scan added texts that Bank texts hasn't shown yet. */
+export async function hasUnseenPending(database: BudgyDB = db): Promise<boolean> {
+  return (await database.smsPending.filter((row) => !!row.unseen).count()) > 0;
+}
+
+/** Marks every pending text as shown, keeping it in the list. */
+export async function markPendingSeen(database: BudgyDB = db): Promise<void> {
+  await database.transaction('rw', database.smsPending, async () => {
+    const rows = await database.smsPending.filter((row) => !!row.unseen).toArray();
+    await database.smsPending.bulkPut(rows.map(({ unseen: _, ...row }) => row));
   });
 }

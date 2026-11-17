@@ -59,6 +59,15 @@ const SHARE_WARNING = new RegExp(
 /** Any OTP wording, e.g. a "never share your OTP" footer: only trusted when no transaction was read. */
 export const OTP_MENTION = new RegExp(`${OTP_WORD}|${CONFIRM_WORD}|كلمة المرور|كلمة السر|لا تشارك|\\bone[- ]time\\b`, 'i');
 
+/** Words that name some code or PIN, OTP or not. Only trusted on texts with no money in them. */
+const CODE_WORD = /\b(?:code|pin|password|verify|verification)\b|رمز|كود|تحقق|التحقق/i;
+const LONE_CODE = new RegExp(CODE);
+
+/** Whether a Latin-digit text with no money amount names a code and carries one, e.g. "Your InstaPay code: 482913". */
+export function sendsBareCode(text: string): boolean {
+  return CODE_WORD.test(text) && LONE_CODE.test(text);
+}
+
 /** Replaces each span with filler of the same length, so later indexes still line up. */
 const blank = (s: string) => '¤'.repeat(s.length);
 

@@ -1,5 +1,5 @@
 import { parseNumber } from '@/core/utils/number';
-import { isOtp, OTP_MENTION } from './otp';
+import { isOtp, OTP_MENTION, sendsBareCode } from './otp';
 import { BANK_TEMPLATES } from './templates';
 import { currencyNear, currencyOf, findAmounts, findDigits, toLatinDigits, type FoundAmount } from './text';
 import type { BankTemplate, IgnoreReason, ParsedSms, SmsDirection } from './types';
@@ -9,6 +9,9 @@ const ar = (w: string) => `(?<![\\u0621-\\u064A])${w}(?![\\u0621-\\u064A])`;
 
 // "تم خصم" is a debit; "خصم 20%" is an offer, caught by the percent sign.
 const PROMO = new RegExp(`https?://|www\\.|\\d\\s*[%٪]|\\b(offers?|cashback|win)\\b|${ar('عرض')}|${ar('اربح')}`, 'i');
+/** Sign-ins, new devices and password changes: account security notices, never a transaction. */
+const SECURITY =
+  /\b(?:log(?:ged)?[- ]?ins?|sign(?:ed)?[- ]?ins?|new device|password (?:was |has been )?(?:changed|reset|updated))\b|تسجيل (?:ال)?دخول|تم الدخول|دخولك|جهاز جديد|تغيير كلمة (?:المرور|السر)/i;
 const BALANCE = /\bbalance\b|رصيد/i;
 /** Top-ups ("تم شحن رصيد") talk about رصيد without being balance notices. */
 const TOP_UP = /\b(recharge|top[- ]?up)\b|شحن/i;
@@ -33,6 +36,11 @@ function ignoreReason(text: string, isTransaction: boolean, notDone: boolean): I
   if (isOtp(text)) return 'otp';
   if (isTransaction) return undefined;
   if (OTP_MENTION.test(text)) return 'otp';
+  // Without money in the text, a sign-in or a code is all it can be about.
+  if (!findAmounts(text).length) {
+    if (SECURITY.test(text)) return 'security';
+    if (sendsBareCode(text)) return 'otp';
+  }
   if (PROMO.test(text)) return 'promo';
   if (BALANCE.test(text) && !notDone && !TOP_UP.test(text)) return 'balance';
   return undefined;
