@@ -119,6 +119,30 @@ describe('parseSms review cases', () => {
     expect(t('EGP 450,50 debited')).toMatchObject({ amount: 450.5 });
     expect(t('EGP 1.500,00 debited')).toMatchObject({ amount: 1500 });
   });
+  it('drops sign-in and other security notices', () => {
+    for (const body of [
+      'You have successfully logged in to CIB Internet Banking on 16/11/2026 10:15',
+      'A new login to your mobile banking was detected on 16/11/2026 10:15. If this was not you call 19666',
+      'You signed in to the NBE app from a new device',
+      'تم تسجيل الدخول إلى الأهلي نت بنجاح يوم 16/11/2026',
+      'تم الدخول على تطبيق بنك مصر من جهاز جديد',
+      'Your internet banking password was changed successfully',
+    ]) expect(t(body), body).toEqual({ status: 'ignored', reason: 'security' });
+  });
+  it('drops codes with no money in them, whatever the code is called', () => {
+    for (const body of [
+      'Your code is 482913',
+      'Your InstaPay code: 482913',
+      'PIN 4821 for your card activation',
+      'رمز الدخول الخاص بك 482913',
+      'كود 4821 لإتمام العملية',
+      'Verify your number with 482913',
+    ]) expect(t(body), body).toEqual({ status: 'ignored', reason: 'otp' });
+  });
+  it('keeps texts with money that mention signing in or a code', () => {
+    expect(t('Card **4821 debited EGP 450.00 at UBER. Log in to the app for details')).toMatchObject({ status: 'understood', amount: 450 });
+    expect(t('Transfer of EGP 500.00 to AHMED, ref code 1234567').status).toBe('unreadable');
+  });
   it('lets a template read texts the filters would drop', () => {
     const tpl: BankTemplate = { id: 't', sender: /^TESTBANK$/i, formats: [{ match: /^POS/, direction: 'out', amount: /AMT:([\d.,]+)/ }] };
     expect(parseSms('TestBank', 'POS AMT:99.5 never share your OTP', [tpl])).toMatchObject({ status: 'understood', amount: 99.5 });

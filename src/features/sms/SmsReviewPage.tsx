@@ -21,6 +21,7 @@ import { flowOf, resolveSkipped, suggestFor } from './learning';
 import PickerSheet, { type PickerItem, type PickerSection } from './PickerSheet';
 import PurchasePickerSheet from './PurchasePickerSheet';
 import { addPerson, cardDraft, choiceOf, isPerson, usablePick, type CardChoice, type CardPick } from './review';
+import { markPendingSeen } from './scan';
 import ScanSheet from './ScanSheet';
 import SmsItemCard from './SmsItemCard';
 import TextsSheet from './TextsSheet';
@@ -119,6 +120,12 @@ export default function SmsReviewPage() {
   useEffect(() => {
     if (blocked && pathname === PATH) router.push('/categories', 'root', 'replace');
   }, [blocked, pathname, router]);
+
+  // Texts on screen are seen: opening the app stops coming here until a scan adds new ones.
+  const showingUnseen = allowed && pathname === PATH && !!items?.some((x) => x.unseen);
+  useEffect(() => {
+    if (showingUnseen) void markPendingSeen();
+  }, [showingUnseen]);
 
   // Texts resolved (or gone) drop out of the selection.
   useEffect(() => {

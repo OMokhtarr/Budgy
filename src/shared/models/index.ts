@@ -157,6 +157,8 @@ export interface SmsPending {
   direction?: SmsDirection;
   merchant?: string;
   digits?: string;
+  /** Set by the scan that added it, cleared once Bank texts has shown it; opening the app goes there while any is set. */
+  unseen?: true;
 }
 
 /** A text the user dismissed or skipped as already added. Local only. */
