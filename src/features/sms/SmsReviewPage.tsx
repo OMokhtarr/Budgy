@@ -269,7 +269,7 @@ export default function SmsReviewPage() {
           ...(flowOf(picking.item) === 'income'
             ? [
                 moneyBackSection(),
-                { title: t('sms.takeOff'), items: [], addLabel: t('sms.pickPurchase'), onAdd: () => startTakeOff([picking.item.fingerprint]) },
+                { title: t('sms.takeOff'), items: [], addLabel: t('sms.pickPurchase'), onAdd: () => void requirePro(() => startTakeOff([picking.item.fingerprint])) },
               ]
             : []),
         ]
