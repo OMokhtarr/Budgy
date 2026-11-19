@@ -10,6 +10,29 @@ Before adding a section, raise `versionCode` (and `versionName` if it's a new ve
 
 ---
 
+## Next: the release that turns on Budgy Pro (raise versionCode first)
+
+**Draft, not for a build yet.** Use it for the release built with `VITE_PRO_GATE=on`. Raise `versionCode` (and
+`versionName`) first, then put them in this heading and the release name. Existing testers get promotional Pro
+from the owner (`TODO.md`), so say that sync is now part of Budgy Pro.
+
+```
+<en-US>
+• Budgy Pro is here: bank texts and sync across your phones are now part of Budgy Pro
+• Start with a free trial, then choose monthly, yearly or lifetime
+• Everything else stays free, including credit cards
+• Your data stays on your phone. Without Pro, sync pauses and bank texts stop being read
+</en-US>
+<ar>
+• وصل Budgy Pro: الرسائل المصرفية والمزامنة بين هواتفك أصبحت الآن ضمن Budgy Pro
+• جرّبه مجانًا خلال فترة تجريبية، ثم اختر الاشتراك الشهري أو السنوي أو مدى الحياة
+• كل ما عدا ذلك يبقى مجانيًا، ومنه بطاقات الائتمان
+• تبقى بياناتك على هاتفك. وبدون Pro تتوقف المزامنة ولا تُقرأ الرسائل المصرفية
+</ar>
+```
+
+---
+
 ## 1.0 (versionCode 1) — 2026-11-14
 
 **Release name:** `1 (1.0)`

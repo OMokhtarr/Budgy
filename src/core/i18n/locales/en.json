@@ -464,7 +464,8 @@
       },
       "private": {
         "title": "Yours, on your phone",
-        "body": "No ads, and it works offline. Sign in to sync and back up."
+        "body": "No ads, and it works offline. Sign in to sync and back up.",
+        "bodyPro": "No ads, and it works offline. Budgy Pro adds bank texts and sync across your phones."
       },
       "currency": {
         "title": "Which currency do you use?",
