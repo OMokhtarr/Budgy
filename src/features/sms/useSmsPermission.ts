@@ -14,6 +14,8 @@ export interface SmsPermission {
   checkFailed: boolean;
   /** Changes after a cancelled or refused turn-on, to remount a switch so it shows the saved state again. */
   toggleKey: number;
+  /** Remounts the switch so it shows the saved state again (a turn-on that needed Pro didn't go through). */
+  resetToggle: () => void;
   /** Turns reading on, first showing the disclosure and asking for the permission when it isn't granted. */
   turnOn: () => void;
   /** Saves a change to the bank texts settings. */
@@ -102,5 +104,7 @@ export function useSmsPermission(): SmsPermission {
       ],
     });
 
-  return { permission, refused, checkFailed, toggleKey, turnOn, set };
+  const resetToggle = () => setToggleKey((k) => k + 1);
+
+  return { permission, refused, checkFailed, toggleKey, turnOn, resetToggle, set };
 }

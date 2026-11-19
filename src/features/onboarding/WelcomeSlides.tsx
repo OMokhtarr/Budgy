@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useIonToast } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '@/core/contexts/SettingsContext';
+import { isProGateOn } from '@/core/pro/gate';
 import { guessCurrency } from './currencyGuess';
 import CurrencyChips from './CurrencyChips';
 import { SlideDeck, type DeckSlide } from './SlideDeck';
@@ -50,7 +51,7 @@ export default function WelcomeSlides({ withCurrency, onDone }: { withCurrency: 
     key: s.id,
     art: s.art,
     title: t(`onboarding.slides.${s.id}.title`),
-    body: t(`onboarding.slides.${s.id}.body`),
+    body: t(`onboarding.slides.${s.id}.${s.id === 'private' && isProGateOn() ? 'bodyPro' : 'body'}`),
     extra: extras[s.id],
   }));
 

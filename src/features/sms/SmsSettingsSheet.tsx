@@ -2,6 +2,10 @@ import { IonChip, IonIcon, IonItem, IonLabel, IonList, IonModal, IonNote, IonTog
 import { add, closeCircle, closeOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '@/core/contexts/SettingsContext';
+import { usePro } from '@/core/pro/ProContext';
+import { showsProLock } from '@/core/pro/rules';
+import { useRequirePro } from '@/core/pro/useRequirePro';
+import ProBadge from '@/shared/components/ProBadge';
 import { useLearned } from './hooks';
 import { addKeyword, removeKeyword } from './keywordList';
 import { clearIgnoredPending } from './scan';
@@ -75,6 +79,8 @@ export default function SmsSettingsSheet({ isOpen, onClose, perm }: { isOpen: bo
   const linkCount = useLearned()?.links.length ?? 0;
   const [presentToast] = useIonToast();
   const { set } = perm;
+  const pro = usePro();
+  const requirePro = useRequirePro();
   const toast = (message: string, color = 'medium') => void presentToast({ message, duration: 2600, position: 'top', color });
 
   const setIgnoreWords = (ignoreWords: string[]) => {
@@ -84,6 +90,17 @@ export default function SmsSettingsSheet({ isOpen, onClose, perm }: { isOpen: bo
     clearIgnoredPending(ignoreWords)
       .then((removed) => removed && toast(t('sms.ignoreRemoved', { count: removed })))
       .catch(() => toast(t('sms.actionFailed'), 'danger'));
+  };
+
+  // Turning on is Pro; without it the switch snaps back off unless the paywall ended subscribed.
+  const turnOn = () => {
+    let ran = false;
+    void requirePro(() => {
+      ran = true;
+      perm.turnOn();
+    }).then(() => {
+      if (!ran) perm.resetToggle();
+    });
   };
 
   return (
@@ -101,9 +118,9 @@ export default function SmsSettingsSheet({ isOpen, onClose, perm }: { isOpen: bo
               <IonToggle
                 key={perm.toggleKey}
                 checked={smsImport.enabled}
-                onIonChange={(e) => (e.detail.checked ? perm.turnOn() : set({ enabled: false }))}
+                onIonChange={(e) => (e.detail.checked ? turnOn() : set({ enabled: false }))}
               >
-                {t('sms.readTexts')}
+                {t('sms.readTexts')} {showsProLock(pro) && <ProBadge />}
               </IonToggle>
             </IonItem>
             {smsImport.enabled && (

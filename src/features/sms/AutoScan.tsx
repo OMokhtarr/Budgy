@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useIonRouter } from '@ionic/react';
 import { useLocation } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
+import { proAllows } from '@/core/pro/rules';
+import { usePro } from '@/core/pro/ProContext';
 import { useSettings } from '@/core/contexts/SettingsContext';
 import { useTours } from '@/features/onboarding/TourProvider';
 import { SmsInbox } from './native';
@@ -25,9 +27,10 @@ export default function AutoScan() {
   const available = useSmsAvailable();
   const { smsImport } = useSettings();
   const runScan = useInboxScan();
+  const pro = usePro();
   // Waits for a bank sender: a scan with none finds nothing but still moves lastScanAt, so the first real
   // scan would no longer reach back a week.
-  const on = available && smsImport.enabled && !!smsImport.autoScan && smsImport.senders.length > 0;
+  const on = available && smsImport.enabled && !!smsImport.autoScan && smsImport.senders.length > 0 && proAllows(pro);
   // Read when the app opens, so a new lastScanAt doesn't re-register the listener.
   const lastScanAt = useRef(smsImport.lastScanAt);
   lastScanAt.current = smsImport.lastScanAt;

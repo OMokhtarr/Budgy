@@ -9,7 +9,11 @@ import { useLocation } from 'react-router-dom';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useConverter, useLocale, useSettings } from '@/core/contexts/SettingsContext';
 import { categoryFits, useAccounts, useCategories, useNames } from '@/core/db/hooks';
+import { usePro } from '@/core/pro/ProContext';
+import { showsProLock } from '@/core/pro/rules';
+import { usePaywall, useRequirePro } from '@/core/pro/useRequirePro';
 import { dayTimeLabel } from '@/core/utils/period';
+import ProBadge from '@/shared/components/ProBadge';
 import { closeIcon } from '@/shared/icons';
 import type { Flow, SmsPending, Transaction } from '@/shared/models';
 import type { TxDraft } from '@/features/transactions/txRecord';
@@ -265,7 +269,7 @@ export default function SmsReviewPage() {
           ...(flowOf(picking.item) === 'income'
             ? [
                 moneyBackSection(),
-                { title: t('sms.takeOff'), items: [], addLabel: t('sms.pickPurchase'), onAdd: () => startTakeOff([picking.item.fingerprint]) },
+                { title: t('sms.takeOff'), items: [], addLabel: t('sms.pickPurchase'), onAdd: () => void requirePro(() => startTakeOff([picking.item.fingerprint])) },
               ]
             : []),
         ]
@@ -352,6 +356,9 @@ export default function SmsReviewPage() {
     }
   };
 
+  const pro = usePro();
+  const requirePro = useRequirePro();
+  const paywall = usePaywall();
   const sameCategory = () => {
     const first = chosen[0];
     if (!first) return;
@@ -360,7 +367,7 @@ export default function SmsReviewPage() {
   };
 
   const scanButton = (
-    <button className="b-btn b-btn--primary b-scanbtn" {...tourAttr('sms.scan')} onClick={() => setScanOpen(true)}>
+    <button className="b-btn b-btn--primary b-scanbtn" {...tourAttr('sms.scan')} onClick={() => void requirePro(() => setScanOpen(true))}>
       <IonIcon icon={searchOutline} />
       {t('sms.scan')}
     </button>
@@ -412,8 +419,8 @@ export default function SmsReviewPage() {
               <IonIcon icon={chatboxEllipsesOutline} />
               <strong>{t('sms.offTitle')}</strong>
               <p>{t('sms.offBody')}</p>
-              <button className="b-btn b-btn--primary b-scanbtn" onClick={perm.turnOn}>
-                {t('sms.turnOn')}
+              <button className="b-btn b-btn--primary b-scanbtn" onClick={() => void requirePro(perm.turnOn)}>
+                {t('sms.turnOn')} {showsProLock(pro) && <ProBadge />}
               </button>
               <PermissionNotes perm={perm} />
             </div>
@@ -421,6 +428,14 @@ export default function SmsReviewPage() {
         )}
         {allowed && items && (
           <div className="b-page">
+            {showsProLock(pro) && (
+              <div className="b-card b-smspro">
+                <p>{t('sms.proBanner')}</p>
+                <button className="b-btn b-btn--primary b-scanbtn" onClick={() => void paywall()}>
+                  {t('pro.renew')}
+                </button>
+              </div>
+            )}
             {!selecting && (count > 0 || smsImport.lastScanAt) && (
               <div className="b-smsbar">
                 <p className="b-muted b-smslast">
@@ -467,13 +482,13 @@ export default function SmsReviewPage() {
         <IonFooter className="b-smsbatch">
           {/* Only texts that all go the same way can share a category: say so rather than just greying it out. */}
           {chosen.length > 0 && !actions.sameCategory && <p className="b-smsbatch__hint">{t('sms.sameCategoryHint')}</p>}
-          <button className="b-btn b-btn--primary" onClick={sameCategory} disabled={busy || !actions.sameCategory}>
+          <button className="b-btn b-btn--primary" onClick={() => void requirePro(sameCategory)} disabled={busy || !actions.sameCategory}>
             {t('sms.sameCategory')}
           </button>
-          <button className="b-btn b-btn--muted" onClick={startCombine} disabled={busy || !actions.combine}>
+          <button className="b-btn b-btn--muted" onClick={() => void requirePro(startCombine)} disabled={busy || !actions.combine}>
             {t('sms.combine')}
           </button>
-          <button className="b-btn b-btn--muted" onClick={() => startTakeOff(chosen.map((x) => x.fingerprint))} disabled={busy || !actions.takeOff}>
+          <button className="b-btn b-btn--muted" onClick={() => void requirePro(() => startTakeOff(chosen.map((x) => x.fingerprint)))} disabled={busy || !actions.takeOff}>
             {t('sms.takeOff')}
           </button>
         </IonFooter>

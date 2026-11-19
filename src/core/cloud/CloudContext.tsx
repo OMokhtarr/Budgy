@@ -6,6 +6,8 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import type { User } from '@supabase/supabase-js';
 import { useSettings } from '@/core/contexts/SettingsContext';
+import { usePro } from '@/core/pro/ProContext';
+import { syncGate } from '@/core/pro/rules';
 import { SYNCED_TABLES, db, seedIfEmpty } from '@/core/db/db';
 import { SupabaseRemote, cloudEnabled, supabase } from './client';
 import {
@@ -15,21 +17,33 @@ import {
   takeRedirectError,
   type Provider,
 } from './auth';
+import { useSessionUser } from './useSessionUser';
 import { hasWorkToSync, clearLocal, hasLocalTransactions, syncOnce, type SettingsPort, type SyncState } from './sync';
 
 /**
  * Who is signed in, and the backup of their data to the account. Sync runs after sign-in and on start,
  * and a few seconds after each local change. When the app comes back to the front, when the connection
  * returns, and every few minutes while open, it only runs if something is left to send or finish.
+ * With the Budgy Pro gate on, sync waits for Pro and pauses without it; local edits stay dirty until it returns.
  * Without cloud settings in the build (see `.env.example`) this is all off.
  */
 
-export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error';
+/** "Remove from this device" was refused because sync is still waiting for Budgy Pro's answer; nothing changed. */
+export class SyncWaitingError extends Error {
+  constructor() {
+    super('Sync is waiting for Budgy Pro; not removing local data');
+    this.name = 'SyncWaitingError';
+  }
+}
+
+export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error' | 'paused';
 
 interface CloudValue {
   enabled: boolean;
   user: User | null;
   status: SyncStatus;
+  /** Signed in, but sync can't run now: paused without Pro, or still waiting for RevenueCat's answer. */
+  syncBlocked: boolean;
   lastSyncedAt?: string;
   signIn: (provider: Provider) => Promise<void>;
   /** `keepLocal: false` also removes the data from this device (it stays in the account). */
@@ -88,9 +102,16 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const settings = useSettings();
   const [presentAlert] = useIonAlert();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useSessionUser();
   const [status, setStatus] = useState<SyncStatus>(cloudEnabled ? 'idle' : 'off');
   const [lastSyncedAt, setLastSyncedAt] = useState<string>();
+
+  // Sync needs Pro. ProProvider reads the session on its own, so for a render it can still be answering for the
+  // previous account: wait until it's about this one. With the gate off sync doesn't depend on ProProvider at all.
+  const pro = usePro();
+  const gate = !pro.gateOn ? 'go' : pro.accountId === (user?.id ?? null) ? syncGate(pro) : 'wait';
+  const gateRef = useRef(gate);
+  gateRef.current = gate;
 
   // Sync reads the latest settings through a ref: it runs outside React's render cycle.
   const settingsRef = useRef(settings);
@@ -119,17 +140,6 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
 
   // ── Session ──
   const [redirectError, setRedirectError] = useState(() => (cloudEnabled ? takeRedirectError() : undefined));
-  useEffect(() => {
-    if (!supabase) return;
-    void supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    // Also fires SIGNED_OUT when the session ends elsewhere (account deleted on another phone,
-    // refresh token revoked): the app just carries on offline with the data it has.
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Same user, new token: keep the object so sync effects don't restart on every refresh.
-      setUser((prev) => (session?.user && prev?.id === session.user.id ? prev : (session?.user ?? null)));
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     setLastSyncedAt(user ? loadState(user.id).lastSyncedAt : undefined);
@@ -162,7 +172,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   /** Set while `replaceLocal` swaps the data: no sync may start. */
   const paused = useRef(false);
   const sync = useCallback(async () => {
-    if (!supabase || !user || paused.current) return;
+    if (!supabase || !user || paused.current || gateRef.current !== 'go') return;
     if (running.current) {
       again.current = true;
       return;
@@ -209,10 +219,10 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, port, askHowToMerge, clearLocalData]);
 
-  // After sign-in, and on start with a saved session.
+  // After sign-in, on start with a saved session, and the moment Pro arrives (or returns).
   useEffect(() => {
-    if (user) void sync();
-  }, [user, sync]);
+    if (user && gate === 'go') void sync();
+  }, [user, gate, sync]);
 
   // A few seconds after local changes (records or synced settings) — batched.
   const pending = useLiveQuery(async () => {
@@ -266,6 +276,9 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(
     async (keepLocal: boolean) => {
       if (!user) return;
+      // Sync can't upload while it waits for Pro's answer, so removing now could lose unsent edits: refuse and
+      // stay signed in. (Paused is different: the user was told those edits aren't in the account.)
+      if (!keepLocal && gateRef.current === 'wait') throw new SyncWaitingError();
       // Upload anything not sent yet, so removing it here loses nothing.
       if (!keepLocal) await sync();
       await providerSignOut();
@@ -305,17 +318,19 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     () => ({
       enabled: cloudEnabled,
       user,
-      status: !cloudEnabled ? 'off' : status,
+      status: !cloudEnabled ? 'off' : user && gate === 'paused' ? 'paused' : status,
+      syncBlocked: cloudEnabled && !!user && gate !== 'go',
       lastSyncedAt,
       signIn,
       signOut,
       deleteAccount,
+      // A no-op while paused: sync() checks the gate.
       syncNow: () => void sync(),
       replaceLocal,
       redirectError,
       clearRedirectError: () => setRedirectError(undefined),
     }),
-    [user, status, lastSyncedAt, signIn, signOut, deleteAccount, sync, replaceLocal, redirectError],
+    [user, gate, status, lastSyncedAt, signIn, signOut, deleteAccount, sync, replaceLocal, redirectError],
   );
 
   return <CloudContext.Provider value={value}>{children}</CloudContext.Provider>;

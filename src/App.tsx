@@ -4,6 +4,7 @@ import { Redirect, Route } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TxEditorProvider } from '@/core/contexts/TxEditorContext';
 import { CloudProvider } from '@/core/cloud/CloudContext';
+import { ProProvider } from '@/core/pro/ProContext';
 import { accountsIcon, categoriesIcon, overviewIcon, transactionsIcon } from '@/shared/icons';
 
 import AccountsPage from '@/features/accounts/AccountsPage';
@@ -30,6 +31,7 @@ export default function App({ onboarding }: { onboarding: OnboardingState | null
 
   return (
     <IonApp>
+      <ProProvider>
       <CloudProvider>
       <IonReactRouter>
       {/* Inside the router: "Show me" navigates, and the editor asks for its tour. */}
@@ -81,6 +83,7 @@ export default function App({ onboarding }: { onboarding: OnboardingState | null
       </TourProvider>
       </IonReactRouter>
       </CloudProvider>
+      </ProProvider>
     </IonApp>
   );
 }

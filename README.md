@@ -20,6 +20,7 @@ offline-only and shows no sign-in at all.
 | **Overview** | Income, expenses, net, average spend per day, trend bars, budget progress, and a breakdown by category and subcategory. |
 | **Header** | Total balance of the accounts in the accounts filter (tap it to change the filter). A warning appears when some currency has no exchange rate. |
 | **Side menu** | Profile (name, colour, account & sync), Settings, Data, Rate us, Support, About. |
+| **Budgy Pro** | Bank texts (Android) and sign-in with sync are Budgy Pro: monthly, yearly or lifetime, with a free trial on the subscriptions. Everything else, credit cards included, stays free. When Pro ends, data stays on the phone, sync pauses and bank-text scanning stops. Switched by `VITE_PRO_GATE` (`off`, `test` or `on`); with it `off`, nothing is gated. |
 | **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week. |
 | **Data** | CSV export and import (adds to your data, skipping rows already there), backup / restore (a JSON file, version 5), erase all. |
 
@@ -74,6 +75,8 @@ The Google Play icon, feature graphic and screenshots are in `store/`. To regene
 [scripts/store-assets/README.md](scripts/store-assets/README.md).
 
 ## Cloud sync (Supabase)
+
+When `VITE_PRO_GATE=on`, sign-in and sync need Budgy Pro. Without it, sync pauses and data stays on the device.
 
 - **Schema:** `supabase/migrations/`.
   - Tables: `accounts`, `categories`, `transactions` and `settings`.

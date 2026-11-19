@@ -464,7 +464,8 @@
       },
       "private": {
         "title": "Yours, on your phone",
-        "body": "No ads, and it works offline. Sign in to sync and back up."
+        "body": "No ads, and it works offline. Sign in to sync and back up.",
+        "bodyPro": "No ads, and it works offline. Budgy Pro adds bank texts and sync across your phones."
       },
       "currency": {
         "title": "Which currency do you use?",
@@ -611,7 +612,8 @@
   },
   "cloud": {
     "title": "Account & sync",
-    "hint": "Sign in to keep a copy of your data in your account, so you can get it back if you change phones or reinstall Budgy. Without an account, everything stays on this device.",
+    "hint": "Sign-in and sync are part of Budgy Pro. They keep a copy of your data in your account, so you can get it back if you change phones or reinstall Budgy. Without an account, everything stays on this device.",
+    "hintNoGate": "Sign in to keep a copy of your data in your account, so you can get it back if you change phones or reinstall Budgy. Without an account, everything stays on this device.",
     "google": "Continue with Google",
     "apple": "Continue with Apple",
     "signedInAs": "Signed in as {{email}}",
@@ -638,10 +640,17 @@
     "mergeTitle": "This account already has data",
     "mergeMessage": "This device has data too. Merge both, or replace this device's data with the account's?",
     "mergeBoth": "Merge both",
-    "useCloud": "Use the account's data"
+    "useCloud": "Use the account's data",
+    "paused": "Sync paused",
+    "pausedEnded": "Sync is paused: Budgy Pro has ended",
+    "pausedNeverPro": "Sync is part of Budgy Pro",
+    "alreadyPro": "Already have Pro? Sign in",
+    "signOutPausedMessage": "Changes you made since sync paused aren't in your account. Remove them from this device anyway?",
+    "waitingForPro": "Budgy is still checking your Budgy Pro. Try again in a moment."
   },
   "sms": {
     "readTexts": "Read bank texts",
+    "proBanner": "Bank texts are part of Budgy Pro. Your texts are kept here until you renew.",
     "autoScan": "Scan when the app opens",
     "permission": "SMS permission",
     "permissionAllowed": "Allowed",
@@ -741,5 +750,29 @@
     "ignoreHint": "Texts that contain any of these words are skipped.",
     "ignoreRemoved_one": "Removed 1 waiting text with this word",
     "ignoreRemoved_other": "Removed {{count}} waiting texts with this word"
+  },
+  "pro": {
+    "unavailable": "Budgy Pro isn't available right now. Check your connection and try again.",
+    "failed": "The purchase didn't go through. You weren't charged.",
+    "renew": "Renew",
+    "cancelInStoreFirst": "Your Budgy Pro subscription keeps running until you cancel it in Google Play or the App Store.",
+    "title": "Budgy Pro",
+    "pitch": "Bank texts, and sync across your phones",
+    "get": "Get Pro",
+    "restore": "Restore purchases",
+    "restoredNone": "No Budgy Pro purchase found for this store account",
+    "restored": "Budgy Pro restored",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "lifetime": "Lifetime",
+    "trial": "Free trial",
+    "renewsOn": "Renews on {{date}}",
+    "endsOn": "Ends on {{date}}",
+    "billingIssue": "There's a problem with your payment. Check it in the store.",
+    "manage": "Manage",
+    "supportId": "Support ID",
+    "copied": "Copied",
+    "checkFailed": "Couldn't check Budgy Pro. Check your connection and try again.",
+    "tryAgain": "Try again"
   }
 }

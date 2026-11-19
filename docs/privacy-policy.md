@@ -2,10 +2,11 @@
 
 > **Published at https://omokhtarr.github.io/Budgy/privacy.html from the `gh-pages` branch.** When this
 > changes, update `privacy.html` and `privacy-ar.html` there too. Keep it in line with what the app actually
-> does: it matches the code as of 2026-11-11 (optional Google/Apple sign-in, cloud sync on Supabase, optional
-> SMS import on Android, no ads, no analytics).
+> does: it matches the code as of 2026-11-19 (optional Google/Apple sign-in, cloud sync on Supabase, optional
+> SMS import on Android, Budgy Pro purchases through Google Play / the App Store and RevenueCat, no ads, no
+> analytics).
 
-_Last updated: November 11, 2026_
+_Last updated: November 19, 2026_
 
 Budgy ("the app") is a personal budget and spending tracker made by Omar Mokhtar ("we"). This policy
 explains what data the app handles and why.
@@ -17,6 +18,8 @@ explains what data the app handles and why.
   back if you change phones or reinstall the app. It is used for nothing else.
 - If you turn on SMS import (Android only), your bank texts are read **on your phone only**. The
   messages themselves never leave it.
+- If you buy **Budgy Pro**, the store handles the payment and RevenueCat keeps the record of your purchase.
+  We never see your card or payment details.
 - No ads, no analytics, no selling or sharing of data.
 - You can delete your account and all its data from inside the app at any time.
 
@@ -50,6 +53,18 @@ Bank texts, and Android asks for your permission first.
 - You can review and remove learned card numbers in Bank texts → settings → Linked numbers.
   Turning SMS import off stops Budgy reading texts.
 
+**Budgy Pro purchases, only if you buy or restore Budgy Pro:** Budgy Pro (monthly, yearly or lifetime)
+unlocks bank texts and sign-in with sync. It's sold through Google Play or the App Store, which take the
+payment under their own terms and privacy policies. We never see your card, bank or payment details.
+- To know whether you have Budgy Pro, the app uses **RevenueCat** ([revenuecat.com](https://www.revenuecat.com)),
+  a subscription service. RevenueCat receives the store's receipt for your purchase (which product, when it
+  was bought, renews or ends, and whether it's a trial) and an ID for you: a random ID made on your phone,
+  or, once you sign in, your Budgy account ID, so your Pro follows your account.
+- This is used only to unlock Budgy Pro on your devices and to help you if a purchase doesn't show up (the
+  "Support ID" on your Profile is this ID).
+- Even if you never buy it, the app asks RevenueCat whether you have Budgy Pro, so RevenueCat receives that
+  random ID and basic technical details (app version, platform, language). It receives no budget data.
+
 **Things we don't collect:** location, contacts, photos, advertising IDs, or usage analytics.
 
 ## Where the data is stored and who processes it
@@ -57,7 +72,10 @@ Bank texts, and Android asks for your permission first.
 - **Supabase** ([supabase.com](https://supabase.com)) hosts our database and sign-in service, in the
   EU (Ireland) region. Supabase processes the data only to provide this service.
 - **Google and Apple** handle the sign-in itself when you choose "Continue with Google" or
-  "Continue with Apple", under their own privacy policies.
+  "Continue with Apple", under their own privacy policies. **Google Play and the App Store** handle Budgy
+  Pro payments.
+- **RevenueCat** keeps the record of Budgy Pro purchases described above, and processes it only to provide
+  this service.
 - The data is encrypted in transit (HTTPS). In the database, access rules limit each account's
   data to that account.
 
@@ -69,6 +87,9 @@ Bank texts, and Android asks for your permission first.
 - **Profile → Account & sync → Delete account** permanently deletes your account and all its cloud
   data. You can choose whether to keep a copy on the device.
 - **Signing out** leaves your data in your account. You choose whether to keep a copy on the device.
+- **Budgy Pro purchase records** are kept by the store and RevenueCat for as long as needed to provide and
+  account for the purchase. Deleting your Budgy account doesn't cancel a subscription: cancel it in Google
+  Play or the App Store. To have your RevenueCat record deleted, email us with your Support ID.
 - **Can't open the app?** See [Delete your Budgy account](https://omokhtarr.github.io/Budgy/delete-account.html).
 
 ## Children

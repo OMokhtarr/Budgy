@@ -178,6 +178,50 @@ request that data be deleted.
 | News apps | No |
 | Sensitive permissions | None in the release build (`READ_SMS` is debug-only, in `android/app/src/debug/AndroidManifest.xml`) |
 
+## When Budgy Pro turns on
+
+Budgy Pro (spec: `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`) is in the code but
+switched off (`VITE_PRO_GATE`). Everything above describes the app as it is today. **Enter these changes in
+Play Console in the same release that sets `VITE_PRO_GATE=on`**, then fold them into the sections above.
+
+### Store listing
+
+| Field (limit) | English | Arabic |
+|---|---|---|
+| Short description (80) | Track spending, income and budgets. Works offline. Cloud backup with Budgy Pro. | تتبّع مصروفاتك ودخلك وميزانياتك. يعمل دون إنترنت، ونسخ سحابي مع Budgy Pro. |
+
+Character counts on 2026-11-19: 79 / 74.
+
+In both full descriptions, replace the sign-in line under "Your data, your choice":
+
+```
+• Budgy Pro: sign in with Google or Apple to back up your data and keep it the same across your devices. Free trial included
+```
+
+```
+• Budgy Pro: سجّل الدخول عبر Google أو Apple لنسخ بياناتك احتياطيًا ومزامنتها بين أجهزتك، مع فترة تجريبية مجانية
+```
+
+When bank texts ship in release builds, add a line for them to both descriptions too (they're part of Pro).
+
+### Data safety
+
+- **Financial info → Purchase history:** already ticked. It now also covers Budgy Pro purchases, which
+  RevenueCat processes as a service provider (not sharing). Purpose stays App functionality.
+- **Personal info → User IDs:** already ticked. It now also covers the RevenueCat app user ID, which exists
+  for everyone once Pro is on, so check whether Play wants it marked **Required** rather than "Users can
+  choose". Compare with RevenueCat's own Play Data safety guidance before submitting.
+- **Device or other IDs:** stays unticked unless RevenueCat's guidance says its Android SDK collects one.
+- Nothing else changes: no ads, no analytics.
+
+### Other declarations and setup
+
+| Item | Change |
+|---|---|
+| App access | Sign-in and bank texts need Budgy Pro. Add instructions for reviewers: a promotional Pro grant in RevenueCat for the reviewer, or "start the free trial" |
+| Monetization | Products: subscription with monthly ($1) and yearly ($5) base plans, each with a free trial; one-time product lifetime ($15). Play shows "In-app purchases" on the listing once they exist |
+| Privacy policy | Already updated for Pro (`docs/privacy-policy.md`, 2026-11-19); the `gh-pages` pages must match before release |
+
 ## When the app changes
 
 Check these before releasing a change of the kind listed:
@@ -185,7 +229,7 @@ Check these before releasing a change of the kind listed:
 | If you… | Update |
 |---|---|
 | Sync a new kind of data, or add a field to what's uploaded | Data safety types and purposes, `docs/privacy-policy.md`, and the `gh-pages` privacy pages |
-| Add an SDK (analytics, crash reporting, ads, push, payments) | Data safety (crash logs, device IDs, etc.), the Ads declaration, the privacy policy, and "No ads, no analytics" in both descriptions |
+| Add an SDK (analytics, crash reporting, ads, push, payments; RevenueCat is in from Budgy Pro) | Data safety (crash logs, device IDs, etc.), the Ads declaration, the privacy policy, and "No ads, no analytics" in both descriptions |
 | Add a sign-in method | The account creation methods question, the privacy policy, and the descriptions |
 | Change how deletion works | The delete account URL page, the partial deletion question, and the privacy policy |
 | Add a permission, e.g. `READ_SMS` for SMS import | Permissions Declaration Form, Data safety (SMS → Messages), the privacy policy, a demo video, and the descriptions. See the SMS stage 3 items in `TODO.md` |

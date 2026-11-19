@@ -21,13 +21,16 @@ export default function AppMenu() {
   const { profileName, lastBackupAt, smsImport } = useSettings();
   const showBankTexts = useSmsAvailable();
   const pending = usePendingCount();
-  const { user, lastSyncedAt } = useCloud();
+  const { user, status, lastSyncedAt } = useCloud();
+  // A paused account (no Budgy Pro) isn't backed up by sync.
+  const synced = !!user && status !== 'paused';
   const [presentAlert] = useIonAlert();
 
   const when = (iso: string) => dayTimeLabel(new Date(iso), locale, { today: t('period.today'), yesterday: t('period.yesterday') });
   // Signed in, sync is the backup: show when it last synced.
-  const backupLabel = user
-    ? lastSyncedAt ? t('cloud.synced', { when: when(lastSyncedAt) }) : t('cloud.notSynced')
+  const backupLabel =
+    status === 'paused' ? t('cloud.paused')
+    : user ? lastSyncedAt ? t('cloud.synced', { when: when(lastSyncedAt) }) : t('cloud.notSynced')
     : lastBackupAt ? when(lastBackupAt) : t('menu.noBackup');
 
   const page = (path: string, icon: string, label: string, badge?: number) => (
@@ -44,7 +47,7 @@ export default function AppMenu() {
     presentAlert({
       header: 'Budgy',
       subHeader: `v${version}`,
-      message: t(user ? 'settings.aboutSynced' : 'settings.about'),
+      message: t(synced ? 'settings.aboutSynced' : 'settings.about'),
       buttons: [t('common.close')],
     });
 

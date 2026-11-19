@@ -57,7 +57,21 @@
 
 ## Your work (needs your accounts, devices or decisions)
 
-1. [ ] **Privacy & store:**
+1. [ ] **Budgy Pro setup** (spec §11, `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`):
+   - [ ] **RevenueCat:** project, Android app, entitlement `budgy_pro`, offering `default` with monthly, annual
+     and lifetime packages, the paywall (Arabic and English), Customer Center on. Public keys in `.env.local`.
+   - [ ] **Play Console:** a subscription with monthly ($1) and yearly ($5) base plans, each with a free-trial
+     offer; a one-time product, lifetime ($15); link the Play service account in RevenueCat; add a license tester.
+   - [ ] **Test** with `VITE_PRO_GATE=test` on a testing-track build: buy, reinstall and restore; sign in and
+     check Pro follows to a second phone. Nothing is gated at `test`, so check that sync pauses after expiry
+     (cancel, then wait it out) on a debug build with `VITE_PRO_GATE=on`. Then set `VITE_PRO_GATE=on` for the release.
+   - [ ] **Testers:** grant the closed testers promotional Pro in RevenueCat (by Support ID, on their Profile
+     pages) before the gated release reaches them.
+   - [ ] **Privacy and store text:** the policy (`docs/privacy-policy.md` and the `gh-pages` pages) and the
+     listing and Data safety changes (`docs/play-store.md` → "When Budgy Pro turns on") are written. Left: publish
+     the `gh-pages` pages, then enter the listing, Data safety and App access changes in Play Console with the
+     release that turns Pro on.
+2. [ ] **Privacy & store:**
    - The links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
      https://omokhtarr.github.io/Budgy/delete-account.html (Play's account deletion link).
    - Changes to `docs/privacy-policy.md` must also go in those pages (`privacy.html`, `privacy-ar.html`,
