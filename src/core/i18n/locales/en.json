@@ -636,7 +636,6 @@
     "useCloud": "Use the account's data"
   },
   "sms": {
-    "title": "Import from SMS",
     "readTexts": "Read bank texts",
     "autoScan": "Scan when the app opens",
     "permission": "SMS permission",
@@ -644,7 +643,7 @@
     "permissionNotAllowed": "Not allowed",
     "permissionDenied": "Budgy can't read texts. To allow it, open Android Settings → Apps → Budgy → Permissions → SMS.",
     "disclosureTitle": "Read your bank texts?",
-    "disclosureBody": "Budgy reads texts on this phone only, and only from the senders you list below. While a text waits for your review, its message is kept on this phone, and it is deleted once you confirm or dismiss it. Budgy keeps the amount, date, merchant and last digits. When you are signed in, the last card digits and merchant names Budgy learns are saved to your account, so your other phones can use them.",
+    "disclosureBody": "Budgy reads texts on this phone only, and only from the senders you list. While a text waits for your review, its message is kept on this phone, and it is deleted once you confirm or dismiss it. Budgy keeps the amount, date, merchant and last digits. When you are signed in, the last card digits and merchant names Budgy learns are saved to your account, so your other phones can use them.",
     "permissionError": "Budgy couldn't check the SMS permission. Try again.",
     "continue": "Continue",
     "senders": "Bank senders",
@@ -676,7 +675,7 @@
     "scanFound_one": "1 new text",
     "scanFound_other": "{{count}} new texts",
     "scanNothing": "Nothing new",
-    "scanNoPermission": "Budgy isn't allowed to read texts any more. To allow it again, go to Settings → Import from SMS.",
+    "scanNoPermission": "Budgy isn't allowed to read texts any more. To allow it again, tap Turn on.",
     "scanFailed": "Budgy couldn't scan your texts. Try again.",
     "actionFailed": "Something went wrong. Try again.",
     "pickAccount": "Pick account",
@@ -726,6 +725,14 @@
     "combined_other": "Combined {{count}} texts into one",
     "paidFromParts_one": "Paid from 1 account",
     "paidFromParts_other": "Paid from {{count}} accounts",
-    "sameCategoryHint": "One category needs texts that are all money in, or all money out."
+    "sameCategoryHint": "One category needs texts that are all money in, or all money out.",
+    "settingsTitle": "Bank texts settings",
+    "offTitle": "Read your bank texts",
+    "offBody": "Budgy can read your bank's texts and turn them into transactions for you to review.",
+    "turnOn": "Turn on",
+    "ignoreWords": "Ignore texts with",
+    "addIgnoreTitle": "Ignore texts with this word",
+    "addIgnorePlaceholder": "e.g. offer or promo",
+    "ignoreHint": "Texts that contain any of these words are skipped."
   }
 }

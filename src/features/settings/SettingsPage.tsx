@@ -12,8 +12,6 @@ import { currenciesOf, roundTo } from '@/core/utils/currency';
 import { parseNumber } from '@/core/utils/number';
 import RateInput from '@/shared/components/RateInput';
 import { useCloud } from '@/core/cloud/CloudContext';
-import SmsSettingsSection from '@/features/sms/SmsSettingsSection';
-import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 import ToursSettingsSection from '@/features/onboarding/ToursSettingsSection';
@@ -23,7 +21,6 @@ export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const settings = useSettings();
   const { user } = useCloud();
-  const smsAvailable = useSmsAvailable();
   useRevealWhen(true);
   usePageTour(['settings']);
   const accounts = useAccounts(true);
@@ -160,8 +157,6 @@ export default function SettingsPage() {
               </IonSelect>
             </IonItem>
           </IonList>
-
-          {smsAvailable && <SmsSettingsSection />}
 
           {foreign.length > 0 && (
             <IonList inset>

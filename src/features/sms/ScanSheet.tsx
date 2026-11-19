@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IonIcon, IonModal, IonSpinner, useIonAlert, useIonRouter, useIonToast } from '@ionic/react';
+import { IonIcon, IonModal, IonSpinner, useIonAlert, useIonToast } from '@ionic/react';
 import { closeOutline, searchOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocale, useSettings } from '@/core/contexts/SettingsContext';
@@ -14,8 +14,7 @@ const PERIODS: ScanPeriod[] = ['sinceLast', '3d', '1w', '2w', '1m', '3m', '6m'];
 export default function ScanSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const locale = useLocale();
-  const router = useIonRouter();
-  const { smsImport } = useSettings();
+  const { smsImport, update } = useSettings();
   const runScan = useInboxScan();
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
@@ -33,13 +32,9 @@ export default function ScanSheet({ isOpen, onClose }: { isOpen: boolean; onClos
       const { sms } = await SmsInbox.checkPermissions();
       if (sms !== 'granted') {
         onClose();
-        void presentAlert({
-          message: t('sms.scanNoPermission'),
-          buttons: [
-            { text: t('common.close'), role: 'cancel' },
-            { text: t('menu.settings'), handler: () => router.push('/settings', 'forward') },
-          ],
-        });
+        // Reading turns off, so Bank texts shows its "Turn on" button to allow it again.
+        update({ smsImport: { ...smsImport, enabled: false } });
+        void presentAlert({ message: t('sms.scanNoPermission'), buttons: [t('common.close')] });
         return;
       }
       const added = await runScan(period);

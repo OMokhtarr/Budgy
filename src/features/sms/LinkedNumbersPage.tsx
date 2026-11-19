@@ -14,7 +14,7 @@ import { useSmsAvailability } from './useSmsAvailable';
 
 const PATH = '/sms/links';
 
-/** Settings → Linked numbers: the card numbers Budgy learned, each pointing at an account; fix or remove them. */
+/** Bank texts settings → Linked numbers: the card numbers Budgy learned, each pointing at an account; fix or remove them. */
 export default function LinkedNumbersPage() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -55,7 +55,7 @@ export default function LinkedNumbersPage() {
       <IonHeader className="ion-no-border">
         <IonToolbar className="b-toolbar">
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/settings" text="" />
+            <IonBackButton defaultHref="/sms" text="" />
           </IonButtons>
           <IonTitle className="b-title">{t('sms.linkedNumbers')}</IonTitle>
         </IonToolbar>

@@ -19,7 +19,7 @@ export default function AppMenu() {
   const { t } = useTranslation();
   const locale = useLocale();
   const { profileName, lastBackupAt, smsImport } = useSettings();
-  const showBankTexts = useSmsAvailable() && smsImport.enabled;
+  const showBankTexts = useSmsAvailable();
   const pending = usePendingCount();
   const { user, lastSyncedAt } = useCloud();
   const [presentAlert] = useIonAlert();
@@ -65,7 +65,7 @@ export default function AppMenu() {
           {page('/profile', personCircleOutline, t('menu.profile'))}
           {page('/settings', settingsOutline, t('menu.settings'))}
           {page('/data', serverOutline, t('menu.data'))}
-          {showBankTexts && page('/sms', chatboxEllipsesOutline, t('menu.bankTexts'), pending)}
+          {showBankTexts && page('/sms', chatboxEllipsesOutline, t('menu.bankTexts'), smsImport.enabled ? pending : undefined)}
           <IonMenuToggle autoHide={false}>
             <IonItem button detail={false} lines="none" href={PLAY_STORE_URL} target="_blank" rel="noopener">
               <IonIcon icon={starOutline} slot="start" />
