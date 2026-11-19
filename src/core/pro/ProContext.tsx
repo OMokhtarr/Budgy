@@ -1,5 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import { useSessionUser } from '@/core/cloud/useSessionUser';
 import { isProGateOn, proAvailable } from './gate';
 import { readProCache, writeProCache } from './cache';
@@ -138,6 +140,12 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     if (!available || !sessionReady) return;
     let cancelled = false;
     let unsubscribe: (() => void) | null = null;
+    let removeResume: (() => void) | null = null;
+    // Back in front and back online, ask again: this reads renewals and expiries, and finishes a move to the
+    // signed-in account that failed earlier (offline at sign-in, say), which nothing else would retry.
+    const recheck = () => {
+      if (!cancelled && identityPending.current === 0) syncIdentity();
+    };
 
     identityRef.current = accountIdRef.current;
     sdkAccountId.current = accountIdRef.current;
@@ -146,6 +154,15 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         // Also puts an SDK still on a previous account back to anonymous when signed out.
         syncIdentity();
+        window.addEventListener('online', recheck);
+        if (Capacitor.isNativePlatform()) {
+          CapApp.addListener('resume', recheck)
+            .then((handle) => {
+              if (cancelled) void handle.remove();
+              else removeResume = () => void handle.remove();
+            })
+            .catch((err) => console.warn('Budgy: resume listener failed', err));
+        }
         onCustomerInfo((info) => {
           if (!cancelled && identityPending.current === 0) apply(info, sdkAccountId.current);
         })
@@ -160,6 +177,8 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
       unsubscribe?.();
+      removeResume?.();
+      window.removeEventListener('online', recheck);
     };
   }, [available, sessionReady, apply, syncIdentity]);
 
