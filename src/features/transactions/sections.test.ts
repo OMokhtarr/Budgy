@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Transaction } from '@/shared/models';
-import { accountSections, type AccountSection } from './sections';
+import { accountSections, shownArrangement, type AccountSection } from './sections';
 
 let n = 0;
 const tx = (amount: number, over: Partial<Transaction> = {}): Transaction => ({
@@ -45,5 +45,20 @@ describe('accountSections', () => {
   it('has no "Not transfers" section when every row is a transfer', () => {
     const sections = accountSections([transfer(10, 'savings'), transfer(20, 'wallet')], 'toAccount', (t) => t.amount);
     expect(sections.some((s) => s.accountId === null)).toBe(false);
+  });
+});
+
+describe('shownArrangement', () => {
+  it('shows the chosen arrangement while filtered', () => {
+    expect(shownArrangement('toAccount', true, true)).toBe('toAccount');
+    expect(shownArrangement('account', true, false)).toBe('account');
+  });
+
+  it('shows days when nothing is filtered', () => {
+    expect(shownArrangement('account', false, true)).toBe('day');
+  });
+
+  it('shows days while To account is chosen but no transfers are listed', () => {
+    expect(shownArrangement('toAccount', true, false)).toBe('day');
   });
 });

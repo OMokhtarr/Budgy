@@ -31,7 +31,7 @@ import MoneyText from '@/shared/components/MoneyText';
 import { deleteMany, moveToAccount, moveToCategory, moveToDay } from './bulk';
 import GroupSheet from './GroupSheet';
 import { foldGroups, type ListEntry } from './groups';
-import { accountSections, type Arrangement } from './sections';
+import { accountSections, shownArrangement, type Arrangement } from './sections';
 import type { Transaction } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
@@ -105,8 +105,9 @@ export default function TransactionsPage() {
   const [arrange, setArrange] = useState<Arrangement>('day');
   const hasTransfers = filtered.some((x) => x.type === 'transfer');
   useEffect(() => {
-    if (!filter.size || (arrange === 'toAccount' && !hasTransfers)) setArrange('day');
-  }, [filter.size, arrange, hasTransfers]);
+    if (!filter.size) setArrange('day');
+  }, [filter.size]);
+  const view = shownArrangement(arrange, filter.size > 0, hasTransfers);
 
   /** What a row adds to its day's or account's total, in the main currency; a transfer counts only as money moved through a tile. */
   const netOf = useCallback(
@@ -117,13 +118,13 @@ export default function TransactionsPage() {
     [conv, tiles],
   );
   const sections = useMemo(() => {
-    if (arrange === 'day') return null;
-    if (arrange === 'account') return accountSections(filtered, 'account', netOf);
+    if (view === 'day') return null;
+    if (view === 'account') return accountSections(filtered, 'account', netOf);
     // What arrived, in the main currency.
     return accountSections(filtered, 'toAccount', (x) =>
       x.toAmount != null && x.toCurrency ? conv.toBase(x.toAmount, x.toCurrency) : txInBase(x, conv),
     );
-  }, [arrange, filtered, conv, netOf]);
+  }, [view, filtered, conv, netOf]);
   const shortDate = useMemo(() => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }), [locale]);
   const chosen = useMemo(() => filtered.filter((x) => selected.has(x.id!)), [filtered, selected]);
 
@@ -450,7 +451,7 @@ export default function TransactionsPage() {
               </div>
               <div className="b-pills b-groupby" role="tablist" aria-label={t('transactions.groupBy')}>
                 {(['day', 'account', ...(hasTransfers ? ['toAccount' as const] : [])] as const).map((k) => (
-                  <button key={k} role="tab" aria-selected={arrange === k} className={arrange === k ? 'is-active' : ''} onClick={() => setArrange(k)}>
+                  <button key={k} role="tab" aria-selected={view === k} className={view === k ? 'is-active' : ''} onClick={() => setArrange(k)}>
                     {t(k === 'day' ? 'transactions.byDay' : k === 'account' ? 'transactions.byAccount' : 'transactions.byToAccount')}
                   </button>
                 ))}
@@ -544,7 +545,7 @@ export default function TransactionsPage() {
           {sections?.map((s) => {
             const acc = s.accountId == null ? undefined : accounts.get(s.accountId);
             const spent = s.total != null && s.total < 0;
-            const tone = s.total == null || s.total === 0 ? '' : arrange === 'toAccount' ? 'b-transfer' : spent ? 'b-expense' : 'b-income';
+            const tone = s.total == null || s.total === 0 ? '' : view === 'toAccount' ? 'b-transfer' : spent ? 'b-expense' : 'b-income';
             return (
               <section key={s.accountId ?? 'rest'} className="b-daygroup">
                 <div className="b-dayhead">
@@ -555,7 +556,7 @@ export default function TransactionsPage() {
                   </div>
                   {s.total != null && (
                     <span className={`b-dayhead__total b-num ${tone}`}>
-                      <SignedMoney plus={arrange === 'account' && s.total > 0} currency={conv.base} text={money.plain(Math.abs(s.total))} />
+                      <SignedMoney plus={view === 'account' && s.total > 0} currency={conv.base} text={money.plain(Math.abs(s.total))} />
                     </span>
                   )}
                 </div>

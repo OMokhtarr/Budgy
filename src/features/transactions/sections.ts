@@ -3,6 +3,15 @@ import type { Transaction } from '@/shared/models';
 /** How the filtered transactions list is split up: by day, by account, or by the account transfers went to. */
 export type Arrangement = 'day' | 'account' | 'toAccount';
 
+/**
+ * The arrangement on screen: the chosen one while a filter is on, except To account while no transfers are
+ * listed. The choice itself is kept, so it comes back once transfers do (after a search or a month change).
+ */
+export function shownArrangement(chosen: Arrangement, filtered: boolean, hasTransfers: boolean): Arrangement {
+  if (!filtered || (chosen === 'toAccount' && !hasTransfers)) return 'day';
+  return chosen;
+}
+
 /** The transactions of one account in the list arranged by account. */
 export interface AccountSection {
   /** null: the "Not transfers" section of the To account view. */

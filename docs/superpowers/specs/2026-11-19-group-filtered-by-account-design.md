@@ -28,7 +28,7 @@ Today the filtered list is always split by day, so the answer means adding rows 
 
 ## Design
 
-**The control.** A three-way segmented control (Day · Account · To account) sits just under the filter chips, next to the existing count/net bar (`.b-filtersum`). "To account" only shows when the filtered list has at least one transfer. The choice goes back to Day when the last filter chip is removed, and also when "To account" disappears because the list no longer has transfers.
+**The control.** A three-way segmented control (Day · Account · To account) sits just under the filter chips, next to the existing count/net bar (`.b-filtersum`). "To account" only shows when the filtered list has at least one transfer. The choice goes back to Day when the last filter chip is removed. While "To account" is chosen but the list has no transfers (after a search, a month change or removing a chip), Day is shown and the choice is kept, so To account comes back with the transfers.
 
 **Day.** Unchanged.
 
