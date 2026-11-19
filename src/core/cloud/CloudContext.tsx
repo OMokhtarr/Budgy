@@ -15,6 +15,7 @@ import {
   takeRedirectError,
   type Provider,
 } from './auth';
+import { useSessionUser } from './useSessionUser';
 import { hasWorkToSync, clearLocal, hasLocalTransactions, syncOnce, type SettingsPort, type SyncState } from './sync';
 
 /**
@@ -88,7 +89,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const settings = useSettings();
   const [presentAlert] = useIonAlert();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useSessionUser();
   const [status, setStatus] = useState<SyncStatus>(cloudEnabled ? 'idle' : 'off');
   const [lastSyncedAt, setLastSyncedAt] = useState<string>();
 
@@ -119,17 +120,6 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
 
   // ── Session ──
   const [redirectError, setRedirectError] = useState(() => (cloudEnabled ? takeRedirectError() : undefined));
-  useEffect(() => {
-    if (!supabase) return;
-    void supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    // Also fires SIGNED_OUT when the session ends elsewhere (account deleted on another phone,
-    // refresh token revoked): the app just carries on offline with the data it has.
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Same user, new token: keep the object so sync effects don't restart on every refresh.
-      setUser((prev) => (session?.user && prev?.id === session.user.id ? prev : (session?.user ?? null)));
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
     setLastSyncedAt(user ? loadState(user.id).lastSyncedAt : undefined);

@@ -741,5 +741,9 @@
     "ignoreHint": "Texts that contain any of these words are skipped.",
     "ignoreRemoved_one": "Removed 1 waiting text with this word",
     "ignoreRemoved_other": "Removed {{count}} waiting texts with this word"
+  },
+  "pro": {
+    "unavailable": "Budgy Pro isn't available right now. Check your connection and try again.",
+    "failed": "The purchase didn't go through. You weren't charged."
   }
 }
