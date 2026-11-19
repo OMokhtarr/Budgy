@@ -323,7 +323,8 @@ export default function TransactionsPage() {
     const acc = accounts.get(x.accountId);
     const cls = `b-row ${selected.has(x.id!) ? 'is-selected' : ''}`;
     const note = x.note && <div className="b-row__note">{x.note}</div>;
-    const date = withDate && ` · ${shortDate.format(new Date(x.date))}`;
+    // Its own span, so long account names are cut short rather than the date.
+    const date = withDate && <span className="b-row__date">· {shortDate.format(new Date(x.date))}</span>;
     if (x.type === 'transfer') {
       const to = accounts.get(x.toAccountId!);
       return (
@@ -333,7 +334,8 @@ export default function TransactionsPage() {
             <div className="b-row__title">{t('type.transfer')}</div>
             <div className="b-row__sub">
               <IonIcon icon={iconFor(acc?.icon)} />
-              <span>{accountName(acc)} → {accountName(to)}{date}</span>
+              <span>{accountName(acc)} → {accountName(to)}</span>
+              {date}
             </div>
             {note}
           </div>
@@ -362,7 +364,8 @@ export default function TransactionsPage() {
           </div>
           <div className="b-row__sub">
             <IonIcon icon={iconFor(acc?.icon)} />
-            <span>{accountName(acc)}{date}</span>
+            <span>{accountName(acc)}</span>
+            {date}
           </div>
           {note}
         </div>

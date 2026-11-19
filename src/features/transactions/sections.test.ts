@@ -42,6 +42,21 @@ describe('accountSections', () => {
     expect(sections[0]).toMatchObject({ accountId: null, total: null });
   });
 
+  it('gives no total to an account whose only rows are transfers that moved nothing through a tile', () => {
+    const [only] = accountSections([transfer(10, 'savings'), transfer(20, 'wallet')], 'account', () => 0);
+    expect(only).toMatchObject({ accountId: 'card', total: null });
+  });
+
+  it('keeps an account with no total ahead of "Not transfers"', () => {
+    const list = [tx(5), transfer(0, 'savings', { accountId: 'bank' })];
+    expect(accountSections(list, 'toAccount', (t) => t.amount).map((s) => s.accountId)).toEqual(['savings', null]);
+  });
+
+  it('keeps a zero total when the account has more than transfers', () => {
+    const [only] = accountSections([tx(50), tx(50, { type: 'income' })], 'account', signed);
+    expect(only.total).toBe(0);
+  });
+
   it('has no "Not transfers" section when every row is a transfer', () => {
     const sections = accountSections([transfer(10, 'savings'), transfer(20, 'wallet')], 'toAccount', (t) => t.amount);
     expect(sections.some((s) => s.accountId === null)).toBe(false);
