@@ -65,8 +65,14 @@ export async function fetchCustomerInfo(): Promise<CustomerInfo> {
 export async function logInAndCheck(id: string): Promise<CustomerInfo> {
   const { customerInfo } = await Purchases.logIn({ appUserID: id });
   if (isProFromCustomerInfo(customerInfo)) return customerInfo;
-  await Purchases.syncPurchases();
-  return fetchCustomerInfo();
+  try {
+    await Purchases.syncPurchases();
+    return await fetchCustomerInfo();
+  } catch (err) {
+    // The logIn itself succeeded, so keep its answer; the listener reports a late sync.
+    console.warn('Budgy: syncing purchases after logIn failed', err);
+    return customerInfo;
+  }
 }
 
 /** Back to an anonymous id. logOut throws for an already anonymous user, so that case just resolves the info. */

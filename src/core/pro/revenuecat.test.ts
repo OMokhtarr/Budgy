@@ -153,6 +153,15 @@ describe('logInAndCheck', () => {
     await expect(mod.logInAndCheck('u1')).resolves.toBe(pro);
     expect(mocks.purchases.syncPurchases).toHaveBeenCalledTimes(1);
   });
+
+  it("falls back to logIn's info when syncing fails", async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mocks.purchases.logIn.mockResolvedValue({ customerInfo: free, created: false });
+    mocks.purchases.syncPurchases.mockRejectedValue(new Error('offline'));
+    await expect(mod.logInAndCheck('u1')).resolves.toBe(free);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
 });
 
 it('logOutRevenueCat does not call logOut when already anonymous', async () => {
