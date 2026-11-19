@@ -39,3 +39,6 @@ supabase/.temp/
 scripts/store-assets/raw/
 scripts/store-assets/recon/
 __pycache__/
+
+# Claude Code: per-machine permission approvals (launch.json is shared)
+.claude/settings.local.json
