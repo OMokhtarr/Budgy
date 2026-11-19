@@ -34,7 +34,7 @@ nothing else. With Apple's "Hide My Email", we only see a relay address.
 
 **Bank text messages, only if you turn on SMS import (Android):** Budgy can read your bank's text
 messages and turn them into transactions for you to review. It's off until you turn it on in
-Settings → Import from SMS, and Android asks for your permission first.
+Bank texts, and Android asks for your permission first.
 - Budgy reads only texts from the bank senders you list, and only on your phone. It reads them when you
   tap "Scan inbox", or, if you turn on "Scan when the app opens", each time you open Budgy (looking only at
   texts that arrived since the last scan). It doesn't read texts in the background or when a text arrives.
@@ -47,7 +47,7 @@ Settings → Import from SMS, and Android asks for your permission first.
   of your Budgy data, so your other phones can use them. Each imported transaction also carries a code
   so the same text is never added twice. The code is made from the sender and the time the text
   arrived, not from what it says.
-- You can review and remove learned card numbers in Settings → Import from SMS → Linked numbers.
+- You can review and remove learned card numbers in Bank texts → settings → Linked numbers.
   Turning SMS import off stops Budgy reading texts.
 
 **Things we don't collect:** location, contacts, photos, advertising IDs, or usage analytics.

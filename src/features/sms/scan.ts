@@ -58,14 +58,15 @@ const isIgnored = (address: string, body: string, ignore: string[]) =>
 
 /**
  * Drops waiting texts a scan would now leave out: ones containing an ignore word, and ones the parser
- * now ignores, e.g. OTPs read as purchases before it learned their wording.
+ * now ignores, e.g. OTPs read as purchases before it learned their wording. Returns how many it dropped.
  */
-export async function clearIgnoredPending(ignore: string[], database: BudgyDB = db): Promise<void> {
-  await database.transaction('rw', database.smsPending, async () => {
+export async function clearIgnoredPending(ignore: string[], database: BudgyDB = db): Promise<number> {
+  return database.transaction('rw', database.smsPending, async () => {
     const stale = (await database.smsPending.toArray())
       .filter((row) => isIgnored(row.address, row.body, ignore))
       .map((row) => row.fingerprint);
     await database.smsPending.bulkDelete(stale);
+    return stale.length;
   });
 }
 

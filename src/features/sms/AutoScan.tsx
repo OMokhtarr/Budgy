@@ -50,7 +50,7 @@ export default function AutoScan() {
       running.current = true;
       try {
         if (autoScanDue(lastScanAt.current, new Date())) {
-          // Without permission there's nothing to read; Settings shows that the permission is gone.
+          // Without permission there's nothing to read; Bank texts shows that the permission is gone.
           const { sms } = await SmsInbox.checkPermissions();
           if (sms === 'granted') await runScan('sinceLast');
         }

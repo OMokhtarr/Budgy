@@ -1,4 +1,4 @@
-import { IonChip, IonIcon, IonItem, IonLabel, IonList, IonModal, IonNote, IonToggle, useIonAlert } from '@ionic/react';
+import { IonChip, IonIcon, IonItem, IonLabel, IonList, IonModal, IonNote, IonToggle, useIonAlert, useIonToast } from '@ionic/react';
 import { add, closeCircle, closeOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '@/core/contexts/SettingsContext';
@@ -73,12 +73,17 @@ export default function SmsSettingsSheet({ isOpen, onClose, perm }: { isOpen: bo
   const { t } = useTranslation();
   const { smsImport } = useSettings();
   const linkCount = useLearned()?.links.length ?? 0;
+  const [presentToast] = useIonToast();
   const { set } = perm;
+  const toast = (message: string, color = 'medium') => void presentToast({ message, duration: 2600, position: 'top', color });
 
   const setIgnoreWords = (ignoreWords: string[]) => {
     set({ ignoreWords });
-    // Texts already waiting that contain a new word go now, not at the next scan.
-    void clearIgnoredPending(ignoreWords);
+    // Texts already waiting that contain a new word go now, not at the next scan. Say so: a short word can
+    // also match a real purchase ("off" in "OFFICE"), which would otherwise vanish from the list unnoticed.
+    clearIgnoredPending(ignoreWords)
+      .then((removed) => removed && toast(t('sms.ignoreRemoved', { count: removed })))
+      .catch(() => toast(t('sms.actionFailed'), 'danger'));
   };
 
   return (

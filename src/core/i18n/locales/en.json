@@ -733,6 +733,8 @@
     "ignoreWords": "Ignore texts with",
     "addIgnoreTitle": "Ignore texts with this word",
     "addIgnorePlaceholder": "e.g. offer or promo",
-    "ignoreHint": "Texts that contain any of these words are skipped."
+    "ignoreHint": "Texts that contain any of these words are skipped.",
+    "ignoreRemoved_one": "Removed 1 waiting text with this word",
+    "ignoreRemoved_other": "Removed {{count}} waiting texts with this word"
   }
 }

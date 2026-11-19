@@ -63,7 +63,7 @@ describe('scanInbox', () => {
 
   it('clears waiting texts that contain an ignore word without a scan', async () => {
     await database.smsPending.bulkPut([pendingRow('promo', `${DEBIT} PROMO`), pendingRow('debit', DEBIT)]);
-    await clearIgnoredPending(['promo'], database);
+    expect(await clearIgnoredPending(['promo'], database)).toBe(1);
     expect((await database.smsPending.toArray()).map((r) => r.fingerprint)).toEqual(['debit']);
   });
 
