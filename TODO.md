@@ -58,18 +58,24 @@
 ## Your work (needs your accounts, devices or decisions)
 
 1. [ ] **Budgy Pro setup** (spec §11, `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`):
-   - [ ] **RevenueCat:** project, Android app, entitlement `budgy_pro`, offering `default` with monthly, annual
-     and lifetime packages, the paywall (Arabic and English), Customer Center on. Public keys in `.env.local`.
-   - [ ] **Play Console:** a subscription with monthly ($1) and yearly ($5) base plans, each with a free-trial
-     offer; a one-time product, lifetime ($15); link the Play service account in RevenueCat; add a license tester.
+   - [x] **RevenueCat:** project "Budgy", app "Budgy (Android)", entitlement `budgy_pro`, offering `default`
+     (Monthly → `budgy_pro:monthly`, Annual → `budgy_pro:yearly`, Lifetime → `budgy_pro_lifetime`), Customer
+     Center on, Android key in `.env.local` (2026-11-19).
+   - [ ] **RevenueCat paywall** for `default`, in Arabic and English.
+   - [x] **Play Console products** (2026-11-19, all active): subscription `budgy_pro` with base plans `monthly`
+     (US$0.99, backwards compatible) and `yearly` (US$4.99), each with a 7-day free-trial offer for new customers
+     (`free-trial-7d-monthly`, `free-trial-7d-yearly`; one trial per person across both plans); one-time product
+     `budgy_pro_lifetime` (US$14.99, purchase option `lifetime`, backwards compatible). Play's converted local prices.
+   - [ ] **Play ↔ RevenueCat:** upload the Play service account's credentials in RevenueCat, turn on Google
+     developer notifications, then check Product catalog → Products no longer says "Could not check". Add a license tester.
    - [ ] **Test** with `VITE_PRO_GATE=test` on a testing-track build: buy, reinstall and restore; sign in and
      check Pro follows to a second phone. Nothing is gated at `test`, so check that sync pauses after expiry
      (cancel, then wait it out) on a debug build with `VITE_PRO_GATE=on`. Then set `VITE_PRO_GATE=on` for the release.
    - [ ] **Testers:** grant the closed testers promotional Pro in RevenueCat (by Support ID, on their Profile
      pages) before the gated release reaches them.
    - [ ] **Privacy and store text:** the policy (`docs/privacy-policy.md` and the `gh-pages` pages) and the
-     listing and Data safety changes (`docs/play-store.md` → "When Budgy Pro turns on") are written. Left: publish
-     the `gh-pages` pages, then enter the listing, Data safety and App access changes in Play Console with the
+     listing and Data safety changes (`docs/play-store.md` → "When Budgy Pro turns on") are written, and the
+     `gh-pages` pages are live. Left: enter the listing, Data safety and App access changes in Play Console with the
      release that turns Pro on.
 2. [ ] **Privacy & store:**
    - The links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
