@@ -55,20 +55,26 @@ export async function fetchCustomerInfo(): Promise<CustomerInfo> {
   return customerInfo;
 }
 
+/** Hands this store account's purchases to the current RevenueCat user, then reads its info. Rejects on failure. */
+export async function syncPurchasesAndCheck(): Promise<CustomerInfo> {
+  await Purchases.syncPurchases();
+  return fetchCustomerInfo();
+}
+
 /**
  * Moves RevenueCat to the signed-in account. When that account has no Pro, a purchase made anonymously on this
- * device may not be attached to it yet, so sync once and re-read before giving up.
+ * device may not be attached to it yet, so sync once and re-read before giving up. `syncFailed` says that sync
+ * didn't happen (offline, say), so the caller can try it again later.
  */
-export async function logInAndCheck(id: string): Promise<CustomerInfo> {
+export async function logInAndCheck(id: string): Promise<{ info: CustomerInfo; syncFailed: boolean }> {
   const { customerInfo } = await Purchases.logIn({ appUserID: id });
-  if (isProFromCustomerInfo(customerInfo)) return customerInfo;
+  if (isProFromCustomerInfo(customerInfo)) return { info: customerInfo, syncFailed: false };
   try {
-    await Purchases.syncPurchases();
-    return await fetchCustomerInfo();
+    return { info: await syncPurchasesAndCheck(), syncFailed: false };
   } catch (err) {
-    // The logIn itself succeeded, so keep its answer; the listener reports a late sync.
+    // The logIn itself succeeded, so keep its answer.
     console.warn('Budgy: syncing purchases after logIn failed', err);
-    return customerInfo;
+    return { info: customerInfo, syncFailed: true };
   }
 }
 

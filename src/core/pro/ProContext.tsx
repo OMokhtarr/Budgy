@@ -20,6 +20,7 @@ import {
   proPlanFromCustomerInfo,
   restore as restorePurchases,
   setRevenueCatLocale,
+  syncPurchasesAndCheck,
   type CustomerInfo,
   type PaywallResult,
   type ProPlan,
@@ -56,6 +57,8 @@ export interface ProValue {
   showCustomerCenter(): Promise<void>;
   /** Resolves to whether the restore found an active Pro subscription. */
   restore(): Promise<boolean>;
+  /** Asks RevenueCat again now (e.g. a "Try again" after it couldn't be reached). */
+  recheck(): void;
 }
 
 const ProContext = createContext<ProValue | null>(null);
@@ -88,6 +91,9 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
   const identityPending = useRef(0);
   // The account RevenueCat is on right now (null = anonymous).
   const sdkAccountId = useRef<string | null>(null);
+  // The account whose purchase sync after logIn failed (offline at sign-in, say). Until it goes through, a purchase
+  // made anonymously just before signing in may still sit on the anonymous id, so each recheck tries it again.
+  const purchaseSyncOwed = useRef<string | null>(null);
 
   // In the very render where the account changes, start over from that account's cached answer (in practice
   // not Pro once RevenueCat has answered for another one), so no frame shows one account's Pro to the next.
@@ -125,11 +131,22 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
         let info: CustomerInfo;
         if (!target) {
           // No-op when RevenueCat is already anonymous.
+          purchaseSyncOwed.current = null;
           info = await logOutRevenueCat();
+        } else if (sdkAccountId.current === target && purchaseSyncOwed.current === target) {
+          try {
+            info = await syncPurchasesAndCheck();
+            purchaseSyncOwed.current = null;
+          } catch (err) {
+            console.warn('Budgy: syncing purchases failed again', err);
+            info = await fetchCustomerInfo();
+          }
         } else if (sdkAccountId.current === target) {
           info = await fetchCustomerInfo();
         } else {
-          info = await logInAndCheck(target);
+          const result = await logInAndCheck(target);
+          info = result.info;
+          purchaseSyncOwed.current = result.syncFailed ? target : null;
         }
         sdkAccountId.current = target;
         const id = target ?? (await fetchAppUserId());
@@ -282,9 +299,18 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     return apply(await restorePurchases(), owner);
   }, [available, sessionReady, identitySettled, apply]);
 
+  const recheck = useCallback(() => {
+    if (!available || !sessionReady) return;
+    configureRevenueCat(accountIdRef.current)
+      .then(() => {
+        if (identityPending.current === 0) syncIdentity();
+      })
+      .catch((err) => console.warn('Budgy: RevenueCat configure failed', err));
+  }, [available, sessionReady, syncIdentity]);
+
   const value = useMemo<ProValue>(
-    () => ({ gateOn, available, isPro, ready, plan, hadPro, accountId, appUserId, showPaywall, showCustomerCenter, restore }),
-    [gateOn, available, isPro, ready, plan, hadPro, accountId, appUserId, showPaywall, showCustomerCenter, restore],
+    () => ({ gateOn, available, isPro, ready, plan, hadPro, accountId, appUserId, showPaywall, showCustomerCenter, restore, recheck }),
+    [gateOn, available, isPro, ready, plan, hadPro, accountId, appUserId, showPaywall, showCustomerCenter, restore, recheck],
   );
 
   return <ProContext.Provider value={value}>{children}</ProContext.Provider>;

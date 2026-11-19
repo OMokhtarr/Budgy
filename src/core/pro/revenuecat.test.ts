@@ -147,7 +147,7 @@ describe('logInAndCheck', () => {
 
   it("returns logIn's info without syncing when it has Pro", async () => {
     mocks.purchases.logIn.mockResolvedValue({ customerInfo: pro, created: false });
-    await expect(mod.logInAndCheck('u1')).resolves.toBe(pro);
+    await expect(mod.logInAndCheck('u1')).resolves.toEqual({ info: pro, syncFailed: false });
     expect(mocks.purchases.logIn).toHaveBeenCalledWith({ appUserID: 'u1' });
     expect(mocks.purchases.syncPurchases).not.toHaveBeenCalled();
   });
@@ -156,17 +156,47 @@ describe('logInAndCheck', () => {
     mocks.purchases.logIn.mockResolvedValue({ customerInfo: free, created: false });
     mocks.purchases.syncPurchases.mockResolvedValue(undefined);
     mocks.purchases.getCustomerInfo.mockResolvedValue({ customerInfo: pro });
-    await expect(mod.logInAndCheck('u1')).resolves.toBe(pro);
+    await expect(mod.logInAndCheck('u1')).resolves.toEqual({ info: pro, syncFailed: false });
     expect(mocks.purchases.syncPurchases).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to logIn's info when syncing fails", async () => {
+  it("falls back to logIn's info and reports the failed sync when syncing fails", async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    mocks.purchases.logIn.mockResolvedValue({ customerInfo: free, created: false });
+    try {
+      mocks.purchases.logIn.mockResolvedValue({ customerInfo: free, created: false });
+      mocks.purchases.syncPurchases.mockRejectedValue(new Error('offline'));
+      await expect(mod.logInAndCheck('u1')).resolves.toEqual({ info: free, syncFailed: true });
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('reports a failed sync when reading the info after syncing fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      mocks.purchases.logIn.mockResolvedValue({ customerInfo: free, created: false });
+      mocks.purchases.syncPurchases.mockResolvedValue(undefined);
+      mocks.purchases.getCustomerInfo.mockRejectedValue(new Error('offline'));
+      await expect(mod.logInAndCheck('u1')).resolves.toEqual({ info: free, syncFailed: true });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
+describe('syncPurchasesAndCheck', () => {
+  it('syncs the store purchases, then reads the info', async () => {
+    const pro = withActive({ budgy_pro: {} });
+    mocks.purchases.syncPurchases.mockResolvedValue(undefined);
+    mocks.purchases.getCustomerInfo.mockResolvedValue({ customerInfo: pro });
+    await expect(mod.syncPurchasesAndCheck()).resolves.toBe(pro);
+    expect(mocks.purchases.syncPurchases).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects when syncing fails, so the caller can try again later', async () => {
     mocks.purchases.syncPurchases.mockRejectedValue(new Error('offline'));
-    await expect(mod.logInAndCheck('u1')).resolves.toBe(free);
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+    await expect(mod.syncPurchasesAndCheck()).rejects.toThrow('offline');
   });
 });
 

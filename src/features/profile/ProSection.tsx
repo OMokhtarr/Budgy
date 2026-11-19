@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IonIcon, IonSpinner, useIonToast } from '@ionic/react';
 import { alertCircleOutline, copyOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +6,9 @@ import { useCloud } from '@/core/cloud/CloudContext';
 import { useLocale } from '@/core/contexts/SettingsContext';
 import { usePro } from '@/core/pro/ProContext';
 import { usePaywall } from '@/core/pro/useRequirePro';
+
+/** How long the section waits for RevenueCat before saying it couldn't be reached. */
+const SLOW_MS = 8000;
 
 /** "abcd1234…wxyz": enough for support to find the account without showing the whole id. */
 const shortId = (id: string) => (id.length > 12 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id);
@@ -22,6 +25,21 @@ export default function ProSection() {
   const paywall = usePaywall();
   const [presentToast] = useIonToast();
   const [busy, setBusy] = useState(false);
+  // RevenueCat hasn't answered for a while (offline with no saved answer, say): say so and offer to ask again,
+  // rather than guessing "Get Pro" for someone who may be subscribed.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (pro.ready) {
+      setSlow(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSlow(true), SLOW_MS);
+    return () => window.clearTimeout(timer);
+  }, [pro.ready, slow]);
+  const tryAgain = () => {
+    setSlow(false);
+    pro.recheck();
+  };
 
   const toast = (message: string, color = 'medium') => presentToast({ message, duration: 3000, position: 'top', color });
   const withBusy = async (fn: () => Promise<void>) => {
@@ -79,7 +97,14 @@ export default function ProSection() {
     <>
       <div className="b-section-title">{t('pro.title')}</div>
       <div className="b-card" style={{ padding: 14 }}>
-        {!pro.ready ? (
+        {!pro.ready && slow ? (
+          <>
+            <p className="b-muted" style={{ margin: '0 0 12px', fontSize: 13.5, lineHeight: 1.5 }}>{t('pro.checkFailed')}</p>
+            <button className="b-btn b-btn--muted" style={{ width: '100%' }} onClick={tryAgain}>
+              {t('pro.tryAgain')}
+            </button>
+          </>
+        ) : !pro.ready ? (
           // Neither the pitch nor the plan until RevenueCat has answered, so a subscriber never sees "Get Pro" flash.
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <IonSpinner name="dots" />

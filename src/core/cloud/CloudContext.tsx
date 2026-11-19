@@ -28,6 +28,14 @@ import { hasWorkToSync, clearLocal, hasLocalTransactions, syncOnce, type Setting
  * Without cloud settings in the build (see `.env.example`) this is all off.
  */
 
+/** "Remove from this device" was refused because sync is still waiting for Budgy Pro's answer; nothing changed. */
+export class SyncWaitingError extends Error {
+  constructor() {
+    super('Sync is waiting for Budgy Pro; not removing local data');
+    this.name = 'SyncWaitingError';
+  }
+}
+
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error' | 'paused';
 
 interface CloudValue {
@@ -270,7 +278,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       if (!user) return;
       // Sync can't upload while it waits for Pro's answer, so removing now could lose unsent edits: refuse and
       // stay signed in. (Paused is different: the user was told those edits aren't in the account.)
-      if (!keepLocal && gateRef.current === 'wait') throw new Error('Sync is waiting for Budgy Pro; not removing local data');
+      if (!keepLocal && gateRef.current === 'wait') throw new SyncWaitingError();
       // Upload anything not sent yet, so removing it here loses nothing.
       if (!keepLocal) await sync();
       await providerSignOut();

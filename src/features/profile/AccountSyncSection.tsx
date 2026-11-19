@@ -3,7 +3,7 @@ import { IonIcon, IonSpinner, useIonActionSheet, useIonAlert, useIonToast } from
 import { alertCircleOutline, checkmarkCircleOutline, logoApple, logoGoogle, pauseCircleOutline, syncOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/core/contexts/SettingsContext';
-import { useCloud } from '@/core/cloud/CloudContext';
+import { SyncWaitingError, useCloud } from '@/core/cloud/CloudContext';
 import { SignInError, availableProviders, classifySignInError, type Provider } from '@/core/cloud/auth';
 import { usePro } from '@/core/pro/ProContext';
 import { showsProLock } from '@/core/pro/rules';
@@ -59,7 +59,8 @@ export default function AccountSyncSection() {
       await fn();
     } catch (err) {
       console.warn('Budgy:', err);
-      toast(t('cloud.actionFailed'), 'danger');
+      // Refused before anything changed: say why, so it doesn't look like something broke.
+      toast(t(err instanceof SyncWaitingError ? 'cloud.waitingForPro' : 'cloud.actionFailed'), err instanceof SyncWaitingError ? 'medium' : 'danger');
     } finally {
       setBusy(false);
     }

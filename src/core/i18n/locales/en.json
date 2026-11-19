@@ -645,7 +645,8 @@
     "pausedEnded": "Sync is paused: Budgy Pro has ended",
     "pausedNeverPro": "Sync is part of Budgy Pro",
     "alreadyPro": "Already have Pro? Sign in",
-    "signOutPausedMessage": "Changes you made since sync paused aren't in your account. Remove them from this device anyway?"
+    "signOutPausedMessage": "Changes you made since sync paused aren't in your account. Remove them from this device anyway?",
+    "waitingForPro": "Budgy is still checking your Budgy Pro. Try again in a moment."
   },
   "sms": {
     "readTexts": "Read bank texts",
@@ -770,6 +771,8 @@
     "billingIssue": "There's a problem with your payment. Check it in the store.",
     "manage": "Manage",
     "supportId": "Support ID",
-    "copied": "Copied"
+    "copied": "Copied",
+    "checkFailed": "Couldn't check Budgy Pro. Check your connection and try again.",
+    "tryAgain": "Try again"
   }
 }
