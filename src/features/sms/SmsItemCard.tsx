@@ -4,6 +4,7 @@ import { checkmarkCircle, ellipseOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
+import { useRequirePro } from '@/core/pro/useRequirePro';
 import { useNames } from '@/core/db/hooks';
 import { currenciesOf } from '@/core/utils/currency';
 import { dayTimeLabel } from '@/core/utils/period';
@@ -85,6 +86,9 @@ export default function SmsItemCard({ item, choice, account, category, person, o
     await importText(item, buildTxRecord(draft));
   });
 
+  // Bank texts are Pro: without it, Confirm and Fill in open the paywall first. Dismiss stays free.
+  const requirePro = useRequirePro();
+
   const dismiss = run(() => resolveSkipped(item, 'dismissed'));
 
   const edit = () => {
@@ -117,7 +121,7 @@ export default function SmsItemCard({ item, choice, account, category, person, o
 
   const press = useLongPress<void>(
     () => onSelect?.(),
-    () => (selecting ? onSelect?.() : edit()),
+    () => (selecting ? onSelect?.() : void requirePro(edit)),
   )();
 
   const chip = (label: string, picked: { name: string; icon: string; color: string } | undefined, onClick: () => void): ReactNode => (
@@ -190,11 +194,11 @@ export default function SmsItemCard({ item, choice, account, category, person, o
             {t('sms.dismiss')}
           </button>
           {understood ? (
-            <button className="b-btn b-btn--primary" onClick={only(() => void confirm())} disabled={busy || !draft}>
+            <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(confirm))} disabled={busy || !draft}>
               {t('sms.confirm')}
             </button>
           ) : (
-            <button className="b-btn b-btn--primary" onClick={only(edit)} disabled={busy}>
+            <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(edit))} disabled={busy}>
               {t('sms.fillIn')}
             </button>
           )}

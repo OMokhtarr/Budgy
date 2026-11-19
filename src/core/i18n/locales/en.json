@@ -648,6 +648,7 @@
   },
   "sms": {
     "readTexts": "Read bank texts",
+    "proBanner": "Bank texts are part of Budgy Pro. Your texts are kept here until you renew.",
     "autoScan": "Scan when the app opens",
     "permission": "SMS permission",
     "permissionAllowed": "Allowed",
