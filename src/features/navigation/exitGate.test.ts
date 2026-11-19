@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EXIT_WINDOW_MS, createBackToExit } from './exitGate';
+import { EXIT_WINDOW_MS, backFallback, createBackToExit } from './exitGate';
 
 function setup() {
   let time = 1_000;
@@ -32,5 +32,23 @@ describe('createBackToExit', () => {
     press();
     expect(onFirst).toHaveBeenCalledTimes(2);
     expect(onExit).not.toHaveBeenCalled();
+  });
+});
+
+describe('backFallback', () => {
+  it('asks to exit on the tabs', () => {
+    for (const tab of ['/accounts', '/categories', '/transactions', '/overview', '/', '/overview/']) {
+      expect(backFallback(tab)).toBeNull();
+    }
+  });
+
+  it('sends the pages opened on top of the tabs back to the main page', () => {
+    for (const page of ['/profile', '/settings', '/data', '/sms', '/settings/']) {
+      expect(backFallback(page)).toBe('/categories');
+    }
+  });
+
+  it('sends linked numbers back to bank texts, like its back arrow', () => {
+    expect(backFallback('/sms/links')).toBe('/sms');
   });
 });
