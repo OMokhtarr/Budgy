@@ -16,11 +16,19 @@ export function revenueCatKey(): string {
   return key ?? '';
 }
 
-/** Anything but an explicit 'test' / 'on', on a native platform with a key, is off (RevenueCat has no web build here). */
+/** Test Store keys start with this. The SDK deliberately crashes a release build configured with one. */
+export const TEST_STORE_KEY_PREFIX = 'test_';
+
+/**
+ * Anything but an explicit 'test' / 'on', on a native platform with a key, is off (RevenueCat has no web build here).
+ * So is a Test Store key in a release build: RevenueCat refuses to start with it, and 'on' would hold sync forever.
+ */
 export function proMode(): ProMode {
   const gate = import.meta.env.VITE_PRO_GATE;
   if (gate !== 'test' && gate !== 'on') return 'off';
-  if (!Capacitor.isNativePlatform() || !revenueCatKey()) return 'off';
+  const key = revenueCatKey();
+  if (!Capacitor.isNativePlatform() || !key) return 'off';
+  if (key.startsWith(TEST_STORE_KEY_PREFIX) && !Capacitor.DEBUG) return 'off';
   return gate;
 }
 

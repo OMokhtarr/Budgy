@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { proAllows, requirePro, syncGate, type PaywallOutcome } from './rules';
+import { proAllows, requirePro, showsProLock, syncGate, type PaywallOutcome } from './rules';
 
 describe('proAllows', () => {
   it('allows everything while the gate is off', () => {
@@ -10,6 +10,19 @@ describe('proAllows', () => {
   });
   it('blocks non-Pro when the gate is on', () => {
     expect(proAllows({ gateOn: true, isPro: false })).toBe(false);
+  });
+});
+
+describe('showsProLock', () => {
+  it('shows nothing locked while the gate is off', () => {
+    expect(showsProLock({ gateOn: false, isPro: false, ready: true })).toBe(false);
+  });
+  it('shows nothing locked until RevenueCat has answered', () => {
+    expect(showsProLock({ gateOn: true, isPro: false, ready: false })).toBe(false);
+  });
+  it('shows the lock for non-Pro once ready, never for Pro', () => {
+    expect(showsProLock({ gateOn: true, isPro: false, ready: true })).toBe(true);
+    expect(showsProLock({ gateOn: true, isPro: true, ready: true })).toBe(false);
   });
 });
 

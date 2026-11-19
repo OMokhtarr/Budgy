@@ -10,8 +10,8 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useConverter, useLocale, useSettings } from '@/core/contexts/SettingsContext';
 import { categoryFits, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import { usePro } from '@/core/pro/ProContext';
-import { proAllows } from '@/core/pro/rules';
-import { useRequirePro } from '@/core/pro/useRequirePro';
+import { showsProLock } from '@/core/pro/rules';
+import { usePaywall, useRequirePro } from '@/core/pro/useRequirePro';
 import { dayTimeLabel } from '@/core/utils/period';
 import ProBadge from '@/shared/components/ProBadge';
 import { closeIcon } from '@/shared/icons';
@@ -358,6 +358,7 @@ export default function SmsReviewPage() {
 
   const pro = usePro();
   const requirePro = useRequirePro();
+  const paywall = usePaywall();
   const sameCategory = () => {
     const first = chosen[0];
     if (!first) return;
@@ -419,7 +420,7 @@ export default function SmsReviewPage() {
               <strong>{t('sms.offTitle')}</strong>
               <p>{t('sms.offBody')}</p>
               <button className="b-btn b-btn--primary b-scanbtn" onClick={() => void requirePro(perm.turnOn)}>
-                {t('sms.turnOn')} {!proAllows(pro) && <ProBadge />}
+                {t('sms.turnOn')} {showsProLock(pro) && <ProBadge />}
               </button>
               <PermissionNotes perm={perm} />
             </div>
@@ -427,10 +428,10 @@ export default function SmsReviewPage() {
         )}
         {allowed && items && (
           <div className="b-page">
-            {!proAllows(pro) && (
+            {showsProLock(pro) && (
               <div className="b-card b-smspro">
                 <p>{t('sms.proBanner')}</p>
-                <button className="b-btn b-btn--primary b-scanbtn" onClick={() => void pro.showPaywall()}>
+                <button className="b-btn b-btn--primary b-scanbtn" onClick={() => void paywall()}>
                   {t('pro.renew')}
                 </button>
               </div>

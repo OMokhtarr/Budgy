@@ -245,8 +245,9 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     let result: PaywallResult;
     try {
       await configureRevenueCat(accountIdRef.current);
-      // A purchase made before logIn finishes would attach to the anonymous id.
-      if (!(await identitySettled())) return 'failed';
+      // A purchase made before logIn finishes would attach to the anonymous id. No paywall was shown, so nothing
+      // was attempted: "unavailable", not "failed".
+      if (!(await identitySettled())) return 'unavailable';
       result = await presentPaywall();
     } catch (err) {
       console.warn('Budgy: paywall failed', err);

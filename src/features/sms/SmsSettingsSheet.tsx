@@ -3,7 +3,7 @@ import { add, closeCircle, closeOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '@/core/contexts/SettingsContext';
 import { usePro } from '@/core/pro/ProContext';
-import { proAllows } from '@/core/pro/rules';
+import { showsProLock } from '@/core/pro/rules';
 import { useRequirePro } from '@/core/pro/useRequirePro';
 import ProBadge from '@/shared/components/ProBadge';
 import { useLearned } from './hooks';
@@ -120,7 +120,7 @@ export default function SmsSettingsSheet({ isOpen, onClose, perm }: { isOpen: bo
                 checked={smsImport.enabled}
                 onIonChange={(e) => (e.detail.checked ? turnOn() : set({ enabled: false }))}
               >
-                {t('sms.readTexts')} {!proAllows(pro) && <ProBadge />}
+                {t('sms.readTexts')} {showsProLock(pro) && <ProBadge />}
               </IonToggle>
             </IonItem>
             {smsImport.enabled && (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IonIcon, IonSpinner, useIonActionSheet, useIonAlert, useIonToast } from '@ionic/react';
 import { alertCircleOutline, checkmarkCircleOutline, logoApple, logoGoogle, pauseCircleOutline, syncOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +6,8 @@ import { useLocale } from '@/core/contexts/SettingsContext';
 import { useCloud } from '@/core/cloud/CloudContext';
 import { SignInError, availableProviders, classifySignInError, type Provider } from '@/core/cloud/auth';
 import { usePro } from '@/core/pro/ProContext';
-import { useRequirePro } from '@/core/pro/useRequirePro';
+import { showsProLock } from '@/core/pro/rules';
+import { usePaywall, useRequirePro } from '@/core/pro/useRequirePro';
 import { dayTimeLabel } from '@/core/utils/period';
 import ProBadge from '@/shared/components/ProBadge';
 
@@ -21,6 +22,7 @@ export default function AccountSyncSection() {
   const cloud = useCloud();
   const pro = usePro();
   const requirePro = useRequirePro();
+  const paywall = usePaywall();
   const [presentAlert] = useIonAlert();
   const [presentSheet] = useIonActionSheet();
   const [presentToast] = useIonToast();
@@ -40,15 +42,7 @@ export default function AccountSyncSection() {
   }, [redirectError, clearRedirectError, presentToast, t]);
 
   const { user } = cloud;
-  const { gateOn, isPro, ready, accountId, showPaywall } = pro;
-
-  /** The paywall on its own; a purchase that errored or a paywall that couldn't open gets a toast. */
-  const paywall = useCallback(async () => {
-    const outcome = await showPaywall();
-    if (outcome === 'failed' || outcome === 'unavailable') {
-      void presentToast({ message: t(`pro.${outcome}`), duration: 3000, position: 'top', color: 'danger' });
-    }
-  }, [showPaywall, presentToast, t]);
+  const { gateOn, isPro, ready, accountId } = pro;
 
   // Waits until RevenueCat has answered for the account just signed in to, not the identity before it.
   useEffect(() => {
@@ -129,8 +123,8 @@ export default function AccountSyncSection() {
   const signOut = () =>
     presentAlert({
       header: t('cloud.signOutTitle'),
-      // "Remove" normally uploads first, which can't happen while paused.
-      message: t(paused ? 'cloud.signOutPausedMessage' : 'cloud.signOutMessage'),
+      // "Remove" normally uploads first, which can't happen while sync is paused or still waiting for Pro.
+      message: t(cloud.syncBlocked ? 'cloud.signOutPausedMessage' : 'cloud.signOutMessage'),
       buttons: [
         { text: t('cloud.keepOnDevice'), handler: () => void run(() => cloud.signOut(true)) },
         { text: t('cloud.removeFromDevice'), role: 'destructive', handler: () => void run(() => cloud.signOut(false)) },
@@ -170,7 +164,8 @@ export default function AccountSyncSection() {
     : cloud.status === 'error' ? alertCircleOutline
     : cloud.status === 'syncing' ? syncOutline
     : checkmarkCircleOutline;
-  const proLocked = gateOn && !isPro;
+  // Only once RevenueCat has answered, so a subscriber never sees the badges flash.
+  const proLocked = showsProLock(pro);
 
   return (
     <>
@@ -218,7 +213,15 @@ export default function AccountSyncSection() {
           </button>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
             {paused ? (
-              <button className="b-btn b-btn--primary" disabled={busy} onClick={() => void withBusy(paywall)}>
+              <button
+                className="b-btn b-btn--primary"
+                disabled={busy}
+                onClick={() =>
+                  void withBusy(async () => {
+                    await paywall();
+                  })
+                }
+              >
                 {t('pro.renew')}
               </button>
             ) : (

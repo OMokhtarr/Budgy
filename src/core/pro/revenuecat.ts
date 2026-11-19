@@ -2,7 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Purchases } from '@revenuecat/purchases-capacitor';
 import type { CustomerInfo } from '@revenuecat/purchases-capacitor';
 import { PAYWALL_RESULT, RevenueCatUI } from '@revenuecat/purchases-capacitor-ui';
-import { revenueCatKey } from './gate';
+import { TEST_STORE_KEY_PREFIX, revenueCatKey } from './gate';
 
 /**
  * Thin wrapper over the RevenueCat Capacitor SDK for Budgy Pro. RevenueCat verifies store receipts on its own
@@ -15,9 +15,6 @@ export type { CustomerInfo };
 
 /** Must match the entitlement id in the RevenueCat dashboard. */
 export const PRO_ENTITLEMENT = 'budgy_pro';
-
-/** Test Store keys start with this. The SDK deliberately crashes a release build configured with one. */
-const TEST_STORE_KEY_PREFIX = 'test_';
 
 let configured: Promise<void> | null = null;
 

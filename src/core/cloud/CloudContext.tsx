@@ -34,6 +34,8 @@ interface CloudValue {
   enabled: boolean;
   user: User | null;
   status: SyncStatus;
+  /** Signed in, but sync can't run now: paused without Pro, or still waiting for RevenueCat's answer. */
+  syncBlocked: boolean;
   lastSyncedAt?: string;
   signIn: (provider: Provider) => Promise<void>;
   /** `keepLocal: false` also removes the data from this device (it stays in the account). */
@@ -97,9 +99,9 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   const [lastSyncedAt, setLastSyncedAt] = useState<string>();
 
   // Sync needs Pro. ProProvider reads the session on its own, so for a render it can still be answering for the
-  // previous account: wait until it's about this one.
+  // previous account: wait until it's about this one. With the gate off sync doesn't depend on ProProvider at all.
   const pro = usePro();
-  const gate = pro.accountId === (user?.id ?? null) ? syncGate(pro) : 'wait';
+  const gate = !pro.gateOn ? 'go' : pro.accountId === (user?.id ?? null) ? syncGate(pro) : 'wait';
   const gateRef = useRef(gate);
   gateRef.current = gate;
 
@@ -266,6 +268,9 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(
     async (keepLocal: boolean) => {
       if (!user) return;
+      // Sync can't upload while it waits for Pro's answer, so removing now could lose unsent edits: refuse and
+      // stay signed in. (Paused is different: the user was told those edits aren't in the account.)
+      if (!keepLocal && gateRef.current === 'wait') throw new Error('Sync is waiting for Budgy Pro; not removing local data');
       // Upload anything not sent yet, so removing it here loses nothing.
       if (!keepLocal) await sync();
       await providerSignOut();
@@ -306,6 +311,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
       enabled: cloudEnabled,
       user,
       status: !cloudEnabled ? 'off' : user && gate === 'paused' ? 'paused' : status,
+      syncBlocked: cloudEnabled && !!user && gate !== 'go',
       lastSyncedAt,
       signIn,
       signOut,

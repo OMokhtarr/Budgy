@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ platform: 'android' as 'android' | 'ios' | 'web' }));
+const mocks = vi.hoisted(() => ({ platform: 'android' as 'android' | 'ios' | 'web', debug: false }));
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: () => mocks.platform !== 'web', getPlatform: () => mocks.platform },
+  Capacitor: {
+    isNativePlatform: () => mocks.platform !== 'web',
+    getPlatform: () => mocks.platform,
+    get DEBUG() {
+      return mocks.debug;
+    },
+  },
 }));
 
 const { isProGateOn, proAvailable, proMode, revenueCatKey } = await import('./gate');
@@ -16,6 +22,7 @@ function env(gate: string | undefined, android: string, ios: string) {
 afterEach(() => {
   vi.unstubAllEnvs();
   mocks.platform = 'android';
+  mocks.debug = false;
 });
 
 describe('proMode', () => {
@@ -53,6 +60,18 @@ describe('proMode', () => {
   it('is off for an unknown VITE_PRO_GATE value', () => {
     env('yes', 'goog_x', '');
     expect(proMode()).toBe('off');
+  });
+
+  it('is off for a Test Store key in a release build', () => {
+    env('on', 'test_x', '');
+    expect(proMode()).toBe('off');
+    expect(proAvailable()).toBe(false);
+  });
+
+  it('is on for a Test Store key in a debug build', () => {
+    mocks.debug = true;
+    env('on', 'test_x', '');
+    expect(proMode()).toBe('on');
   });
 });
 

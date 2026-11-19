@@ -12,6 +12,11 @@ export function proAllows(p: Pick<ProState, 'gateOn' | 'isPro'>): boolean {
   return !p.gateOn || p.isPro;
 }
 
+/** Whether to show locked UI (PRO badges, the Pro banner): only once RevenueCat has answered, so a subscriber never sees it flash. */
+export function showsProLock(p: ProState): boolean {
+  return p.gateOn && p.ready && !p.isPro;
+}
+
 /** Cloud sync: wait for the first answer rather than pausing a paying user by mistake. */
 export function syncGate(p: ProState): 'go' | 'wait' | 'paused' {
   if (!p.gateOn) return 'go';

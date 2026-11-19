@@ -63,8 +63,8 @@
    - [ ] **Play Console:** a subscription with monthly ($1) and yearly ($5) base plans, each with a free-trial
      offer; a one-time product, lifetime ($15); link the Play service account in RevenueCat; add a license tester.
    - [ ] **Test** with `VITE_PRO_GATE=test` on a testing-track build: buy, reinstall and restore; sign in and
-     check Pro follows to a second phone; cancel and check sync pauses after expiry. Then set `VITE_PRO_GATE=on`
-     for the release.
+     check Pro follows to a second phone. Nothing is gated at `test`, so check that sync pauses after expiry
+     (cancel, then wait it out) on a debug build with `VITE_PRO_GATE=on`. Then set `VITE_PRO_GATE=on` for the release.
    - [ ] **Testers:** grant the closed testers promotional Pro in RevenueCat (by Support ID, on their Profile
      pages) before the gated release reaches them.
    - [ ] **Privacy and store text:** purchase history goes to RevenueCat and Google. Update
