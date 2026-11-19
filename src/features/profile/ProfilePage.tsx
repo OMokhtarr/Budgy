@@ -8,7 +8,9 @@ import { dayTimeLabel } from '@/core/utils/period';
 import { useDataActions } from '@/features/data/useDataActions';
 import { COLORS } from '@/shared/icons';
 import ProfileAvatar from '@/shared/components/ProfileAvatar';
+import { proAvailable } from '@/core/pro/gate';
 import AccountSyncSection from './AccountSyncSection';
+import ProSection from './ProSection';
 import { useRevealWhen } from '@/shared/splash';
 
 export default function ProfilePage() {
@@ -66,6 +68,7 @@ export default function ProfilePage() {
             />
           </label>
 
+          {proAvailable() && <ProSection />}
           <AccountSyncSection />
 
           {/* Signed in, sync already keeps a copy in the account (not while paused without Budgy Pro). Backup files

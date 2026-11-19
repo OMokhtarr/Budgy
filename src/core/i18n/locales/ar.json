@@ -865,6 +865,22 @@
     "unavailable": "Budgy Pro غير متاح الآن. تحقّق من اتصالك وحاول مرة أخرى.",
     "failed": "لم تتم عملية الشراء، ولم يُخصم منك أي مبلغ.",
     "renew": "تجديد",
-    "cancelInStoreFirst": "يستمر اشتراكك في Budgy Pro حتى تلغيه من Google Play أو App Store."
+    "cancelInStoreFirst": "يستمر اشتراكك في Budgy Pro حتى تلغيه من Google Play أو App Store.",
+    "title": "Budgy Pro",
+    "pitch": "رسائل البنك، والمزامنة بين هواتفك",
+    "get": "احصل على Pro",
+    "restore": "استعادة المشتريات",
+    "restoredNone": "لم يتم العثور على اشتراك Budgy Pro في حساب المتجر هذا",
+    "restored": "تمت استعادة Budgy Pro",
+    "monthly": "شهري",
+    "yearly": "سنوي",
+    "lifetime": "مدى الحياة",
+    "trial": "تجربة مجانية",
+    "renewsOn": "يتجدد في {{date}}",
+    "endsOn": "ينتهي في {{date}}",
+    "billingIssue": "هناك مشكلة في الدفع. تحقّق منه في المتجر.",
+    "manage": "إدارة",
+    "supportId": "معرّف الدعم",
+    "copied": "تم النسخ"
   }
 }
