@@ -1716,6 +1716,8 @@ ion-fab-button.b-fab {
 
 .b-filtersum > span:first-child { font-style: italic; color: var(--b-muted); }
 
+.b-groupby { margin: 4px 0 8px; }
+
 ion-popover.b-popmenu { --width: 230px; }
 
 /* ─── Bank texts (SMS review) ──────────────────────────────────────────────── */
