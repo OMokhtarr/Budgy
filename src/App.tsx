@@ -22,7 +22,7 @@ import BackupReminder from '@/features/data/BackupReminder';
 import AutoScan from '@/features/sms/AutoScan';
 import BackToExit from '@/features/navigation/BackToExit';
 
-// No edge-swipe back between pages: back only leaves the app (BackToExit) or the on-screen back arrows.
+// No edge-swipe back between pages: back leaves a page on top of the tabs, or the app from a tab (BackToExit).
 setupIonicReact({ mode: 'ios', swipeBackEnabled: false });
 
 export default function App({ onboarding }: { onboarding: OnboardingState | null }) {
