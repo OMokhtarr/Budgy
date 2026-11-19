@@ -611,7 +611,8 @@
   },
   "cloud": {
     "title": "Account & sync",
-    "hint": "Sign in to keep a copy of your data in your account, so you can get it back if you change phones or reinstall Budgy. Without an account, everything stays on this device.",
+    "hint": "Sign-in and sync are part of Budgy Pro. They keep a copy of your data in your account, so you can get it back if you change phones or reinstall Budgy. Without an account, everything stays on this device.",
+    "hintNoGate": "Sign in to keep a copy of your data in your account, so you can get it back if you change phones or reinstall Budgy. Without an account, everything stays on this device.",
     "google": "Continue with Google",
     "apple": "Continue with Apple",
     "signedInAs": "Signed in as {{email}}",
@@ -638,7 +639,12 @@
     "mergeTitle": "This account already has data",
     "mergeMessage": "This device has data too. Merge both, or replace this device's data with the account's?",
     "mergeBoth": "Merge both",
-    "useCloud": "Use the account's data"
+    "useCloud": "Use the account's data",
+    "paused": "Sync paused",
+    "pausedEnded": "Sync is paused: Budgy Pro has ended",
+    "pausedNeverPro": "Sync is part of Budgy Pro",
+    "alreadyPro": "Already have Pro? Sign in",
+    "signOutPausedMessage": "Changes you made since sync paused aren't in your account. Remove them from this device anyway?"
   },
   "sms": {
     "readTexts": "Read bank texts",
@@ -744,6 +750,8 @@
   },
   "pro": {
     "unavailable": "Budgy Pro isn't available right now. Check your connection and try again.",
-    "failed": "The purchase didn't go through. You weren't charged."
+    "failed": "The purchase didn't go through. You weren't charged.",
+    "renew": "Renew",
+    "cancelInStoreFirst": "Your Budgy Pro subscription keeps running until you cancel it in Google Play or the App Store."
   }
 }

@@ -1,23 +1,32 @@
-import { useEffect, useState } from 'react';
-import { IonIcon, IonSpinner, useIonAlert, useIonToast } from '@ionic/react';
-import { alertCircleOutline, checkmarkCircleOutline, logoApple, logoGoogle, syncOutline } from 'ionicons/icons';
+import { useCallback, useEffect, useState } from 'react';
+import { IonIcon, IonSpinner, useIonActionSheet, useIonAlert, useIonToast } from '@ionic/react';
+import { alertCircleOutline, checkmarkCircleOutline, logoApple, logoGoogle, pauseCircleOutline, syncOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/core/contexts/SettingsContext';
 import { useCloud } from '@/core/cloud/CloudContext';
 import { SignInError, availableProviders, classifySignInError, type Provider } from '@/core/cloud/auth';
+import { usePro } from '@/core/pro/ProContext';
+import { useRequirePro } from '@/core/pro/useRequirePro';
 import { dayTimeLabel } from '@/core/utils/period';
+import ProBadge from '@/shared/components/ProBadge';
 
 /**
  * Profile → "Account & sync": optional sign-in with Google / Apple, then sync status, sign out and
- * account deletion. Hidden in builds without cloud settings.
+ * account deletion. Hidden in builds without cloud settings. With the Budgy Pro gate on, sign-in and sync are
+ * part of Pro: a free user's sign-in goes through the paywall, and a signed-in account without Pro is paused.
  */
 export default function AccountSyncSection() {
   const { t } = useTranslation();
   const locale = useLocale();
   const cloud = useCloud();
+  const pro = usePro();
+  const requirePro = useRequirePro();
   const [presentAlert] = useIonAlert();
+  const [presentSheet] = useIonActionSheet();
   const [presentToast] = useIonToast();
   const [busy, setBusy] = useState(false);
+  // Set by "Already have Pro? Sign in": if the account turns out not to have Pro, the paywall opens once.
+  const [paywallAfterSignIn, setPaywallAfterSignIn] = useState(false);
 
   const toast = (message: string, color = 'medium') => presentToast({ message, duration: 3000, position: 'top', color });
 
@@ -29,6 +38,24 @@ export default function AccountSyncSection() {
     void presentToast({ message: t('cloud.signInFailed'), duration: 3000, position: 'top', color: 'danger' });
     clearRedirectError();
   }, [redirectError, clearRedirectError, presentToast, t]);
+
+  const { user } = cloud;
+  const { gateOn, isPro, ready, accountId, showPaywall } = pro;
+
+  /** The paywall on its own; a purchase that errored or a paywall that couldn't open gets a toast. */
+  const paywall = useCallback(async () => {
+    const outcome = await showPaywall();
+    if (outcome === 'failed' || outcome === 'unavailable') {
+      void presentToast({ message: t(`pro.${outcome}`), duration: 3000, position: 'top', color: 'danger' });
+    }
+  }, [showPaywall, presentToast, t]);
+
+  // Waits until RevenueCat has answered for the account just signed in to, not the identity before it.
+  useEffect(() => {
+    if (!paywallAfterSignIn || !user || accountId !== user.id || !ready) return;
+    setPaywallAfterSignIn(false);
+    if (gateOn && !isPro) void paywall();
+  }, [paywallAfterSignIn, user, accountId, ready, gateOn, isPro, paywall]);
 
   if (!cloud.enabled) return null;
 
@@ -44,10 +71,20 @@ export default function AccountSyncSection() {
     }
   };
 
-  const signIn = async (p: Provider) => {
+  const withBusy = async (fn: () => Promise<void>) => {
     setBusy(true);
     try {
+      await fn();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Resolves true once signed in; failures are toasted here. */
+  const providerSignIn = async (p: Provider): Promise<boolean> => {
+    try {
       await cloud.signIn(p);
+      return true;
     } catch (err) {
       const kind = classifySignInError(err);
       console.warn('Budgy: sign-in', kind, err instanceof SignInError ? err.original : err);
@@ -55,15 +92,45 @@ export default function AccountSyncSection() {
       if (kind === 'not-configured') toast(t('cloud.notSetUp', { provider: p === 'google' ? 'Google' : 'Apple' }), 'danger');
       else if (kind === 'network') toast(t('cloud.offline'), 'danger');
       else if (kind === 'failed') toast(t('cloud.signInFailed'), 'danger');
-    } finally {
-      setBusy(false);
+      return false;
     }
   };
+
+  // A free user sees the paywall first and signs in only once subscribed.
+  const signIn = (p: Provider) =>
+    withBusy(() =>
+      requirePro(async () => {
+        await providerSignIn(p);
+      }),
+    );
+
+  // "Already have Pro?": sign in straight away; the paywall follows if the account turns out not to have it.
+  const signInHavingPro = (p: Provider) =>
+    withBusy(async () => {
+      if (await providerSignIn(p)) setPaywallAfterSignIn(true);
+    });
+
+  const pickProviderHavingPro = () => {
+    const providers = availableProviders();
+    if (providers.length === 1) {
+      void signInHavingPro(providers[0]);
+      return;
+    }
+    void presentSheet({
+      buttons: [
+        ...providers.map((p) => ({ text: t(p === 'google' ? 'cloud.google' : 'cloud.apple'), handler: () => void signInHavingPro(p) })),
+        { text: t('common.cancel'), role: 'cancel' },
+      ],
+    });
+  };
+
+  const paused = cloud.status === 'paused';
 
   const signOut = () =>
     presentAlert({
       header: t('cloud.signOutTitle'),
-      message: t('cloud.signOutMessage'),
+      // "Remove" normally uploads first, which can't happen while paused.
+      message: t(paused ? 'cloud.signOutPausedMessage' : 'cloud.signOutMessage'),
       buttons: [
         { text: t('cloud.keepOnDevice'), handler: () => void run(() => cloud.signOut(true)) },
         { text: t('cloud.removeFromDevice'), role: 'destructive', handler: () => void run(() => cloud.signOut(false)) },
@@ -74,7 +141,8 @@ export default function AccountSyncSection() {
   const deleteAccount = () =>
     presentAlert({
       header: t('cloud.deleteTitle'),
-      message: t('cloud.deleteMessage'),
+      // Deleting the account doesn't end a store subscription.
+      message: isPro && pro.plan?.willRenew ? `${t('cloud.deleteMessage')} ${t('pro.cancelInStoreFirst')}` : t('cloud.deleteMessage'),
       buttons: [
         {
           text: t('cloud.deleteKeepLocal'),
@@ -92,18 +160,24 @@ export default function AccountSyncSection() {
 
   const when = (iso: string) => dayTimeLabel(new Date(iso), locale, { today: t('period.today'), yesterday: t('period.yesterday') });
   const statusLine =
-    cloud.status === 'syncing' ? t('cloud.syncing')
+    paused ? t(pro.hadPro ? 'cloud.pausedEnded' : 'cloud.pausedNeverPro')
+    : cloud.status === 'syncing' ? t('cloud.syncing')
     : cloud.status === 'error' ? t('cloud.error')
     : cloud.lastSyncedAt ? t('cloud.synced', { when: when(cloud.lastSyncedAt) })
     : t('cloud.notSynced');
-  const statusIcon = cloud.status === 'error' ? alertCircleOutline : cloud.status === 'syncing' ? syncOutline : checkmarkCircleOutline;
+  const statusIcon =
+    paused ? pauseCircleOutline
+    : cloud.status === 'error' ? alertCircleOutline
+    : cloud.status === 'syncing' ? syncOutline
+    : checkmarkCircleOutline;
+  const proLocked = gateOn && !isPro;
 
   return (
     <>
       <div className="b-section-title">{t('cloud.title')}</div>
       {!cloud.user ? (
         <div className="b-card" style={{ padding: 14 }}>
-          <p className="b-muted" style={{ margin: '0 0 12px', fontSize: 13.5, lineHeight: 1.5 }}>{t('cloud.hint')}</p>
+          <p className="b-muted" style={{ margin: '0 0 12px', fontSize: 13.5, lineHeight: 1.5 }}>{t(gateOn ? 'cloud.hint' : 'cloud.hintNoGate')}</p>
           {availableProviders().map((p) => (
             <button
               key={p}
@@ -114,8 +188,19 @@ export default function AccountSyncSection() {
             >
               <IonIcon icon={p === 'google' ? logoGoogle : logoApple} />
               {t(p === 'google' ? 'cloud.google' : 'cloud.apple')}
+              {proLocked && <ProBadge />}
             </button>
           ))}
+          {proLocked && (
+            <button
+              className="b-muted"
+              style={{ display: 'block', margin: '14px auto 2px', padding: 0, border: 'none', background: 'none', font: 'inherit', fontSize: 13, textDecoration: 'underline' }}
+              disabled={busy}
+              onClick={pickProviderHavingPro}
+            >
+              {t('cloud.alreadyPro')}
+            </button>
+          )}
         </div>
       ) : (
         <div className="b-card" style={{ padding: 14 }}>
@@ -126,16 +211,22 @@ export default function AccountSyncSection() {
             className="b-muted"
             style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0 0', padding: 0, border: 'none', background: 'none', font: 'inherit', fontSize: 13 }}
             onClick={cloud.syncNow}
-            disabled={cloud.status === 'syncing'}
+            disabled={cloud.status === 'syncing' || paused}
           >
             {cloud.status === 'syncing' ? <IonSpinner name="dots" style={{ width: 16, height: 16 }} /> : <IonIcon icon={statusIcon} />}
             {statusLine}
           </button>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
-            <button className="b-btn b-btn--muted" disabled={busy || cloud.status === 'syncing'} onClick={cloud.syncNow}>
-              <IonIcon icon={syncOutline} />
-              {t('cloud.syncNow')}
-            </button>
+            {paused ? (
+              <button className="b-btn b-btn--primary" disabled={busy} onClick={() => void withBusy(paywall)}>
+                {t('pro.renew')}
+              </button>
+            ) : (
+              <button className="b-btn b-btn--muted" disabled={busy || cloud.status === 'syncing'} onClick={cloud.syncNow}>
+                <IonIcon icon={syncOutline} />
+                {t('cloud.syncNow')}
+              </button>
+            )}
             <button className="b-btn b-btn--muted" disabled={busy} onClick={signOut}>
               {t('cloud.signOut')}
             </button>

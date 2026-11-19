@@ -33,13 +33,14 @@ export default function BackupReminder() {
   backupRef.current = backup;
   const [presentToast] = useIonToast();
   const txCount = useLiveQuery(() => db.transactions.filter(alive).count());
-  // Signed in, sync already keeps a copy in the account.
-  const { user } = useCloud();
+  // Signed in, sync already keeps a copy in the account (not while it's paused without Budgy Pro).
+  const { user, status } = useCloud();
+  const synced = !!user && status !== 'paused';
   // Not over the welcome or What's new slides; the timer starts once they close.
   const { deckOpen } = useTours();
 
   useEffect(() => {
-    if (deckOpen || user || txCount == null || txCount < MIN_TRANSACTIONS) return;
+    if (deckOpen || synced || txCount == null || txCount < MIN_TRANSACTIONS) return;
     const now = Date.now();
     const last = lastBackupAt ? Date.parse(lastBackupAt) : 0;
     if (last && now - last < 30 * DAY) return;
@@ -63,7 +64,7 @@ export default function BackupReminder() {
       });
     }, 2000);
     return () => window.clearTimeout(timer);
-  }, [deckOpen, user, txCount, lastBackupAt, presentToast, t]);
+  }, [deckOpen, synced, txCount, lastBackupAt, presentToast, t]);
 
   return null;
 }

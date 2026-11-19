@@ -105,6 +105,11 @@ export function isProFromCustomerInfo(info: CustomerInfo): boolean {
   return info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
 }
 
+/** Pro was ever active for this customer: `entitlements.all` keeps expired entitlements too. */
+export function hadProFromCustomerInfo(info: CustomerInfo): boolean {
+  return info.entitlements.all[PRO_ENTITLEMENT] !== undefined;
+}
+
 /** What the active Pro entitlement looks like, for the account card. */
 export interface ProPlan {
   /** 'lifetime' when it never expires (a promotional grant, say). */

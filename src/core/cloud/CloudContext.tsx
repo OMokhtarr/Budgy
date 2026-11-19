@@ -6,6 +6,8 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import type { User } from '@supabase/supabase-js';
 import { useSettings } from '@/core/contexts/SettingsContext';
+import { usePro } from '@/core/pro/ProContext';
+import { syncGate } from '@/core/pro/rules';
 import { SYNCED_TABLES, db, seedIfEmpty } from '@/core/db/db';
 import { SupabaseRemote, cloudEnabled, supabase } from './client';
 import {
@@ -22,10 +24,11 @@ import { hasWorkToSync, clearLocal, hasLocalTransactions, syncOnce, type Setting
  * Who is signed in, and the backup of their data to the account. Sync runs after sign-in and on start,
  * and a few seconds after each local change. When the app comes back to the front, when the connection
  * returns, and every few minutes while open, it only runs if something is left to send or finish.
+ * With the Budgy Pro gate on, sync waits for Pro and pauses without it; local edits stay dirty until it returns.
  * Without cloud settings in the build (see `.env.example`) this is all off.
  */
 
-export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error';
+export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error' | 'paused';
 
 interface CloudValue {
   enabled: boolean;
@@ -93,6 +96,13 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<SyncStatus>(cloudEnabled ? 'idle' : 'off');
   const [lastSyncedAt, setLastSyncedAt] = useState<string>();
 
+  // Sync needs Pro. ProProvider reads the session on its own, so for a render it can still be answering for the
+  // previous account: wait until it's about this one.
+  const pro = usePro();
+  const gate = pro.accountId === (user?.id ?? null) ? syncGate(pro) : 'wait';
+  const gateRef = useRef(gate);
+  gateRef.current = gate;
+
   // Sync reads the latest settings through a ref: it runs outside React's render cycle.
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -152,7 +162,7 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
   /** Set while `replaceLocal` swaps the data: no sync may start. */
   const paused = useRef(false);
   const sync = useCallback(async () => {
-    if (!supabase || !user || paused.current) return;
+    if (!supabase || !user || paused.current || gateRef.current !== 'go') return;
     if (running.current) {
       again.current = true;
       return;
@@ -199,10 +209,10 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, port, askHowToMerge, clearLocalData]);
 
-  // After sign-in, and on start with a saved session.
+  // After sign-in, on start with a saved session, and the moment Pro arrives (or returns).
   useEffect(() => {
-    if (user) void sync();
-  }, [user, sync]);
+    if (user && gate === 'go') void sync();
+  }, [user, gate, sync]);
 
   // A few seconds after local changes (records or synced settings) — batched.
   const pending = useLiveQuery(async () => {
@@ -295,17 +305,18 @@ export function CloudProvider({ children }: { children: React.ReactNode }) {
     () => ({
       enabled: cloudEnabled,
       user,
-      status: !cloudEnabled ? 'off' : status,
+      status: !cloudEnabled ? 'off' : user && gate === 'paused' ? 'paused' : status,
       lastSyncedAt,
       signIn,
       signOut,
       deleteAccount,
+      // A no-op while paused: sync() checks the gate.
       syncNow: () => void sync(),
       replaceLocal,
       redirectError,
       clearRedirectError: () => setRedirectError(undefined),
     }),
-    [user, status, lastSyncedAt, signIn, signOut, deleteAccount, sync, replaceLocal, redirectError],
+    [user, gate, status, lastSyncedAt, signIn, signOut, deleteAccount, sync, replaceLocal, redirectError],
   );
 
   return <CloudContext.Provider value={value}>{children}</CloudContext.Provider>;

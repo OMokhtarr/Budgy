@@ -1650,6 +1650,19 @@ ion-menu.b-menu { --background: var(--b-bg); --width: min(320px, 85vw); }
   background: var(--b-track);
   vertical-align: 1px;
 }
+/* The "PRO" chip on a Budgy Pro feature (ProBadge) */
+.b-probadge {
+  display: inline-block;
+  margin-inline-start: 2px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  color: var(--ion-color-primary);
+  background: rgba(var(--ion-color-primary-rgb), 0.14);
+}
 /* A group's entry lists its rows: "Card −600 · Bank +200" */
 .b-row__parts { white-space: normal; }
 .b-row__link { margin-inline-start: 6px; font-size: 14px; color: var(--b-muted); vertical-align: -2px; }

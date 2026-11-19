@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const { profileName, profileColor, lastBackupAt, update } = useSettings();
   useRevealWhen(true);
   const { backup } = useDataActions();
-  const { user } = useCloud();
+  const { user, status } = useCloud();
   const [choosingColor, setChoosingColor] = useState(false);
 
   return (
@@ -68,8 +68,9 @@ export default function ProfilePage() {
 
           <AccountSyncSection />
 
-          {/* Signed in, sync already keeps a copy in the account. Backup files stay available under Menu → Data. */}
-          {!user && (
+          {/* Signed in, sync already keeps a copy in the account (not while paused without Budgy Pro). Backup files
+              stay available under Menu → Data. */}
+          {(!user || status === 'paused') && (
             <>
               <div className="b-section-title">{t('profile.backup')}</div>
               <div className="b-card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>

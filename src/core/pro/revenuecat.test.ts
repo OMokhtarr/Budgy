@@ -71,6 +71,12 @@ it('reads Pro from the budgy_pro entitlement only', () => {
   expect(mod.isProFromCustomerInfo(withActive({ pro: {} }))).toBe(false);
 });
 
+it('counts an expired budgy_pro entitlement as having had Pro', () => {
+  const withAll = (all: object) => ({ entitlements: { active: {}, all } }) as never;
+  expect(mod.hadProFromCustomerInfo(withAll({ budgy_pro: { isActive: false } }))).toBe(true);
+  expect(mod.hadProFromCustomerInfo(withAll({}))).toBe(false);
+});
+
 describe('proPlanFromCustomerInfo', () => {
   const ent = (over: object) =>
     withActive({

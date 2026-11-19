@@ -10,6 +10,7 @@ import {
   configureRevenueCat,
   fetchAppUserId,
   fetchCustomerInfo,
+  hadProFromCustomerInfo,
   isProFromCustomerInfo,
   logInAndCheck,
   logOutRevenueCat,
@@ -44,6 +45,10 @@ export interface ProValue {
   ready: boolean;
   /** The active plan's details; null when not Pro or not known yet. */
   plan: ProPlan | null;
+  /** RevenueCat reported Pro on this account at some point, expired included (false until it answers). */
+  hadPro: boolean;
+  /** The account `isPro` and `ready` are about (null = signed out); for one render it can lag another session reader. */
+  accountId: string | null;
   appUserId: string | null;
   /** Shows RevenueCat's Paywall; resolves once it is closed. */
   showPaywall(): Promise<PaywallOutcome>;
@@ -71,6 +76,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
   const [isPro, setIsPro] = useState(() => !available || readProCache(accountId));
   const [ready, setReady] = useState(() => !available || readProCache(accountId));
   const [plan, setPlan] = useState<ProPlan | null>(null);
+  const [hadPro, setHadPro] = useState(false);
   const [appUserId, setAppUserId] = useState<string | null>(null);
 
   // The account RevenueCat follows (undefined until configured).
@@ -93,6 +99,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       setIsPro(cached);
       setReady(cached);
       setPlan(null);
+      setHadPro(false);
       setAppUserId(null);
     }
   }
@@ -103,6 +110,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
     if (owner !== accountIdRef.current) return pro;
     setIsPro(pro);
     setPlan(proPlanFromCustomerInfo(info));
+    setHadPro(hadProFromCustomerInfo(info));
     setReady(true);
     writeProCache(owner, pro);
     return pro;
@@ -274,8 +282,8 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
   }, [available, sessionReady, identitySettled, apply]);
 
   const value = useMemo<ProValue>(
-    () => ({ gateOn, available, isPro, ready, plan, appUserId, showPaywall, showCustomerCenter, restore }),
-    [gateOn, available, isPro, ready, plan, appUserId, showPaywall, showCustomerCenter, restore],
+    () => ({ gateOn, available, isPro, ready, plan, hadPro, accountId, appUserId, showPaywall, showCustomerCenter, restore }),
+    [gateOn, available, isPro, ready, plan, hadPro, accountId, appUserId, showPaywall, showCustomerCenter, restore],
   );
 
   return <ProContext.Provider value={value}>{children}</ProContext.Provider>;

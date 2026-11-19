@@ -10,7 +10,9 @@ import { useRevealWhen } from '@/shared/splash';
 export default function DataPage() {
   const { t } = useTranslation();
   const { exportCsv, importCsv, backup, restore, erase } = useDataActions();
-  const { user } = useCloud();
+  const { user, status } = useCloud();
+  // A paused account (no Budgy Pro) isn't synced.
+  const synced = !!user && status !== 'paused';
   useRevealWhen(true);
 
   return (
@@ -59,7 +61,7 @@ export default function DataPage() {
               <IonLabel color="danger">{t('settings.erase')}</IonLabel>
             </IonItem>
           </IonList>
-          <p className="b-muted b-hint" style={{ paddingInline: 20 }}>{t(user ? 'settings.aboutSynced' : 'settings.about')}</p>
+          <p className="b-muted b-hint" style={{ paddingInline: 20 }}>{t(synced ? 'settings.aboutSynced' : 'settings.about')}</p>
         </div>
       </IonContent>
     </IonPage>

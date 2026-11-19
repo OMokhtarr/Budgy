@@ -20,7 +20,9 @@ import { usePageTour } from '@/features/onboarding/usePageTour';
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const settings = useSettings();
-  const { user } = useCloud();
+  const { user, status } = useCloud();
+  // A paused account (no Budgy Pro) isn't synced.
+  const synced = !!user && status !== 'paused';
   useRevealWhen(true);
   usePageTour(['settings']);
   const accounts = useAccounts(true);
@@ -180,7 +182,7 @@ export default function SettingsPage() {
             <IonItem lines="none">
               <IonLabel>
                 Budgy
-                <p>{t(user ? 'settings.aboutSynced' : 'settings.about')}</p>
+                <p>{t(synced ? 'settings.aboutSynced' : 'settings.about')}</p>
               </IonLabel>
               <IonNote slot="end">v{version}</IonNote>
             </IonItem>
