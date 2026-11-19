@@ -476,7 +476,7 @@
       "categories": {
         "bubble": {
           "title": "Tap to log spending",
-          "body": "Tap a category, type the amount, and it is saved."
+          "body": "Tap a category, type the amount, and it is saved. Hold one to see its transactions."
         },
         "center": {
           "title": "Expenses or income",

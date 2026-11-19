@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { IonButton, IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
+import { useHistory } from 'react-router-dom';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
@@ -12,12 +14,14 @@ import AppHeader from '@/shared/components/AppHeader';
 import PeriodBar from '@/shared/components/PeriodBar';
 import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
 import { useDragReorder } from '@/shared/hooks/useDragReorder';
+import { useLongPress } from '@/shared/hooks/useLongPress';
 import Donut from '@/shared/components/Donut';
 import Bubble from '@/shared/components/Bubble';
 import MoneyText from '@/shared/components/MoneyText';
 import { doneIcon, editIcon } from '@/shared/icons';
 import AccountEditModal from '@/features/accounts/AccountEditModal';
 import CategoryEditModal from './CategoryEditModal';
+import type { TransactionsLocationState } from '@/features/transactions/TransactionsPage';
 import type { Account, Amounts, Category, Flow } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
@@ -25,8 +29,8 @@ import { usePageTour } from '@/features/onboarding/usePageTour';
 
 /**
  * Main screen, 1Money-style: categories arranged around a donut of the period's spending.
- * Tap a category to add a transaction to it. Accounts with "Display in expenses" on (but Cash In and
- * Cash Out) follow as square tiles: tap one to send it money. Each tile shows the money moved to it in
+ * Tap a category to add a transaction to it; hold it to see its transactions. Accounts with "Display in
+ * expenses" on (but Cash In and Cash Out) follow as square tiles: tap one to send it money. Each tile shows the money moved to it in
  * the period; for savings that counts as spending, for a debt only what you lend, for an everyday account none. In
  * edit mode, hold a category or an account and drag it to move it.
  */
@@ -102,6 +106,16 @@ export default function CategoriesPage() {
     openEditor({ type: kind, categoryId: c.id, accountId: filterAccountFor(picked, kind, txs) });
   };
 
+  // Holding a category opens the Transactions tab filtered to it. In edit mode holding drags it instead.
+  const history = useHistory();
+  const holdOrTap = useLongPress<Category>(
+    (c) => {
+      Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
+      history.push('/transactions', { categoryId: c.id } satisfies TransactionsLocationState);
+    },
+    (c) => void tap(c),
+  );
+
   return (
     <IonPage>
       <IonHeader className="ion-no-border">
@@ -152,10 +166,9 @@ export default function CategoriesPage() {
                   amount={amountLines(totals.byCategoryCur[kind].get(c.id!), conv.base)}
                   progress={progress}
                   muted={spent === 0 && !editMode}
-                  onClick={() => tap(c)}
                   dragging={dragging === c.id}
                   {...tourAttr('categories.bubble')}
-                  {...itemProps(c.id!)}
+                  {...(editMode ? { onClick: () => void tap(c), ...itemProps(c.id!) } : holdOrTap(c))}
                 />
               );
             })}

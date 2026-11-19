@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   IonButton, IonButtons, IonContent, IonDatetime, IonFab, IonFabButton, IonFooter, IonHeader, IonIcon, IonItem, IonList,
   IonModal, IonPage, IonPopover, IonSearchbar, IonToolbar, useIonActionSheet, useIonAlert, useIonToast,
@@ -9,6 +9,7 @@ import {
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useLocation } from 'react-router-dom';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
@@ -39,6 +40,11 @@ import { usePageTour } from '@/features/onboarding/usePageTour';
 
 /** What the category filter matches on: a category, or all transfers. */
 const filterKey = (x: Transaction) => (x.type === 'transfer' ? 'transfer' : `c${x.categoryId}`);
+
+/** Sent with a move to this page to open it filtered to one category (holding a category does this). */
+export interface TransactionsLocationState {
+  categoryId?: string;
+}
 
 /** Colour tells income from expenses; the plus keeps income readable without it. */
 function SignedMoney({ plus, currency, text }: { plus: boolean; currency: string; text: string }) {
@@ -74,6 +80,20 @@ export default function TransactionsPage() {
   const selecting = selected.size > 0;
   // While picking transactions, a stray swipe shouldn't change the month and drop the selection.
   const contentRef = usePeriodSwipe(!selecting);
+
+  // Arriving from a held category shows all its transactions: that category's filter alone, no search or
+  // selection. Each arrival applies once, so coming back to this entry later keeps whatever filter was set since.
+  const location = useLocation<TransactionsLocationState | undefined>();
+  const appliedArrival = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const categoryId = location.state?.categoryId;
+    if (!categoryId || appliedArrival.current === location.key) return;
+    appliedArrival.current = location.key;
+    setFilter(new Set([`c${categoryId}`]));
+    setQuery('');
+    setSearchOpen(false);
+    setSelected(new Set());
+  }, [location]);
 
   const txs = useFilteredTransactionsInRange(range);
   useRevealWhen(!!txs && lookupsReady);
