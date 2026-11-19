@@ -439,8 +439,8 @@ ion-toolbar.b-toolbar {
 }
 .b-bubble--muted .b-bubble__amount { color: var(--b-faint); }
 
-/* Edit mode: categories can be held and dragged, so a long press mustn't select text or open a menu */
-.b-catgrid--edit .b-bubble { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Holding a bubble drags it (edit mode) or opens its transactions, never selects text or opens a callout. */
+.b-catgrid .b-bubble { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* Lifted: drawn above the others while it follows the finger */
 .b-bubble.is-dragging { opacity: 0.85; position: relative; z-index: 10; }
 .b-bubble.is-dragging .b-bubble__ring { transform: scale(1.15); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); }
