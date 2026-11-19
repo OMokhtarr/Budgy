@@ -8,22 +8,22 @@ import { scanInbox, sinceOf, type ScanPeriod } from './scan';
  * Returns how many texts are new. Expects the SMS permission to be granted already.
  */
 export function useInboxScan(): (period: ScanPeriod) => Promise<number> {
-  const { smsImport, update } = useSettings();
-  // The settings as they are when the scan ends, so saving lastScanAt doesn't undo a change made meanwhile.
+  const { smsImport, updateSms } = useSettings();
+  // Read when the scan starts, so the callback doesn't change with every settings change.
   const latest = useRef(smsImport);
   latest.current = smsImport;
 
   return useCallback(
     async (period) => {
       const started = new Date();
-      const { lastScanAt, senders } = latest.current;
+      const { lastScanAt, senders, ignoreWords } = latest.current;
       const { added } = await scanInbox(
-        { since: sinceOf(period, started, lastScanAt), senders },
+        { since: sinceOf(period, started, lastScanAt), senders, ignore: ignoreWords ?? [] },
         { list: (o) => SmsInbox.list(o) },
       );
-      update({ smsImport: { ...latest.current, lastScanAt: started.toISOString() } });
+      updateSms({ lastScanAt: started.toISOString() });
       return added;
     },
-    [update],
+    [updateSms],
   );
 }

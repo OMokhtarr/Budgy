@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
 import type { Transaction } from '@/shared/models';
 import type { SmsMessage } from './parser/types';
-import { autoScanDue, fingerprintOf, hasUnseenPending, markPendingSeen, scanInbox, sinceOf } from './scan';
+import { autoScanDue, clearIgnoredPending, fingerprintOf, hasUnseenPending, markPendingSeen, scanInbox, sinceOf } from './scan';
 
 const database = new BudgyDB('t-scan');
 
@@ -11,8 +11,10 @@ const DEBIT = 'Your card **4821 was debited with EGP 450.00 at CARREFOUR MAADI o
 const msg = (over: Partial<SmsMessage> = {}): SmsMessage =>
   ({ id: '1', address: 'CIB', date: Date.parse('2026-11-03T10:15:00.000Z'), body: DEBIT, ...over });
 const fakeList = (messages: SmsMessage[]) => async () => ({ messages });
-const run = (messages: SmsMessage[], senders = ['cib']) =>
-  scanInbox({ since: 0, senders }, { list: fakeList(messages), database });
+const run = (messages: SmsMessage[], senders = ['cib'], ignore: string[] = []) =>
+  scanInbox({ since: 0, senders, ignore }, { list: fakeList(messages), database });
+const pendingRow = (fingerprint: string, body: string) =>
+  ({ fingerprint, smsId: fingerprint, address: 'CIB', date: 'x', body, status: 'understood' as const, amount: 450, direction: 'out' as const });
 
 describe('scanInbox', () => {
   beforeEach(() => Promise.all([database.smsPending.clear(), database.smsSeen.clear(), database.transactions.clear()]));
@@ -44,6 +46,24 @@ describe('scanInbox', () => {
       { fingerprint: 'debit', smsId: '9', address: 'CIB', date: 'x', body: DEBIT, status: 'understood', amount: 450, direction: 'out' },
     ]);
     expect((await run([])).added).toBe(0);
+    expect((await database.smsPending.toArray()).map((r) => r.fingerprint)).toEqual(['debit']);
+  });
+
+  it('skips texts that contain an ignore word, ignoring case', async () => {
+    const res = await run([msg(), msg({ id: '2', date: msg().date + 1, body: `${DEBIT} Promo` })], ['cib'], ['PROMO']);
+    expect(res.added).toBe(1);
+    expect((await database.smsPending.toArray()).map((r) => r.body)).toEqual([DEBIT]);
+  });
+
+  it('clears waiting texts that contain an ignore word on the next scan', async () => {
+    await database.smsPending.bulkPut([pendingRow('promo', `${DEBIT} promo`), pendingRow('debit', DEBIT)]);
+    await run([], ['cib'], ['promo']);
+    expect((await database.smsPending.toArray()).map((r) => r.fingerprint)).toEqual(['debit']);
+  });
+
+  it('clears waiting texts that contain an ignore word without a scan', async () => {
+    await database.smsPending.bulkPut([pendingRow('promo', `${DEBIT} PROMO`), pendingRow('debit', DEBIT)]);
+    expect(await clearIgnoredPending(['promo'], database)).toBe(1);
     expect((await database.smsPending.toArray()).map((r) => r.fingerprint)).toEqual(['debit']);
   });
 

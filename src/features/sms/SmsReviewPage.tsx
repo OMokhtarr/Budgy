@@ -3,7 +3,7 @@ import {
   IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar,
   useIonAlert, useIonRouter, useIonToast,
 } from '@ionic/react';
-import { chatboxEllipsesOutline, searchOutline } from 'ionicons/icons';
+import { chatboxEllipsesOutline, searchOutline, settingsOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -24,9 +24,11 @@ import { addPerson, cardDraft, choiceOf, isPerson, usablePick, type CardChoice, 
 import { markPendingSeen } from './scan';
 import ScanSheet from './ScanSheet';
 import SmsItemCard from './SmsItemCard';
+import SmsSettingsSheet, { PermissionNotes } from './SmsSettingsSheet';
 import TextsSheet from './TextsSheet';
 import { useBatchDuplicatePrompt } from './useBatchDuplicatePrompt';
 import { useSmsAvailability } from './useSmsAvailable';
+import { useSmsPermission } from './useSmsPermission';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 import { usePageTour } from '@/features/onboarding/usePageTour';
 
@@ -43,7 +45,10 @@ const toItem = (x: { id?: string; icon: string; color: string }, name: string): 
 /** Money-back items get their own ids: a category that takes both flows shows in both groups of the picker. */
 const BACK = 'back:';
 
-/** "Bank texts": the scanned texts waiting for review, newest first. Long-press a card to act on several at once. */
+/**
+ * "Bank texts": the scanned texts waiting for review, newest first. Long-press a card to act on several at once.
+ * Also where reading bank texts is turned on, and where its settings live (the gear).
+ */
 export default function SmsReviewPage() {
   const { t } = useTranslation();
   const locale = useLocale();
@@ -62,6 +67,8 @@ export default function SmsReviewPage() {
   const [picking, setPicking] = useState<Picking | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const perm = useSmsPermission();
   // Fingerprints of the texts picked for a batch action.
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -114,12 +121,14 @@ export default function SmsReviewPage() {
 
   // Waits for the availability check; and since hidden pages stay mounted in Ionic's stack, only
   // leaves while this page is the one showing.
-  const allowed = available === true && smsImport.enabled;
+  // Texts show once the permission is confirmed (or couldn't be checked): when it was taken away, reading turns
+  // off a moment after opening, and the cards would flash before the "Turn on" screen.
+  const allowed = available === true && smsImport.enabled && (perm.permission === 'granted' || perm.checkFailed);
   usePageTour(['sms'], { ready: allowed && !!items });
-  const blocked = available === false || (available === true && !smsImport.enabled);
+  const off = available === true && !smsImport.enabled;
   useEffect(() => {
-    if (blocked && pathname === PATH) router.push('/categories', 'root', 'replace');
-  }, [blocked, pathname, router]);
+    if (available === false && pathname === PATH) router.push('/categories', 'root', 'replace');
+  }, [available, pathname, router]);
 
   // Texts on screen are seen: opening the app stops coming here until a scan adds new ones.
   const showingUnseen = allowed && pathname === PATH && !!items?.some((x) => x.unseen);
@@ -127,15 +136,16 @@ export default function SmsReviewPage() {
     if (showingUnseen) void markPendingSeen();
   }, [showingUnseen]);
 
-  // Texts resolved (or gone) drop out of the selection.
+  // Texts resolved (or gone) drop out of the selection, and all of them once reading is off.
   useEffect(() => {
     setSelected((s) => {
       if (!s.size) return s;
+      if (!allowed) return new Set();
       const pending = new Set((items ?? []).map((x) => x.fingerprint));
       const next = new Set([...s].filter((fp) => pending.has(fp)));
       return next.size === s.size ? s : next;
     });
-  }, [items]);
+  }, [items, allowed]);
 
   // The selection bar takes the tab bar's place; the hardware back button leaves selection mode.
   useEffect(() => {
@@ -385,11 +395,31 @@ export default function SmsReviewPage() {
               <IonBackButton defaultHref="/categories" text="" />
             </IonButtons>
             <IonTitle className="b-title">{count ? `${t('sms.bankTexts')} (${count})` : t('sms.bankTexts')}</IonTitle>
-            {allowed && count > 0 && <IonButtons slot="end">{scanButton}</IonButtons>}
+            <IonButtons slot="end">
+              {allowed && count > 0 && scanButton}
+              {available === true && (
+                <IonButton onClick={() => setSettingsOpen(true)} aria-label={t('sms.settingsTitle')}>
+                  <IonIcon slot="icon-only" icon={settingsOutline} />
+                </IonButton>
+              )}
+            </IonButtons>
           </IonToolbar>
         )}
       </IonHeader>
       <IonContent>
+        {off && (
+          <div className="b-page">
+            <div className="b-empty b-smsempty">
+              <IonIcon icon={chatboxEllipsesOutline} />
+              <strong>{t('sms.offTitle')}</strong>
+              <p>{t('sms.offBody')}</p>
+              <button className="b-btn b-btn--primary b-scanbtn" onClick={perm.turnOn}>
+                {t('sms.turnOn')}
+              </button>
+              <PermissionNotes perm={perm} />
+            </div>
+          </div>
+        )}
         {allowed && items && (
           <div className="b-page">
             {smsImport.lastScanAt && !selecting && (
@@ -447,6 +477,7 @@ export default function SmsReviewPage() {
       )}
 
       <ScanSheet isOpen={scanOpen} onClose={() => setScanOpen(false)} />
+      <SmsSettingsSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} perm={perm} />
       <CombineSheet
         isOpen={combineOpen}
         parts={combineParts}
