@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesSender, normalizeKeyword } from './senders';
+import { containsKeyword, matchesSender, normalizeKeyword } from './senders';
 
 describe('matchesSender', () => {
   it('matches partial names ignoring case', () => {
@@ -11,6 +11,15 @@ describe('matchesSender', () => {
     expect(matchesSender('Vodafone', ['', '  '])).toBe(false);
     expect(matchesSender('CIB', ['  cib '])).toBe(true);
   });
+});
+
+describe('containsKeyword', () => {
+  it('finds a word anywhere in the text, ignoring case', () => {
+    expect(containsKeyword('Get 20% OFF now', ['off'])).toBe(true);
+    expect(containsKeyword('Your card was debited', ['promo'])).toBe(false);
+  });
+  it('matches Arabic words', () => expect(containsKeyword('عرض خاص لعملائنا', ['عرض'])).toBe(true));
+  it('never matches a blank word', () => expect(containsKeyword('x', ['  '])).toBe(false));
 });
 
 describe('normalizeKeyword', () => {

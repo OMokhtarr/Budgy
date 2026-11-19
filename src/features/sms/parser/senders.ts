@@ -3,11 +3,14 @@ export function normalizeKeyword(k: string): string {
   return k.trim().replace(/\s+/g, ' ');
 }
 
-/** True when the sender name contains any keyword, ignoring case. Blank keywords never match. */
-export function matchesSender(sender: string, keywords: string[]): boolean {
-  const name = sender.toLocaleLowerCase('en');
+/** True when `text` contains any keyword, ignoring case. Blank keywords never match. */
+export function containsKeyword(text: string, keywords: string[]): boolean {
+  const lower = text.toLocaleLowerCase('en');
   return keywords.some((k) => {
     const key = normalizeKeyword(k).toLocaleLowerCase('en');
-    return key !== '' && name.includes(key);
+    return key !== '' && lower.includes(key);
   });
 }
+
+/** True when the sender name contains any sender keyword, ignoring case. */
+export const matchesSender = containsKeyword;

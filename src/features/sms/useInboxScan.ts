@@ -16,9 +16,9 @@ export function useInboxScan(): (period: ScanPeriod) => Promise<number> {
   return useCallback(
     async (period) => {
       const started = new Date();
-      const { lastScanAt, senders } = latest.current;
+      const { lastScanAt, senders, ignoreWords } = latest.current;
       const { added } = await scanInbox(
-        { since: sinceOf(period, started, lastScanAt), senders },
+        { since: sinceOf(period, started, lastScanAt), senders, ignore: ignoreWords ?? [] },
         { list: (o) => SmsInbox.list(o) },
       );
       update({ smsImport: { ...latest.current, lastScanAt: started.toISOString() } });

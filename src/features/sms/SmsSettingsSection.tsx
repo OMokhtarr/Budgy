@@ -7,7 +7,7 @@ import type { PermissionState } from '@capacitor/core';
 import { useSettings, type SmsImportSettings } from '@/core/contexts/SettingsContext';
 import { SmsInbox } from './native';
 import { useLearned } from './hooks';
-import { addSender, removeSender } from './senderList';
+import { addKeyword, removeKeyword } from './keywordList';
 
 /** Settings → Import from SMS: the switch (with disclosure and permission) and the bank sender keywords. */
 export default function SmsSettingsSection() {
@@ -94,7 +94,7 @@ export default function SmsSettingsSection() {
       inputs: [{ name: 'keyword', type: 'text', placeholder: t('sms.addSenderPlaceholder') }],
       buttons: [
         { text: t('common.cancel'), role: 'cancel' },
-        { text: t('sms.addSender'), handler: (data: { keyword?: string }) => set({ senders: addSender(smsImport.senders, data.keyword ?? '') }) },
+        { text: t('sms.addSender'), handler: (data: { keyword?: string }) => set({ senders: addKeyword(smsImport.senders, data.keyword ?? '') }) },
       ],
     });
 
@@ -136,7 +136,7 @@ export default function SmsSettingsSection() {
           {t('sms.senders')}
           <div style={{ marginTop: 6 }}>
             {smsImport.senders.map((s) => (
-              <IonChip key={s} onClick={() => set({ senders: removeSender(smsImport.senders, s) })}>
+              <IonChip key={s} onClick={() => set({ senders: removeKeyword(smsImport.senders, s) })}>
                 <IonLabel>{s}</IonLabel>
                 <IonIcon icon={closeCircle} />
               </IonChip>

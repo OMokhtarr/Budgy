@@ -36,6 +36,8 @@ export interface SmsImportSettings {
   enabled: boolean;
   /** Sender keywords; a text is read when its sender name contains one of them (ignoring case). */
   senders: string[];
+  /** Ignore words; a text whose message contains one of them (ignoring case) is skipped by scans. */
+  ignoreWords?: string[];
   /** ISO time of the last inbox scan. */
   lastScanAt?: string;
   /** Scan since the last scan each time the app opens or comes back (see `AutoScan`). */

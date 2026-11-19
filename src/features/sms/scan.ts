@@ -2,7 +2,7 @@ import { BudgyDB, db } from '@/core/db/db';
 import { sha256Hex } from '@/core/utils/id';
 import type { SmsPending } from '@/shared/models';
 import { parseSms } from './parser/parseSms';
-import { matchesSender } from './parser/senders';
+import { containsKeyword, matchesSender } from './parser/senders';
 import type { SmsMessage } from './parser/types';
 
 /**
@@ -52,24 +52,39 @@ export interface ScanDeps {
   database?: BudgyDB;
 }
 
-/** Drops pending texts the parser now ignores, e.g. OTPs read as purchases before it learned their wording. */
-async function clearIgnoredPending(database: BudgyDB): Promise<void> {
-  const stale = (await database.smsPending.toArray())
-    .filter((row) => parseSms(row.address, row.body).status === 'ignored')
-    .map((row) => row.fingerprint);
-  await database.smsPending.bulkDelete(stale);
+/** Whether a scan leaves the text out: the parser ignores it (e.g. an OTP), or it contains one of the user's ignore words. */
+const isIgnored = (address: string, body: string, ignore: string[]) =>
+  containsKeyword(body, ignore) || parseSms(address, body).status === 'ignored';
+
+/**
+ * Drops waiting texts a scan would now leave out: ones containing an ignore word, and ones the parser
+ * now ignores, e.g. OTPs read as purchases before it learned their wording.
+ */
+export async function clearIgnoredPending(ignore: string[], database: BudgyDB = db): Promise<void> {
+  await database.transaction('rw', database.smsPending, async () => {
+    const stale = (await database.smsPending.toArray())
+      .filter((row) => isIgnored(row.address, row.body, ignore))
+      .map((row) => row.fingerprint);
+    await database.smsPending.bulkDelete(stale);
+  });
 }
 
-/** Reads matching texts since `since` into smsPending; returns how many are new. */
-export async function scanInbox(opts: { since: number; senders: string[] }, deps: ScanDeps): Promise<{ added: number }> {
+/** Reads matching texts since `since` into smsPending, leaving out ones with an `ignore` word; returns how many are new. */
+export async function scanInbox(
+  opts: { since: number; senders: string[]; ignore?: string[] },
+  deps: ScanDeps,
+): Promise<{ added: number }> {
   const database = deps.database ?? db;
+  const ignore = opts.ignore ?? [];
   const { messages } = await deps.list({ since: opts.since });
 
   const candidates: { msg: SmsMessage; fingerprint: string }[] = [];
   for (const msg of messages) {
-    if (matchesSender(msg.address, opts.senders)) candidates.push({ msg, fingerprint: await fingerprintOf(msg) });
+    if (matchesSender(msg.address, opts.senders) && !containsKeyword(msg.body, ignore)) {
+      candidates.push({ msg, fingerprint: await fingerprintOf(msg) });
+    }
   }
-  await database.transaction('rw', database.smsPending, () => clearIgnoredPending(database));
+  await clearIgnoredPending(ignore, database);
   if (!candidates.length) return { added: 0 };
 
   const keys = candidates.map((c) => c.fingerprint);
