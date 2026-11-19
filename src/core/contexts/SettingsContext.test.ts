@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { stampIfSynced, withoutLastScan, type Settings } from './SettingsContext';
+import { stampIfSynced, withoutLastScan, withSmsPatch, type Settings } from './SettingsContext';
 
 const settings = (s: Partial<Settings>) => ({ currency: 'USD', ...s }) as Settings;
 
@@ -38,5 +38,12 @@ describe('withoutLastScan', () => {
     const next = withoutLastScan(prev);
     expect(next.smsImport).toEqual({ enabled: true, senders: ['CIB'] });
     expect([next.currency, next.syncedUpdatedAt, next.syncedDirty]).toEqual(['USD', '2026-11-04T09:00:00.000Z', undefined]);
+  });
+});
+
+describe('withSmsPatch', () => {
+  it('changes only the patched bank texts settings, keeping the rest as they are now', () => {
+    const now = settings({ smsImport: { enabled: true, senders: ['CIB'], lastScanAt: '2026-11-19T10:00:00.000Z' } });
+    expect(withSmsPatch(now, { enabled: false }).smsImport).toEqual({ enabled: false, senders: ['CIB'], lastScanAt: '2026-11-19T10:00:00.000Z' });
   });
 });

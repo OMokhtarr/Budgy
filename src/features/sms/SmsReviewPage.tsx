@@ -121,7 +121,9 @@ export default function SmsReviewPage() {
 
   // Waits for the availability check; and since hidden pages stay mounted in Ionic's stack, only
   // leaves while this page is the one showing.
-  const allowed = available === true && smsImport.enabled;
+  // Texts show once the permission is confirmed (or couldn't be checked): when it was taken away, reading turns
+  // off a moment after opening, and the cards would flash before the "Turn on" screen.
+  const allowed = available === true && smsImport.enabled && (perm.permission === 'granted' || perm.checkFailed);
   usePageTour(['sms'], { ready: allowed && !!items });
   const off = available === true && !smsImport.enabled;
   useEffect(() => {
@@ -134,15 +136,16 @@ export default function SmsReviewPage() {
     if (showingUnseen) void markPendingSeen();
   }, [showingUnseen]);
 
-  // Texts resolved (or gone) drop out of the selection.
+  // Texts resolved (or gone) drop out of the selection, and all of them once reading is off.
   useEffect(() => {
     setSelected((s) => {
       if (!s.size) return s;
+      if (!allowed) return new Set();
       const pending = new Set((items ?? []).map((x) => x.fingerprint));
       const next = new Set([...s].filter((fp) => pending.has(fp)));
       return next.size === s.size ? s : next;
     });
-  }, [items]);
+  }, [items, allowed]);
 
   // The selection bar takes the tab bar's place; the hardware back button leaves selection mode.
   useEffect(() => {

@@ -46,6 +46,11 @@ export interface SmsImportSettings {
 
 interface SettingsContextValue extends Settings {
   update: (patch: Partial<Settings>) => void;
+  /**
+   * Changes some bank texts settings, keeping the others as they are when the change lands. Use it instead of
+   * `update({ smsImport: { ...smsImport, ... } })`, which can undo a change made meanwhile (e.g. a scan's lastScanAt).
+   */
+  updateSms: (patch: Partial<SmsImportSettings>) => void;
   /** Sets (or clears, with undefined) the rate of one currency against the main one. */
   setRate: (currency: string, rate: number | undefined) => void;
   /** Applies settings downloaded by sync, without marking them for upload again. */
@@ -110,6 +115,7 @@ const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 const SettingsContext = createContext<SettingsContextValue>({
   ...DEFAULTS,
   update: () => {},
+  updateSms: () => {},
   setRate: () => {},
   applySynced: () => {},
   markSyncedClean: () => {},
@@ -123,6 +129,11 @@ const SettingsContext = createContext<SettingsContextValue>({
 export function withoutLastScan(s: Settings): Settings {
   const { lastScanAt: _lastScanAt, ...smsImport } = s.smsImport;
   return { ...s, smsImport };
+}
+
+/** The settings with `patch` applied to the bank texts settings they have now (not a copy read earlier). */
+export function withSmsPatch(s: Settings, patch: Partial<SmsImportSettings>): Settings {
+  return { ...s, smsImport: { ...s.smsImport, ...patch } };
 }
 
 /** Stamps a change to any synced setting so sync uploads it. */
@@ -205,9 +216,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const forgetLastScan = useCallback(() => change(withoutLastScan), [change]);
 
+  const updateSms = useCallback((patch: Partial<SmsImportSettings>) => change((prev) => withSmsPatch(prev, patch)), [change]);
+
   const value = useMemo(
-    () => ({ ...settings, update, setRate, applySynced, markSyncedClean, forgetLastScan }),
-    [settings, update, setRate, applySynced, markSyncedClean, forgetLastScan],
+    () => ({ ...settings, update, updateSms, setRate, applySynced, markSyncedClean, forgetLastScan }),
+    [settings, update, updateSms, setRate, applySynced, markSyncedClean, forgetLastScan],
   );
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }

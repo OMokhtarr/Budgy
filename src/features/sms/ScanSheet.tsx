@@ -14,7 +14,7 @@ const PERIODS: ScanPeriod[] = ['sinceLast', '3d', '1w', '2w', '1m', '3m', '6m'];
 export default function ScanSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const locale = useLocale();
-  const { smsImport, update } = useSettings();
+  const { smsImport, updateSms } = useSettings();
   const runScan = useInboxScan();
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
@@ -33,7 +33,7 @@ export default function ScanSheet({ isOpen, onClose }: { isOpen: boolean; onClos
       if (sms !== 'granted') {
         onClose();
         // Reading turns off, so Bank texts shows its "Turn on" button to allow it again.
-        update({ smsImport: { ...smsImport, enabled: false } });
+        updateSms({ enabled: false });
         void presentAlert({ message: t('sms.scanNoPermission'), buttons: [t('common.close')] });
         return;
       }

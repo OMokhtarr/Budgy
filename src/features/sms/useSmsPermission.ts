@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useIonAlert } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
 import { App as CapApp } from '@capacitor/app';
@@ -27,21 +27,16 @@ export interface SmsPermission {
  */
 export function useSmsPermission(): SmsPermission {
   const { t } = useTranslation();
-  const { smsImport, update } = useSettings();
+  const { smsImport, updateSms: set } = useSettings();
   const [presentAlert] = useIonAlert();
   const [permission, setPermission] = useState<PermissionState>();
   const [refused, setRefused] = useState(false);
   const [toggleKey, setToggleKey] = useState(0);
   const [checkFailed, setCheckFailed] = useState(false);
 
-  const set = useCallback(
-    (patch: Partial<SmsImportSettings>) => update({ smsImport: { ...smsImport, ...patch } }),
-    [smsImport, update],
-  );
-
   // The resume listener is registered once and reads the latest values through this ref.
-  const latest = useRef({ smsImport, set });
-  latest.current = { smsImport, set };
+  const latest = useRef(smsImport);
+  latest.current = smsImport;
 
   useEffect(() => {
     const refresh = async () => {
@@ -50,7 +45,7 @@ export function useSmsPermission(): SmsPermission {
         setPermission(sms);
         setCheckFailed(false);
         if (sms === 'granted') setRefused(false);
-        else if (latest.current.smsImport.enabled) latest.current.set({ enabled: false });
+        else if (latest.current.enabled) set({ enabled: false });
       } catch {
         setCheckFailed(true);
       }
@@ -60,13 +55,23 @@ export function useSmsPermission(): SmsPermission {
     return () => {
       void handle.then((h) => h.remove());
     };
-  }, []);
+  }, [set]);
 
-  const turnOn = () => {
-    if (permission === 'granted') {
-      set({ enabled: true });
-      return;
-    }
+  // Asks Android again rather than trusting the last answer, which may be from before the permission was taken away.
+  const turnOn = () =>
+    void SmsInbox.checkPermissions()
+      .then(({ sms }) => {
+        setPermission(sms);
+        setCheckFailed(false);
+        if (sms === 'granted') set({ enabled: true });
+        else askToTurnOn();
+      })
+      .catch(() => {
+        setCheckFailed(true);
+        setToggleKey((k) => k + 1);
+      });
+
+  const askToTurnOn = () =>
     presentAlert({
       header: t('sms.disclosureTitle'),
       message: t('sms.disclosureBody'),
@@ -82,8 +87,7 @@ export function useSmsPermission(): SmsPermission {
                 setCheckFailed(false);
                 if (sms === 'granted') {
                   setRefused(false);
-                  // Read fresh: the alert's handler outlives the render that opened it.
-                  latest.current.set({ enabled: true });
+                  set({ enabled: true });
                 } else {
                   setRefused(true);
                   setToggleKey((k) => k + 1);
@@ -97,7 +101,6 @@ export function useSmsPermission(): SmsPermission {
         },
       ],
     });
-  };
 
   return { permission, refused, checkFailed, toggleKey, turnOn, set };
 }

@@ -20,6 +20,16 @@ describe('containsKeyword', () => {
   });
   it('matches Arabic words', () => expect(containsKeyword('عرض خاص لعملائنا', ['عرض'])).toBe(true));
   it('never matches a blank word', () => expect(containsKeyword('x', ['  '])).toBe(false));
+  it('matches a phrase split by a line break or extra spaces', () => {
+    expect(containsKeyword('Special\noffer for you', ['special offer'])).toBe(true);
+    expect(containsKeyword('Special   offer', ['special offer'])).toBe(true);
+  });
+  it('matches Arabic written with vowel marks, tatweel or another alef', () => {
+    expect(containsKeyword('عَرْض خاص', ['عرض'])).toBe(true);
+    expect(containsKeyword('عــرض خاص', ['عرض'])).toBe(true);
+    expect(containsKeyword('إعلان جديد', ['اعلان'])).toBe(true);
+    expect(containsKeyword('اعلان جديد', ['إعلان'])).toBe(true);
+  });
 });
 
 describe('normalizeKeyword', () => {
