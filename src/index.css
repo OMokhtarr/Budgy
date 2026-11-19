@@ -1725,7 +1725,9 @@ ion-popover.b-popmenu { --width: 230px; }
 .b-scanbtn { height: 34px; padding: 0 14px; font-size: 13.5px; margin-inline-end: 8px; }
 .b-scanbtn ion-icon { font-size: 16px; }
 
-.b-smslast { font-size: 12.5px; margin: 0 4px 10px; }
+.b-smsbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.b-smslast { font-size: 12.5px; margin: 0 4px; }
+.b-smsbar .b-scanbtn { margin-inline-end: 0; flex-shrink: 0; }
 
 .b-smsempty strong { display: block; color: var(--b-text); font-size: 16px; margin-bottom: 6px; }
 .b-smsempty p { margin: 0 auto 18px; max-width: 320px; line-height: 1.5; }

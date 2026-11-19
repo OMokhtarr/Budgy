@@ -396,7 +396,6 @@ export default function SmsReviewPage() {
             </IonButtons>
             <IonTitle className="b-title">{count ? `${t('sms.bankTexts')} (${count})` : t('sms.bankTexts')}</IonTitle>
             <IonButtons slot="end">
-              {allowed && count > 0 && scanButton}
               {available === true && (
                 <IonButton onClick={() => setSettingsOpen(true)} aria-label={t('sms.settingsTitle')}>
                   <IonIcon slot="icon-only" icon={settingsOutline} />
@@ -422,12 +421,16 @@ export default function SmsReviewPage() {
         )}
         {allowed && items && (
           <div className="b-page">
-            {smsImport.lastScanAt && !selecting && (
-              <p className="b-muted b-smslast">
-                {t('sms.lastScan', {
-                  when: dayTimeLabel(new Date(smsImport.lastScanAt), locale, { today: t('period.today'), yesterday: t('period.yesterday') }),
-                })}
-              </p>
+            {!selecting && (count > 0 || smsImport.lastScanAt) && (
+              <div className="b-smsbar">
+                <p className="b-muted b-smslast">
+                  {smsImport.lastScanAt &&
+                    t('sms.lastScan', {
+                      when: dayTimeLabel(new Date(smsImport.lastScanAt), locale, { today: t('period.today'), yesterday: t('period.yesterday') }),
+                    })}
+                </p>
+                {count > 0 && scanButton}
+              </div>
             )}
             {items.length === 0 ? (
               <div className="b-empty b-smsempty">
