@@ -219,7 +219,7 @@ When bank texts ship in release builds, add a line for them to both descriptions
 | Item | Change |
 |---|---|
 | App access | Sign-in and bank texts need Budgy Pro. Add instructions for reviewers: a promotional Pro grant in RevenueCat for the reviewer, or "start the free trial" |
-| Monetization | Products: subscription with monthly ($1) and yearly ($5) base plans, each with a free trial; one-time product lifetime ($15). Play shows "In-app purchases" on the listing once they exist |
+| Monetization | Products, created 2026-11-19: subscription `budgy_pro` with base plans `monthly` (US$0.99) and `yearly` (US$4.99), each with a 7-day free trial for new customers; one-time product `budgy_pro_lifetime` (US$14.99). Play shows "In-app purchases" on the listing once they exist |
 | Privacy policy | Already updated for Pro (`docs/privacy-policy.md`, 2026-11-19); the `gh-pages` pages must match before release |
 
 ## When the app changes
