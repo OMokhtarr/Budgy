@@ -67,9 +67,10 @@
      (cancel, then wait it out) on a debug build with `VITE_PRO_GATE=on`. Then set `VITE_PRO_GATE=on` for the release.
    - [ ] **Testers:** grant the closed testers promotional Pro in RevenueCat (by Support ID, on their Profile
      pages) before the gated release reaches them.
-   - [ ] **Privacy and store text:** purchase history goes to RevenueCat and Google. Update
-     `docs/privacy-policy.md`, the `gh-pages` pages, the Data safety form and `docs/play-store.md`; the listing
-     line about sign-in and sync should mention Pro and name the Pro features.
+   - [ ] **Privacy and store text:** the policy (`docs/privacy-policy.md` and the `gh-pages` pages) and the
+     listing and Data safety changes (`docs/play-store.md` → "When Budgy Pro turns on") are written. Left: publish
+     the `gh-pages` pages, then enter the listing, Data safety and App access changes in Play Console with the
+     release that turns Pro on.
 2. [ ] **Privacy & store:**
    - The links are https://omokhtarr.github.io/Budgy/privacy.html (consent screen, both stores) and
      https://omokhtarr.github.io/Budgy/delete-account.html (Play's account deletion link).
