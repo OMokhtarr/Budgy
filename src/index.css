@@ -580,6 +580,7 @@ ion-toolbar.b-toolbar {
 
 .b-daygroup .b-row__sub ion-icon { flex-shrink: 0; font-size: 15px; }
 .b-daygroup .b-row__sub span { overflow: hidden; text-overflow: ellipsis; }
+.b-daygroup .b-row__sub .b-row__date { flex-shrink: 0; overflow: visible; margin-inline-start: -2px; }
 
 .b-row__note {
   font-size: 13.5px;
@@ -1715,6 +1716,8 @@ ion-fab-button.b-fab {
 }
 
 .b-filtersum > span:first-child { font-style: italic; color: var(--b-muted); }
+
+.b-groupby { margin: 4px 0 8px; }
 
 ion-popover.b-popmenu { --width: 230px; }
 

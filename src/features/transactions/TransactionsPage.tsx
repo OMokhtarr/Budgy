@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   IonButton, IonButtons, IonContent, IonDatetime, IonFab, IonFabButton, IonFooter, IonHeader, IonIcon, IonItem, IonList,
   IonModal, IonPage, IonPopover, IonSearchbar, IonToolbar, useIonActionSheet, useIonAlert, useIonToast,
@@ -31,6 +31,7 @@ import MoneyText from '@/shared/components/MoneyText';
 import { deleteMany, moveToAccount, moveToCategory, moveToDay } from './bulk';
 import GroupSheet from './GroupSheet';
 import { foldGroups, type ListEntry } from './groups';
+import { accountSections, shownArrangement, type Arrangement } from './sections';
 import type { Transaction } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
@@ -99,6 +100,32 @@ export default function TransactionsPage() {
   }, [txs, query, filter, categories, accounts, categoryName, accountName]);
 
   const totals = useMemo(() => totalsOf(filtered, conv, tiles), [filtered, conv, tiles]);
+
+  // While filtered, the list can be split by account or by where transfers went instead of by day.
+  const [arrange, setArrange] = useState<Arrangement>('day');
+  const hasTransfers = filtered.some((x) => x.type === 'transfer');
+  useEffect(() => {
+    if (!filter.size) setArrange('day');
+  }, [filter.size]);
+  const view = shownArrangement(arrange, filter.size > 0, hasTransfers);
+
+  /** What a row adds to its day's or account's total, in the main currency; a transfer counts only as money moved through a tile. */
+  const netOf = useCallback(
+    (x: Transaction) => {
+      const v = txInBase(x, conv);
+      return x.type === 'income' ? v : x.type === 'expense' ? -v : -spentOnTile(x, tiles, conv);
+    },
+    [conv, tiles],
+  );
+  const sections = useMemo(() => {
+    if (view === 'day') return null;
+    if (view === 'account') return accountSections(filtered, 'account', netOf);
+    // What arrived, in the main currency.
+    return accountSections(filtered, 'toAccount', (x) =>
+      x.toAmount != null && x.toCurrency ? conv.toBase(x.toAmount, x.toCurrency) : txInBase(x, conv),
+    );
+  }, [view, filtered, conv, netOf]);
+  const shortDate = useMemo(() => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }), [locale]);
   const chosen = useMemo(() => filtered.filter((x) => selected.has(x.id!)), [filtered, selected]);
 
   // Each day's entries: transactions, and the rows of a group in view folded into one (on its first row's day).
@@ -291,6 +318,64 @@ export default function TransactionsPage() {
     return <Avatar icon={cat?.icon ?? 'other'} color={cat?.color ?? '#64748b'} />;
   };
 
+  /** One transaction's row; `withDate` adds its date for lists not split by day. */
+  const txRow = (x: Transaction, withDate = false) => {
+    const acc = accounts.get(x.accountId);
+    const cls = `b-row ${selected.has(x.id!) ? 'is-selected' : ''}`;
+    const note = x.note && <div className="b-row__note">{x.note}</div>;
+    // Its own span, so long account names are cut short rather than the date.
+    const date = withDate && <span className="b-row__date">· {shortDate.format(new Date(x.date))}</span>;
+    if (x.type === 'transfer') {
+      const to = accounts.get(x.toAccountId!);
+      return (
+        <button key={x.id} className={cls} {...tourAttr('transactions.row')} {...bind(x)}>
+          {avatarFor(x)}
+          <div className="b-row__main">
+            <div className="b-row__title">{t('type.transfer')}</div>
+            <div className="b-row__sub">
+              <IonIcon icon={iconFor(acc?.icon)} />
+              <span>{accountName(acc)} → {accountName(to)}</span>
+              {date}
+            </div>
+            {note}
+          </div>
+          <div className="b-row__amount b-transfer b-num">
+            <MoneyText currency={x.currency} text={money.plain(x.amount, x.currency)} />
+            {x.toAmount != null && x.toCurrency && (
+              <small>→ <MoneyText currency={x.toCurrency} text={money.plain(x.toAmount, x.toCurrency)} /></small>
+            )}
+          </div>
+        </button>
+      );
+    }
+    const cat = categories.get(x.categoryId!);
+    // Money back is money in, shown with the spending it lowers.
+    const back = isMoneyBack(x);
+    const isExp = x.type === 'expense' || back;
+    const sub = subcategoryName(cat, x.subcategoryId);
+    return (
+      <button key={x.id} className={cls} {...tourAttr('transactions.row')} {...bind(x)}>
+        {avatarFor(x)}
+        <div className="b-row__main">
+          <div className="b-row__title">
+            {categoryName(cat)}{sub ? ` · ${sub}` : ''}
+            {back && <span className="b-row__tag">{t('transactions.moneyBack')}</span>}
+            {x.groupId && <IonIcon className="b-row__link" icon={linkOutline} aria-label={t('transactions.inGroup')} />}
+          </div>
+          <div className="b-row__sub">
+            <IonIcon icon={iconFor(acc?.icon)} />
+            <span>{accountName(acc)}</span>
+            {date}
+          </div>
+          {note}
+        </div>
+        <div className={`b-row__amount b-num ${isExp ? 'b-expense' : 'b-income'}`}>
+          <SignedMoney plus={x.type === 'income'} currency={x.currency} text={money.plain(x.amount, x.currency)} />
+        </div>
+      </button>
+    );
+  };
+
   return (
     <IonPage>
       <IonHeader className="ion-no-border">
@@ -367,6 +452,13 @@ export default function TransactionsPage() {
                   );
                 })}
               </div>
+              <div className="b-pills b-groupby" role="tablist" aria-label={t('transactions.groupBy')}>
+                {(['day', 'account', ...(hasTransfers ? ['toAccount' as const] : [])] as const).map((k) => (
+                  <button key={k} role="tab" aria-selected={view === k} className={view === k ? 'is-active' : ''} onClick={() => setArrange(k)}>
+                    {t(k === 'day' ? 'transactions.byDay' : k === 'account' ? 'transactions.byAccount' : 'transactions.byToAccount')}
+                  </button>
+                ))}
+              </div>
               <div className="b-filtersum">
                 <span>{t('transactions.count', { count: filtered.length })}</span>
                 <span className={`b-num ${filteredNet < 0 ? 'b-expense' : filteredNet > 0 ? 'b-income' : ''}`}>
@@ -398,12 +490,9 @@ export default function TransactionsPage() {
             </div>
           )}
 
-          {days.map(([k, entries]) => {
+          {!sections && days.map(([k, entries]) => {
             const list = entries.flatMap((e) => (e.kind === 'tx' ? [e.tx] : e.rows));
-            const net = list.reduce((s, x) => {
-              const v = txInBase(x, conv);
-              return s + (x.type === 'income' ? v : x.type === 'expense' ? -v : -spentOnTile(x, tiles, conv));
-            }, 0);
+            const net = list.reduce((s, x) => s + netOf(x), 0);
             const heading = dayHeading(k);
             return (
               <section key={k} className="b-daygroup">
@@ -450,58 +539,31 @@ export default function TransactionsPage() {
                       </button>
                     );
                   }
-                  const x = e.tx;
-                  const acc = accounts.get(x.accountId);
-                  const cls = `b-row ${selected.has(x.id!) ? 'is-selected' : ''}`;
-                  const note = x.note && <div className="b-row__note">{x.note}</div>;
-                  if (x.type === 'transfer') {
-                    const to = accounts.get(x.toAccountId!);
-                    return (
-                      <button key={x.id} className={cls} {...tourAttr('transactions.row')} {...bind(x)}>
-                        {avatarFor(x)}
-                        <div className="b-row__main">
-                          <div className="b-row__title">{t('type.transfer')}</div>
-                          <div className="b-row__sub">
-                            <IonIcon icon={iconFor(acc?.icon)} />
-                            <span>{accountName(acc)} → {accountName(to)}</span>
-                          </div>
-                          {note}
-                        </div>
-                        <div className="b-row__amount b-transfer b-num">
-                          <MoneyText currency={x.currency} text={money.plain(x.amount, x.currency)} />
-                          {x.toAmount != null && x.toCurrency && (
-                            <small>→ <MoneyText currency={x.toCurrency} text={money.plain(x.toAmount, x.toCurrency)} /></small>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  }
-                  const cat = categories.get(x.categoryId!);
-                  // Money back is money in, shown with the spending it lowers.
-                  const back = isMoneyBack(x);
-                  const isExp = x.type === 'expense' || back;
-                  const sub = subcategoryName(cat, x.subcategoryId);
-                  return (
-                    <button key={x.id} className={cls} {...tourAttr('transactions.row')} {...bind(x)}>
-                      {avatarFor(x)}
-                      <div className="b-row__main">
-                        <div className="b-row__title">
-                          {categoryName(cat)}{sub ? ` · ${sub}` : ''}
-                          {back && <span className="b-row__tag">{t('transactions.moneyBack')}</span>}
-                          {x.groupId && <IonIcon className="b-row__link" icon={linkOutline} aria-label={t('transactions.inGroup')} />}
-                        </div>
-                        <div className="b-row__sub">
-                          <IonIcon icon={iconFor(acc?.icon)} />
-                          <span>{accountName(acc)}</span>
-                        </div>
-                        {note}
-                      </div>
-                      <div className={`b-row__amount b-num ${isExp ? 'b-expense' : 'b-income'}`}>
-                        <SignedMoney plus={x.type === 'income'} currency={x.currency} text={money.plain(x.amount, x.currency)} />
-                      </div>
-                    </button>
-                  );
+                  return txRow(e.tx);
                 })}
+              </section>
+            );
+          })}
+
+          {sections?.map((s) => {
+            const acc = s.accountId == null ? undefined : accounts.get(s.accountId);
+            const spent = s.total != null && s.total < 0;
+            const tone = s.total == null || s.total === 0 ? '' : view === 'toAccount' ? 'b-transfer' : spent ? 'b-expense' : 'b-income';
+            return (
+              <section key={s.accountId ?? 'rest'} className="b-daygroup">
+                <div className="b-dayhead">
+                  {acc ? <Avatar size="sm" icon={acc.icon} color={acc.color} /> : <Avatar size="sm" icon="other" color="#64748b" />}
+                  <div className="b-dayhead__date">
+                    <strong>{acc ? accountName(acc) : s.accountId == null ? t('transactions.notTransfers') : accountName(undefined)}</strong>
+                    <span>{t('transactions.count', { count: s.rows.length })}</span>
+                  </div>
+                  {s.total != null && (
+                    <span className={`b-dayhead__total b-num ${tone}`}>
+                      <SignedMoney plus={view === 'account' && s.total > 0} currency={conv.base} text={money.plain(Math.abs(s.total))} />
+                    </span>
+                  )}
+                </div>
+                {s.rows.map((x) => txRow(x, true))}
               </section>
             );
           })}
