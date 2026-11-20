@@ -69,10 +69,10 @@ export default function AppMenu() {
         </div>
         <IonList lines="none" className="b-menu__list">
           {page('/profile', personCircleOutline, t('menu.profile'))}
-          {page('/settings', settingsOutline, t('menu.settings'))}
+          {showBankTexts && page('/sms', chatboxEllipsesOutline, t('menu.bankTexts'), smsImport.enabled ? pending : undefined)}
           {page('/recurring', repeatOutline, t('menu.recurring'), due?.length)}
           {page('/data', serverOutline, t('menu.data'))}
-          {showBankTexts && page('/sms', chatboxEllipsesOutline, t('menu.bankTexts'), smsImport.enabled ? pending : undefined)}
+          {page('/settings', settingsOutline, t('menu.settings'))}
           <IonMenuToggle autoHide={false}>
             <IonItem button detail={false} lines="none" href={PLAY_STORE_URL} target="_blank" rel="noopener">
               <IonIcon icon={starOutline} slot="start" />
