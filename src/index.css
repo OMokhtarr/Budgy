@@ -1696,6 +1696,61 @@ ion-menu.b-menu { --background: var(--b-bg); --width: min(320px, 85vw); }
   vertical-align: 1px;
 }
 /* The "PRO" chip on a Budgy Pro feature (ProBadge) */
+/* Profile → Subscription: the Budgy Pro card. A round mark, the title over one line of text, and an Active pill
+   for a subscriber, whose mark and pill take the app's green. */
+.b-pro { padding: 14px; }
+.b-pro__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.b-pro__mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--b-surface-2);
+  color: var(--b-muted);
+  font-size: 22px;
+}
+.b-pro--active .b-pro__mark {
+  background: rgba(var(--ion-color-primary-rgb), 0.16);
+  color: var(--ion-color-primary);
+}
+.b-pro__text { flex: 1; min-width: 0; }
+.b-pro__title { font-size: 16px; font-weight: 700; }
+.b-pro__line {
+  margin: 3px 0 0;
+  color: var(--b-muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+/* The plan and when it renews; amber when it won't renew or the store couldn't charge. */
+.b-pro__status {
+  display: flex;
+  gap: 5px;
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.b-pro__status > ion-icon { flex-shrink: 0; margin-top: 2px; font-size: 16px; }
+.b-pro__status--attention { color: var(--b-warn); }
+.b-pro__pill {
+  align-self: flex-start;
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .b-probadge {
   display: inline-block;
   margin-inline-start: 2px;
