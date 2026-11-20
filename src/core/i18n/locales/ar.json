@@ -889,6 +889,19 @@
     "checkFailed": "تعذّر التحقق من Budgy Pro. تحقّق من اتصالك وحاول مرة أخرى.",
     "tryAgain": "حاول مرة أخرى"
   },
+  "lock": {
+    "promptTitle": "افتح قفل Budgy",
+    "locked": "Budgy مقفل",
+    "unlock": "فتح القفل",
+    "security": "الأمان",
+    "toggle": "قفل Budgy",
+    "toggleHint": "اطلب بصمتك أو وجهك أو رمز الهاتف عند فتح Budgy",
+    "after": "القفل بعد",
+    "afterImmediately": "فورًا",
+    "afterOneMinute": "دقيقة من مغادرته",
+    "afterFiveMinutes": "5 دقائق من مغادرته",
+    "noScreenLock": "اضبط قفل الشاشة (رمز أو نقش أو كلمة مرور) في إعدادات هاتفك أولًا."
+  },
   "recurring": {
     "title": "المعاملات المتكررة",
     "add": "معاملة متكررة جديدة",

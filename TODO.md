@@ -2,8 +2,24 @@
 
 ## Backlog
 
-- [ ] Passcode / biometric lock
-- [x] **Recurring transactions and phone reminders** (`docs/superpowers/specs/2026-11-20-recurring-transactions-design.md`):
+- [ ] **App lock** (`docs/superpowers/specs/2026-11-20-app-lock-design.md`) — **checks still open (need a debug
+      build on a device):**
+    - Turn Lock Budgy on and off with a fingerprint, and with the phone PIN; cancelling leaves the switch as it was.
+    - A phone with no screen lock: turning it on says to set one first.
+    - Closing and reopening Budgy asks to unlock; cancel → the locked cover → Unlock asks again.
+    - Away less than / more than the chosen time (1 and 5 minutes), and Immediately; no second prompt right after
+      unlocking or after the Settings prompt.
+    - Leave Budgy while a prompt is open, come back: it is still locked (or locks after the time away).
+    - Back on the locked cover leaves the app; the cover sits above an open sheet, alert and the side menu, and
+      TalkBack can't read or reach what's behind it.
+    - One misread fingerprint keeps the prompt open (up to 5 tries), and "Use PIN" still works.
+    - Change the phone's time back while Budgy is away: it still locks.
+    - Recent-apps preview hidden on Android 13+, screenshots still work; preview still shows on older Android.
+    - Remove the phone's screen lock after turning the lock on: Budgy opens without asking, and the switch can
+      still be turned off.
+    - Arabic (RTL) layout and dark mode of the cover and the Security section.
+    - The privacy policy now mentions the app lock: copy it to `privacy.html` and `privacy-ar.html` on `gh-pages`.
+- [ ] **Recurring transactions and phone reminders** (`docs/superpowers/specs/2026-11-20-recurring-transactions-design.md`):
       repeat from the editor, Menu → Recurring, due lines on Overview and Transactions, Auto, and Settings → Reminders
       (also covers card due dates).
   - [ ] **Before the release:** deploy `supabase/migrations/20261120120000_recurring_table.sql` (until then the
@@ -60,24 +76,15 @@
     - Add `READ_SMS` to the main manifest.
     - Play Permissions Declaration Form and Data safety form.
     - Short demo video.
-- [x] **Credit cards:** limit, statement cycle, statement vs current balance, minimum payment, in-app due
-      reminders, payments as transfers, interest and fees, credit vs debit
-      (`docs/superpowers/specs/2026-11-08-credit-cards-design.md`).
-  - [x] Phone notifications for card due dates: part of phone reminders (above).
 
 ---
 
 ## Your work (needs your accounts, devices or decisions)
 
-1. [ ] **Budgy Pro setup** (spec §11, `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`):
-   - [x] **RevenueCat:** project "Budgy", app "Budgy (Android)", entitlement `budgy_pro`, offering `default`
-     (Monthly → `budgy_pro:monthly`, Annual → `budgy_pro:yearly`, Lifetime → `budgy_pro_lifetime`), Customer
-     Center on, Android key in `.env.local` (2026-11-19).
+1. [ ] **Budgy Pro setup** (spec §11, `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`).
+   RevenueCat and the Play products are set up; their details are in `docs/play-store.md` → "Other declarations
+   and setup".
    - [ ] **RevenueCat paywall** for `default`, in Arabic and English.
-   - [x] **Play Console products** (2026-11-19, all active): subscription `budgy_pro` with base plans `monthly`
-     (US$0.99, backwards compatible) and `yearly` (US$4.99), each with a 7-day free-trial offer for new customers
-     (`free-trial-7d-monthly`, `free-trial-7d-yearly`; one trial per person across both plans); one-time product
-     `budgy_pro_lifetime` (US$14.99, purchase option `lifetime`, backwards compatible). Play's converted local prices.
    - [ ] **Play ↔ RevenueCat:** upload the Play service account's credentials in RevenueCat, turn on Google
      developer notifications, then check Product catalog → Products no longer says "Could not check". Add a license tester.
    - [ ] **Test** with `VITE_PRO_GATE=test` on a testing-track build: buy, reinstall and restore; sign in and

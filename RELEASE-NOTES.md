@@ -21,12 +21,14 @@ from the owner (`TODO.md`), so say that sync is now part of Budgy Pro.
 • Budgy Pro is here: bank texts and sync across your phones are now part of Budgy Pro
 • Start with a free trial, then choose monthly, yearly or lifetime
 • Everything else stays free, including credit cards
+• New: Lock Budgy in Settings asks for your fingerprint, face or phone PIN when Budgy opens
 • Your data stays on your phone. Without Pro, sync pauses and bank texts stop being read
 </en-US>
 <ar>
 • وصل Budgy Pro: الرسائل المصرفية والمزامنة بين هواتفك أصبحت الآن ضمن Budgy Pro
 • جرّبه مجانًا خلال فترة تجريبية، ثم اختر الاشتراك الشهري أو السنوي أو مدى الحياة
 • كل ما عدا ذلك يبقى مجانيًا، ومنه بطاقات الائتمان
+• جديد: قفل Budgy في الإعدادات يطلب بصمتك أو وجهك أو رمز الهاتف عند فتح Budgy
 • تبقى بياناتك على هاتفك. وبدون Pro تتوقف المزامنة ولا تُقرأ الرسائل المصرفية
 </ar>
 ```

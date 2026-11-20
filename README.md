@@ -22,7 +22,7 @@ offline-only and shows no sign-in at all.
 | **Side menu** | Profile (name, colour, account & sync), Settings, Recurring, Data, Rate us, Support, About. |
 | **Recurring** | Rent, salary, subscriptions: any transaction can repeat (daily, weekly, every 2 weeks, monthly, every 3 months, yearly). On its day it shows at the top of Overview and Transactions; one tap opens it filled in to add (or skip). Ones set to *Auto* are added by themselves when the app opens. Menu → Recurring lists them all. |
 | **Budgy Pro** | Bank texts (Android) and sign-in with sync are Budgy Pro: monthly, yearly or lifetime, with a free trial on the subscriptions. Everything else, credit cards included, stays free. When Pro ends, data stays on the phone, sync pauses and bank-text scanning stops. Switched by `VITE_PRO_GATE` (`off`, `test` or `on`); with it `off`, nothing is gated. |
-| **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week, and phone reminders (recurring transactions and credit-card due dates, at a time of day you pick; Android and iOS). |
+| **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week, phone reminders (recurring transactions and credit-card due dates, at a time of day you pick), and *Lock Budgy* (Android): asks for the phone's own unlock (fingerprint, face or phone PIN) when Budgy opens and after a chosen time away, and hides it in the recent-apps screen (Android 13+). |
 | **Data** | CSV export and import (adds to your data, skipping rows already there), backup / restore (a JSON file, version 7), erase all. |
 
 The add-transaction sheet has a calculator keypad (`250+120` → 370), From → To pickers, cross-currency
@@ -138,7 +138,3 @@ src/
 supabase/       config.toml, migrations/, functions/
 docs/           privacy policy draft, design specs and plans
 ```
-
-## Ideas
-
-- Passcode / biometric lock

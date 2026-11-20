@@ -15,6 +15,7 @@ import { useCloud } from '@/core/cloud/CloudContext';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 import ToursSettingsSection from '@/features/onboarding/ToursSettingsSection';
+import AppLockSettingsSection from './AppLockSettingsSection';
 import { usePageTour } from '@/features/onboarding/usePageTour';
 import RemindersSettingsSection from '@/features/reminders/RemindersSettingsSection';
 
@@ -160,6 +161,8 @@ export default function SettingsPage() {
               </IonSelect>
             </IonItem>
           </IonList>
+
+          <AppLockSettingsSection />
 
           {foreign.length > 0 && (
             <IonList inset>
