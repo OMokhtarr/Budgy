@@ -59,25 +59,17 @@
     - Add `READ_SMS` to the main manifest.
     - Play Permissions Declaration Form and Data safety form.
     - Short demo video.
-- [x] **Credit cards:** limit, statement cycle, statement vs current balance, minimum payment, in-app due
-      reminders, payments as transfers, interest and fees, credit vs debit
-      (`docs/superpowers/specs/2026-11-08-credit-cards-design.md`).
-  - [ ] Phone notifications for card due dates (needs `@capacitor/local-notifications`, the notification
-        permission, and store/privacy wording).
+- [ ] Phone notifications for credit card due dates (needs `@capacitor/local-notifications`, the notification
+      permission, and store/privacy wording).
 
 ---
 
 ## Your work (needs your accounts, devices or decisions)
 
-1. [ ] **Budgy Pro setup** (spec §11, `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`):
-   - [x] **RevenueCat:** project "Budgy", app "Budgy (Android)", entitlement `budgy_pro`, offering `default`
-     (Monthly → `budgy_pro:monthly`, Annual → `budgy_pro:yearly`, Lifetime → `budgy_pro_lifetime`), Customer
-     Center on, Android key in `.env.local` (2026-11-19).
+1. [ ] **Budgy Pro setup** (spec §11, `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`).
+   RevenueCat and the Play products are set up; their details are in `docs/play-store.md` → "Other declarations
+   and setup".
    - [ ] **RevenueCat paywall** for `default`, in Arabic and English.
-   - [x] **Play Console products** (2026-11-19, all active): subscription `budgy_pro` with base plans `monthly`
-     (US$0.99, backwards compatible) and `yearly` (US$4.99), each with a 7-day free-trial offer for new customers
-     (`free-trial-7d-monthly`, `free-trial-7d-yearly`; one trial per person across both plans); one-time product
-     `budgy_pro_lifetime` (US$14.99, purchase option `lifetime`, backwards compatible). Play's converted local prices.
    - [ ] **Play ↔ RevenueCat:** upload the Play service account's credentials in RevenueCat, turn on Google
      developer notifications, then check Product catalog → Products no longer says "Could not check". Add a license tester.
    - [ ] **Test** with `VITE_PRO_GATE=test` on a testing-track build: buy, reinstall and restore; sign in and
