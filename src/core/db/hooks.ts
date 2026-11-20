@@ -97,6 +97,14 @@ export function useCardStatuses(): Map<string, CardStatus> | undefined {
   });
 }
 
+/** One card's live transactions: those on it and transfers to it. */
+export function useCardTransactions(cardId: string): Transaction[] | undefined {
+  return useLiveQuery(
+    () => db.transactions.where('accountId').equals(cardId).or('toAccountId').equals(cardId).filter(alive).toArray(),
+    [cardId],
+  );
+}
+
 /**
  * Currencies that hold an opening balance or appear in any transaction. Totals need an exchange
  * rate for each of these; without one their amounts are left out.
