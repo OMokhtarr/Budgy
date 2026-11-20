@@ -84,7 +84,8 @@
 1. [ ] **Budgy Pro setup** (spec §11, `docs/superpowers/specs/2026-11-19-budgy-pro-subscription-design.md`).
    RevenueCat and the Play products are set up; their details are in `docs/play-store.md` → "Other declarations
    and setup".
-   - [ ] **RevenueCat paywall** for `default`, in Arabic and English.
+   - [ ] **RevenueCat paywall** for `default`, in Arabic and English. With the phone in English and Budgy in
+     Arabic, check it reads right to left (Android 13+; older versions keep the paywall left to right).
    - [ ] **Play ↔ RevenueCat:** upload the Play service account's credentials in RevenueCat, turn on Google
      developer notifications, then check Product catalog → Products no longer says "Could not check". Add a license tester.
    - [ ] **Test** with `VITE_PRO_GATE=test` on a testing-track build: buy, reinstall and restore; sign in and

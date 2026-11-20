@@ -3,8 +3,8 @@
 > **Published at https://omokhtarr.github.io/Budgy/privacy.html from the `gh-pages` branch.** When this
 > changes, update `privacy.html` and `privacy-ar.html` there too. Keep it in line with what the app actually
 > does: it matches the code as of 2026-11-20 (optional Google/Apple sign-in, cloud sync on Supabase, optional
-> SMS import on Android, Budgy Pro purchases through Google Play / the App Store and RevenueCat, reminders
-> scheduled on the phone, no ads, no analytics).
+> SMS import and app lock on Android, Budgy Pro purchases through Google Play / the App Store and RevenueCat, including
+> RevenueCat's purchase analytics, reminders scheduled on the phone; no ads, no usage analytics, no tracking).
 
 _Last updated: November 20, 2026_
 
@@ -22,7 +22,7 @@ explains what data the app handles and why.
   We never see your card or payment details.
 - If you turn on **Lock Budgy** (Android only), the app asks for your phone's own unlock: your fingerprint,
   face, or the phone's PIN, pattern or password. Your phone checks it; Budgy never sees or stores it.
-- No ads, no analytics, no selling or sharing of data.
+- No ads, no tracking, and your data is never sold.
 - You can delete your account and all its data from inside the app at any time.
 
 ## Data the app handles
@@ -62,8 +62,10 @@ payment under their own terms and privacy policies. We never see your card, bank
   a subscription service. RevenueCat receives the store's receipt for your purchase (which product, when it
   was bought, renews or ends, and whether it's a trial) and an ID for you: a random ID made on your phone,
   or, once you sign in, your Budgy account ID, so your Pro follows your account.
-- This is used only to unlock Budgy Pro on your devices and to help you if a purchase doesn't show up (the
-  "Support ID" on your Profile is this ID).
+- This is used to unlock Budgy Pro on your devices, to help you if a purchase doesn't show up (the
+  "Support ID" on your Profile is this ID), and for purchase analytics: RevenueCat's reports show us
+  figures such as how many people start a trial, subscribe, renew or cancel. It isn't used for ads or
+  tracking.
 - Even if you never buy it, the app asks RevenueCat whether you have Budgy Pro, so RevenueCat receives that
   random ID and basic technical details (app version, platform, language). It receives no budget data.
 
@@ -73,7 +75,8 @@ from the data already on it; nothing is sent to us or anyone else. The notificat
 amount; on a locked phone, your phone's own lock-screen setting decides whether that shows. You can turn
 reminders off in Settings → Reminders, or in your phone's notification settings.
 
-**Things we don't collect:** location, contacts, photos, advertising IDs, or usage analytics.
+**Things we don't collect:** location, contacts, photos, advertising IDs, or usage analytics (what you do
+in the app).
 
 ## Where the data is stored and who processes it
 
@@ -83,7 +86,7 @@ reminders off in Settings → Reminders, or in your phone's notification setting
   "Continue with Apple", under their own privacy policies. **Google Play and the App Store** handle Budgy
   Pro payments.
 - **RevenueCat** keeps the record of Budgy Pro purchases described above, and processes it only to provide
-  this service.
+  this service, including the purchase reports it shows us.
 - The data is encrypted in transit (HTTPS). In the database, access rules limit each account's
   data to that account.
 
