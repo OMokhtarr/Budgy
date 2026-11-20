@@ -22,8 +22,7 @@
 - [ ] **Recurring transactions and phone reminders** (`docs/superpowers/specs/2026-11-20-recurring-transactions-design.md`):
       repeat from the editor, Menu → Recurring, due lines on Overview and Transactions, Auto, and Settings → Reminders
       (also covers card due dates).
-  - [ ] **Before the release:** deploy `supabase/migrations/20261120120000_recurring_table.sql` (until then the
-        app syncs everything else and keeps recurring ones waiting to upload); copy the privacy policy's
+  - [ ] **Before the release:** copy the privacy policy's
         "Reminders" paragraph to `privacy.html` and `privacy-ar.html` on `gh-pages`; mention recurring transactions
         and reminders in both store descriptions; add a `RELEASE-NOTES.md` section (needs the `versionCode` bump).
   - [ ] **Checks on a phone (debug build).** Done on the Android 16 emulator (2026-11-20): turning reminders on
