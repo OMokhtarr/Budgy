@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dueDays, nextAfter, occurrenceDate, occurrencesBetween, occurrenceTxId, repeatOf } from './recurring';
+import { dueDays, isFinished, nextAfter, occurrenceDate, occurrencesBetween, occurrenceTxId, repeatOf } from './recurring';
 import type { Recurring } from '@/shared/models';
 
 const rule = (over: Partial<Recurring> = {}): Recurring => ({
@@ -88,5 +88,25 @@ describe('repeatOf', () => {
     expect(repeatOf({ unit: 'week', every: 2 })).toBe('biweekly');
     expect(repeatOf({ unit: 'month', every: 3 })).toBe('quarterly');
     expect(repeatOf({ unit: 'year', every: 1 })).toBe('yearly');
+  });
+});
+
+describe('until', () => {
+  it('stops occurrences after the last day', () => {
+    expect(occurrencesBetween(rule({ start: '2026-01-15', until: '2026-03-15' }), '2026-01-01', '2026-12-31')).toEqual([
+      '2026-01-15',
+      '2026-02-15',
+      '2026-03-15',
+    ]);
+  });
+
+  it('has nothing due once finished', () => {
+    expect(dueDays(rule({ start: '2026-01-15', next: '2026-04-15', until: '2026-03-15' }), new Date(2026, 5, 1))).toEqual([]);
+  });
+
+  it('isFinished once next is past until', () => {
+    expect(isFinished({ next: '2026-04-15', until: '2026-03-15' })).toBe(true);
+    expect(isFinished({ next: '2026-03-15', until: '2026-03-15' })).toBe(false);
+    expect(isFinished({ next: '2026-03-15' })).toBe(false);
   });
 });

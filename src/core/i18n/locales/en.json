@@ -843,6 +843,8 @@
     "stopMessage": "Transactions already added stay.",
     "nextOn": "Next: {{date}}",
     "next": "next {{date}}",
+    "until": "until {{date}}",
+    "ended": "Ended",
     "editHeader": "Recurring transaction. Changes apply from the next one.",
     "newHeader": "New recurring transaction. Pick the day of the first one.",
     "dueHeader": "{{name}} was due on {{date}}. Check the amount, then save.",

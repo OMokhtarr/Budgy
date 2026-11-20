@@ -52,9 +52,14 @@ function indexNear(r: Repeat & Pick<Recurring, 'start'>, day: Date): number {
   return Math.max(0, n - 1);
 }
 
-/** Every occurrence day (YYYY-MM-DD) from `from` to `to`, both included, at most `limit`. */
-export function occurrencesBetween(r: Repeat & Pick<Recurring, 'start'>, from: string, to: string, limit = MAX_DUE): string[] {
-  const end = parseDayKey(to);
+/** Every occurrence day (YYYY-MM-DD) from `from` to `to`, both included, at most `limit`, and none after `until`. */
+export function occurrencesBetween(
+  r: Repeat & Pick<Recurring, 'start' | 'until'>,
+  from: string,
+  to: string,
+  limit = MAX_DUE,
+): string[] {
+  const end = parseDayKey(r.until && r.until < to ? r.until : to);
   const out: string[] = [];
   for (let n = indexNear(r, parseDayKey(from)); out.length < limit; n++) {
     const d = occurrence(r, n);
@@ -63,6 +68,11 @@ export function occurrencesBetween(r: Repeat & Pick<Recurring, 'start'>, from: s
     if (key >= from) out.push(key);
   }
   return out;
+}
+
+/** Whether it has ended: its next occurrence would come after its last day. */
+export function isFinished(r: Pick<Recurring, 'next' | 'until'>): boolean {
+  return r.until != null && r.next > r.until;
 }
 
 /** The first occurrence after `day`. */

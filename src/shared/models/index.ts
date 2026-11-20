@@ -152,6 +152,10 @@ export interface Recurring extends Synced {
   next: string;
   /** Added by itself when the app opens, instead of waiting for the user to confirm. */
   auto?: true;
+  /** The last day it happens (YYYY-MM-DD, included). Undefined = it never ends. */
+  until?: string;
+  /** Set on the automatic payment of a credit card instalment plan. */
+  planId?: string;
   createdAt: string;
 }
 

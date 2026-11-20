@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '@/core/contexts/SettingsContext';
 import { useLookups } from '@/core/db/hooks';
 import { parseDayKey } from '@/core/utils/period';
-import { repeatOf } from '@/core/utils/recurring';
+import { isFinished, repeatOf } from '@/core/utils/recurring';
 import { useRevealWhen } from '@/shared/splash';
 import Avatar from '@/shared/components/Avatar';
 import type { Recurring } from '@/shared/models';
@@ -104,7 +104,12 @@ export default function RecurringPage() {
                             {r.auto && <IonIcon className="b-row__link" icon={flashOutline} aria-label={t('recurring.auto')} />}
                           </div>
                           <div className="b-row__sub">
-                            <span>{t(`recurring.every.${repeatOf(r)}`)} · {t('recurring.next', { date: day(r.next) })}</span>
+                            <span>
+                              {t(`recurring.every.${repeatOf(r)}`)} ·{' '}
+                              {isFinished(r)
+                                ? t('recurring.ended')
+                                : `${t('recurring.next', { date: day(r.next) })}${r.until ? ` · ${t('recurring.until', { date: day(r.until) })}` : ''}`}
+                            </span>
                           </div>
                         </div>
                         <div className={`b-row__amount b-num ${amountClass(r)}`}>{amount}</div>
