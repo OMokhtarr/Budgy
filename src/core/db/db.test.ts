@@ -135,29 +135,39 @@ describe('backups', () => {
     expect([tx.accountId, tx.categoryId]).toEqual([wallet.id, fun.id]);
   });
 
-  it('version 6 backs up links and rules, never pending or seen texts', async () => {
+  it('version 7 backs up links, rules and recurring transactions, never pending or seen texts', async () => {
     const body = 'Your card **4821 was charged EGP 120.00 at Carrefour';
     const linkId = await db.smsLinks.add({ address: 'CIB', digits: '4821', accountId: 'acc-1' });
     const ruleId = await db.merchantRules.add({ merchant: 'carrefour', flow: 'expense', categoryId: 'cat-1' });
     await db.smsPending.add({ fingerprint: 'fp-1', smsId: '1', address: 'CIB', date: '2026-11-07T10:00:00.000Z', body, status: 'understood', amount: 120, currency: 'EGP', direction: 'out', merchant: 'Carrefour', digits: '4821' });
     await db.smsSeen.add({ fingerprint: 'fp-2', outcome: 'dismissed', at: '2026-11-07T10:00:00.000Z' });
+    const recurringId = await db.recurring.add({
+      tx: { type: 'expense', amount: 5000, currency: 'EGP', accountId: 'acc-1', categoryId: 'cat-1' },
+      unit: 'month', every: 1, start: '2026-11-01', next: '2026-12-01', createdAt: 'x',
+    });
 
     const backup = JSON.parse(JSON.stringify(await exportBackup(SETTINGS)));
-    expect(backup.version).toBe(6);
-    expect([backup.smsLinks.length, backup.merchantRules.length]).toEqual([1, 1]);
+    expect(backup.version).toBe(7);
+    expect([backup.smsLinks.length, backup.merchantRules.length, backup.recurring.length]).toEqual([1, 1, 1]);
     const text = JSON.stringify(backup);
     expect(text).not.toMatch(/"[^"]*(pending|seen|body)[^"]*":/i);
     expect(text).not.toContain(body);
 
     await db.smsLinks.clear();
     await db.merchantRules.clear();
+    await db.recurring.clear();
     await importBackup(backup);
+    expect((await db.recurring.get(recurringId))?.next).toBe('2026-12-01');
     expect((await db.smsLinks.get(linkId))?.accountId).toBe('acc-1');
     expect((await db.merchantRules.get(ruleId))?.categoryId).toBe('cat-1');
     // Restores leave the texts waiting for review, and the dismissed ones, as they were.
     expect([await db.smsPending.count(), await db.smsSeen.count()]).toEqual([1, 1]);
 
-    const { smsLinks: _links, merchantRules: _rules, ...v5 } = backup;
+    const { recurring: _recurring, ...v6 } = backup;
+    await importBackup({ ...v6, version: 6 });
+    expect(await db.recurring.count()).toBe(0);
+
+    const { smsLinks: _links, merchantRules: _rules, ...v5 } = v6;
     await importBackup({ ...v5, version: 5 });
     expect([await db.smsLinks.count(), await db.merchantRules.count()]).toEqual([0, 0]);
   });

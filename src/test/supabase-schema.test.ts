@@ -98,8 +98,8 @@ describe('last edit wins', () => {
   });
 });
 
-describe('learned SMS links and merchant rules', () => {
-  it.each(['sms_links', 'merchant_rules'])('%s keeps rows private and the newest edit', async (t) => {
+describe('tables added later: learned SMS links, merchant rules, recurring transactions', () => {
+  it.each(['sms_links', 'merchant_rules', 'recurring'])('%s keeps rows private and the newest edit', async (t) => {
     const put = `insert into public.${t} (id, data, updated_at) values ($1, $2, $3)
       on conflict (user_id, id) do update set data = excluded.data, updated_at = excluded.updated_at`;
     await as(A, put, [R1, { accountId: 'new' }, '2026-11-07T10:00:00Z']);
@@ -115,7 +115,8 @@ describe('account deletion', () => {
     const n = await pg.query<{ n: number }>(
       `select (select count(*) from public.accounts where user_id = $1) + (select count(*) from public.categories where user_id = $1)
         + (select count(*) from public.transactions where user_id = $1) + (select count(*) from public.settings where user_id = $1)
-        + (select count(*) from public.sms_links where user_id = $1) + (select count(*) from public.merchant_rules where user_id = $1) as n`,
+        + (select count(*) from public.sms_links where user_id = $1) + (select count(*) from public.merchant_rules where user_id = $1)
+        + (select count(*) from public.recurring where user_id = $1) as n`,
       [A],
     );
     expect(Number(n.rows[0].n)).toBe(0);

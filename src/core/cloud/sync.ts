@@ -102,7 +102,7 @@ export async function clearLocal(database: BudgyDB): Promise<void> {
 }
 
 /** Tables added after the first cloud release: until their migration is deployed, sync goes on without them. */
-const LATER_TABLES: ReadonlySet<SyncedTable> = new Set<SyncedTable>(['smsLinks', 'merchantRules']);
+const LATER_TABLES: ReadonlySet<SyncedTable> = new Set<SyncedTable>(['smsLinks', 'merchantRules', 'recurring']);
 
 /** Whether a cloud error means the table isn't there: PostgREST's PGRST205, Postgres's 42P01, or HTTP 404. */
 export function isMissingTable(error: unknown): boolean {

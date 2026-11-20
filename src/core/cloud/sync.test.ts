@@ -14,6 +14,7 @@ function fakeServer() {
     transactions: new Map(),
     smsLinks: new Map(),
     merchantRules: new Map(),
+    recurring: new Map(),
   };
   const server = { tables, settings: null as RemoteSettings | null, writes: 0 };
   const remote: Remote = {
@@ -287,11 +288,11 @@ describe('learned SMS links', () => {
 });
 
 describe('a cloud without the learning tables yet', () => {
-  /** The fake server, but sms_links and merchant_rules fail the way Supabase does before their migration is deployed. */
+  /** The fake server, but the tables added later fail the way Supabase does before their migration is deployed. */
   function withoutLearningTables() {
     const { server, remote } = fakeServer();
     const gate = { deployed: false };
-    const missing = (table: SyncedTable) => !gate.deployed && (table === 'smsLinks' || table === 'merchantRules');
+    const missing = (table: SyncedTable) => !gate.deployed && (table === 'smsLinks' || table === 'merchantRules' || table === 'recurring');
     const notFound = () => Object.assign(new Error("Could not find the table 'public.sms_links' in the schema cache"), { code: 'PGRST205', status: 404 });
     const gated: Remote = {
       ...remote,
