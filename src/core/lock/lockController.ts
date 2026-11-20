@@ -14,7 +14,8 @@ export type LockView = 'open' | 'covered' | 'locked';
 export type ConfirmResult = 'ok' | 'cancelled' | 'no-screen-lock';
 
 export interface LockDeps {
-  now(): number;
+  /** A clock that changing the phone's time doesn't move and that keeps counting while it sleeps (ms). */
+  now(): Promise<number>;
   settings(): AppLockSettings;
   /** Whether the phone has a screen lock (PIN, pattern or password). */
   isSecure(): Promise<boolean>;
@@ -26,31 +27,28 @@ export interface LockDeps {
 export interface LockController {
   view(): LockView;
   start(): void;
-  pause(): void;
-  resume(): void;
+  /** The owner left Budgy (Home, another app, screen off). Budgy's own prompt doesn't count. */
+  leave(): void;
+  /** The owner came back to Budgy. */
+  comeBack(): Promise<void>;
+  /** The cover's Unlock button, and the prompt that opens by itself. */
   unlock(): Promise<void>;
   /** For turning the lock on or off: the owner unlocks once, without changing what the app shows. */
   confirm(): Promise<ConfirmResult>;
 }
 
 /**
- * After a prompt that ended while Budgy was in the background, a return within this long is the prompt's own
- * return (its answer can reach Budgy just before the resume), not the owner coming back later.
- */
-export const PROMPT_RETURN_GRACE_MS = 2_000;
-
-/**
- * The app lock's rules. Android's unlock prompt is a separate screen, so it pauses and resumes Budgy around
- * every unlock: pause and resume don't cover or lock while a prompt is open, so coming back from it never locks
- * again. If the prompt ends while Budgy is in the background (Android cancels it when the owner leaves), the
- * time away starts then, so leaving mid-prompt still locks.
+ * The app lock's rules. Time away runs from leaving Budgy to coming back; Android's unlock prompt sits over
+ * Budgy without leaving it, so it never counts. When the owner leaves while a prompt is open, Android holds the
+ * prompt's answer until Budgy is back: a return that must lock waits for that prompt to end, then asks again.
+ * Once locked, only an unlock (or a phone with no screen lock) opens Budgy.
  */
 export function createLockController(deps: LockDeps): LockController {
   let view: LockView = 'open';
   let awayAt: number | null = null;
-  let awayFromPrompt = false;
+  let leaving: Promise<void> = Promise.resolve();
   let prompting = false;
-  let active = true;
+  let unlockWhenPromptEnds = false;
 
   const show = (next: LockView) => {
     if (next === view) return;
@@ -68,55 +66,51 @@ export function createLockController(deps: LockDeps): LockController {
       return (await deps.verify()) ? 'ok' : 'cancelled';
     } finally {
       prompting = false;
-      if (!active && deps.settings().enabled) {
-        awayAt = deps.now();
-        awayFromPrompt = true;
+      if (unlockWhenPromptEnds) {
+        unlockWhenPromptEnds = false;
+        void unlock();
       }
     }
   };
 
-  /** Shows the app, or keeps it covered while Budgy is still away. */
-  const showUnlessAway = () => show(awayAt === null ? 'open' : 'covered');
-
   const unlock = async () => {
     const result = await prompt();
-    if (result === 'ok' || result === 'no-screen-lock') showUnlessAway();
+    // Still away (the answer came before the return): stay covered until the return decides.
+    if (result === 'ok' || result === 'no-screen-lock') show(awayAt === null ? 'open' : 'covered');
+  };
+
+  const lock = () => {
+    show('locked');
+    if (prompting) unlockWhenPromptEnds = true;
+    else void unlock();
   };
 
   return {
     view: () => view,
     start() {
       if (!deps.settings().enabled) return show('open');
-      show('locked');
-      void unlock();
+      lock();
     },
-    pause() {
-      active = false;
-      if (prompting || !deps.settings().enabled) return;
-      awayAt = deps.now();
-      awayFromPrompt = false;
-      if (view !== 'locked') show('covered');
+    leave() {
+      if (!deps.settings().enabled) return;
+      if (view === 'open') show('covered');
+      leaving = deps.now().then((t) => {
+        awayAt = t;
+      });
     },
-    resume() {
-      active = true;
-      if (prompting || awayAt === null) return;
-      const away = deps.now() - awayAt;
-      const { enabled, afterMs } = deps.settings();
-      const after = awayFromPrompt ? Math.max(afterMs, PROMPT_RETURN_GRACE_MS) : afterMs;
+    async comeBack() {
+      await leaving;
+      if (awayAt === null) return;
+      const away = (await deps.now()) - awayAt;
       awayAt = null;
-      // Only a covered app opens on a short return: once locked, only an unlock opens it.
-      if (view === 'locked' || (enabled && away >= after)) {
-        show('locked');
-        void unlock();
-      } else {
-        show('open');
-      }
+      const { enabled, afterMs } = deps.settings();
+      // A negative time away means the clock can't be trusted, so lock.
+      if (view === 'locked' || (enabled && (away >= afterMs || away < 0))) lock();
+      else show('open');
     },
     unlock,
     async confirm() {
-      const result = (await prompt()) ?? 'cancelled';
-      if (view === 'open' && awayAt !== null) show('covered');
-      return result;
+      return (await prompt()) ?? 'cancelled';
     },
   };
 }
