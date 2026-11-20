@@ -774,5 +774,10 @@
     "copied": "Copied",
     "checkFailed": "Couldn't check Budgy Pro. Check your connection and try again.",
     "tryAgain": "Try again"
+  },
+  "lock": {
+    "promptTitle": "Unlock Budgy",
+    "locked": "Budgy is locked",
+    "unlock": "Unlock"
   }
 }

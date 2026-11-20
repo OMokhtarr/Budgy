@@ -886,5 +886,10 @@
     "copied": "تم النسخ",
     "checkFailed": "تعذّر التحقق من Budgy Pro. تحقّق من اتصالك وحاول مرة أخرى.",
     "tryAgain": "حاول مرة أخرى"
+  },
+  "lock": {
+    "promptTitle": "افتح قفل Budgy",
+    "locked": "Budgy مقفل",
+    "unlock": "فتح القفل"
   }
 }
