@@ -12,6 +12,7 @@ import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { countsInExpenses, countsInTotal, switchesOnByDefault } from '@/core/utils/accountFilter';
 import { currenciesOf, openingOf, roundTo } from '@/core/utils/currency';
 import { debtSideOf, signedFor, unsigned, type DebtSide } from '@/core/utils/debtSide';
+import { fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter } from '@/core/utils/creditCard';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
@@ -43,6 +44,10 @@ const GROUPS: AccountGroup[] = ['regular', 'savings', 'debt'];
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 /** A new credit card starts with a statement on the 25th, due on the 20th of the next month. */
 const NEW_CREDIT: CreditCard = { statementDay: 25, dueDay: 20 };
+/** "Days after the statement" starts here, about what banks give. */
+const NEW_DUE_AFTER = '25';
+/** When a card's payment is due: a day of the month, or a number of days after the statement. */
+type DueMode = 'day' | 'after';
 /** A typed amount, or undefined when it's empty or zero. */
 const optional = (typed: string) => parseNumber(typed) || undefined;
 const DEBT_SIDES: DebtSide[] = ['owed', 'owe'];
@@ -82,6 +87,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const [limit, setLimit] = useState('');
   const [statementDay, setStatementDay] = useState(NEW_CREDIT.statementDay);
   const [dueDay, setDueDay] = useState(NEW_CREDIT.dueDay);
+  const [dueMode, setDueMode] = useState<DueMode>('day');
+  const [dueAfter, setDueAfter] = useState(NEW_DUE_AFTER);
   const [minPercent, setMinPercent] = useState('');
   const [minAmount, setMinAmount] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -113,6 +120,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     setLimit(credit?.limit ? String(credit.limit) : '');
     setStatementDay(credit?.statementDay ?? NEW_CREDIT.statementDay);
     setDueDay(credit?.dueDay ?? NEW_CREDIT.dueDay);
+    setDueMode(credit?.dueAfter ? 'after' : 'day');
+    setDueAfter(credit?.dueAfter ? String(credit.dueAfter) : NEW_DUE_AFTER);
     setMinPercent(credit?.minPercent ? String(credit.minPercent) : '');
     setMinAmount(credit?.minAmount ? String(credit.minAmount) : '');
     setLoaded(true);
@@ -130,6 +139,13 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   // A credit card is typed as what you owe on it, unless it was overpaid.
   const credit = !isDebt && type === 'card' && isCredit;
   const owedOnCard = credit && typedSide !== 'owed' && typedSide !== 'mixed';
+  // The card's cycle as typed so far; undefined while "days after" isn't a valid number.
+  const daysAfter = dueMode === 'after' ? parseDueAfter(dueAfter) : undefined;
+  const cycleDraft: CreditCard | undefined =
+    dueMode === 'day' ? { statementDay, dueDay } : daysAfter ? { statementDay, dueDay, dueAfter: daysAfter } : undefined;
+  // A number above the limit is most likely the bank's total from the day you buy (e.g. 55).
+  const tooManyDays = dueMode === 'after' && !daysAfter && /^\d+$/.test(dueAfter.trim()) && Number(dueAfter) > MAX_DUE_AFTER;
+  const creditInvalid = credit && !cycleDraft;
   const plainSide: DebtSide | undefined = plainAmounts ? side : owedOnCard ? 'owe' : undefined;
   const pickSide = (s: DebtSide) => {
     setSideChoice(s);
@@ -157,7 +173,7 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   };
 
   const save = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || creditInvalid) return;
     // Dropping a currency that transactions use leaves them in it, so make sure that's intended.
     const removed = account ? currenciesOf(account).filter((c) => c !== currency && c !== currency2) : [];
     if (account?.id != null && removed.length) {
@@ -202,15 +218,18 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
       showInExpenses: expensesOn === switchesOnByDefault(group) ? undefined : expensesOn,
       // A debt can't be where new income or expenses start.
       defaultFor: isDebt ? undefined : defaultFor,
-      credit: credit
-        ? {
-            limit: optional(limit),
-            statementDay,
-            dueDay,
-            minPercent: optional(minPercent),
-            minAmount: optional(minAmount),
-          }
-        : undefined,
+      credit:
+        credit && cycleDraft
+          ? {
+              limit: optional(limit),
+              statementDay,
+              // Kept with "days after" too, so an older version of the app still shows a close date.
+              dueDay: cycleDraft.dueAfter ? fixedDueDay(cycleDraft, new Date()) : dueDay,
+              dueAfter: cycleDraft.dueAfter,
+              minPercent: optional(minPercent),
+              minAmount: optional(minAmount),
+            }
+          : undefined,
     };
     let id = account?.id;
     if (account && id != null) {
@@ -276,7 +295,7 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
           </IonButtons>
           <IonTitle>{account ? t('accounts.editTitle') : t('accounts.newTitle')}</IonTitle>
           <IonButtons slot="end">
-            <IonButton strong onClick={save} disabled={!name.trim()}>
+            <IonButton strong onClick={save} disabled={!name.trim() || creditInvalid}>
               {t('common.save')}
             </IonButton>
           </IonButtons>
@@ -343,15 +362,26 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
                   onChange={(e) => setLimit(cleanNumberInput(e.target.value))}
                 />
               </label>
-              <div className="b-field-row b-field-row--even">
-                <label className="b-field">
-                  <span>{t('cards.statementDay')}</span>
-                  <select className="b-input" value={statementDay} onChange={(e) => setStatementDay(Number(e.target.value))}>
-                    {DAYS.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </label>
+              <label className="b-field">
+                <span>{t('cards.statementDay')}</span>
+                <select className="b-input" value={statementDay} onChange={(e) => setStatementDay(Number(e.target.value))}>
+                  {DAYS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="b-field">
+                <span>{t('cards.dueRule')}</span>
+                <div className="b-pills">
+                  <button className={dueMode === 'day' ? 'is-active' : ''} onClick={() => setDueMode('day')}>
+                    {t('cards.dueRuleDay')}
+                  </button>
+                  <button className={dueMode === 'after' ? 'is-active' : ''} onClick={() => setDueMode('after')}>
+                    {t('cards.dueRuleAfter')}
+                  </button>
+                </div>
+              </div>
+              {dueMode === 'day' ? (
                 <label className="b-field">
                   <span>{t('cards.dueDay')}</span>
                   <select className="b-input" value={dueDay} onChange={(e) => setDueDay(Number(e.target.value))}>
@@ -360,8 +390,24 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
                     ))}
                   </select>
                 </label>
+              ) : (
+                <label className="b-field">
+                  <span>{t('cards.dueAfter')}</span>
+                  <input
+                    className="b-input b-num"
+                    inputMode="numeric"
+                    value={dueAfter}
+                    onChange={(e) => setDueAfter(e.target.value.replace(/[^\d]/g, ''))}
+                  />
+                </label>
+              )}
+              <div className={`b-field-hint ${tooManyDays ? 'b-expense' : ''}`}>
+                {tooManyDays
+                  ? t('cards.dueAfterTooMany')
+                  : cycleDraft
+                    ? `${t('cards.upToDays', { count: interestFree(cycleDraft, new Date()).best.days })} ${dueMode === 'day' ? t('cards.daysHint') : ''}`.trim()
+                    : t('cards.dueAfterRange', { max: MAX_DUE_AFTER })}
               </div>
-              <div className="b-field-hint">{t('cards.daysHint')}</div>
               <div className="b-field-row b-field-row--even">
                 <label className="b-field">
                   <span>{t('cards.minPercent')}</span>
