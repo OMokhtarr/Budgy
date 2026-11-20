@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { decimalsOf, roundTo } from '@/core/utils/currency';
+import { decimalsOf, numberLocale, roundTo } from '@/core/utils/currency';
 import { stampAfter } from '@/core/utils/stamp';
 import type { Amounts } from '@/shared/models';
 import { DEFAULT_LOCK_AFTER_MS, type AppLockSettings } from '@/core/lock/lockController';
@@ -244,7 +244,7 @@ export function useSettings() {
 /** Locale used for number/date formatting; Arabic keeps Latin digits for readability. */
 export function useLocale(): string {
   const { i18n } = useTranslation();
-  return i18n.language === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US';
+  return numberLocale(i18n.language);
 }
 
 /** Returns a money formatter bound to the user's language; amounts default to the main currency. */

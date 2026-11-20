@@ -1,5 +1,10 @@
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
 
+/** Budgy's locale for numbers and dates: Arabic keeps Western digits (0-9) for readability. */
+export function numberLocale(lang: string): string {
+  return lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US';
+}
+
 const decimalsCache = new Map<string, number>();
 
 /** Decimal places a currency uses: 2 for most, 3 for KWD/BHD/OMR/JOD, 0 for JPY. */
