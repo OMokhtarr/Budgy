@@ -130,6 +130,8 @@ export interface Transaction extends Synced {
   groupId?: string;
   /** The recurring transaction this one was added from. */
   recurringId?: string;
+  /** One instalment of a credit card purchase: the n-th of `of`, all sharing `planId`. Only on expenses. */
+  instalment?: { planId: string; n: number; of: number };
 }
 
 export type RepeatUnit = 'day' | 'week' | 'month' | 'year';

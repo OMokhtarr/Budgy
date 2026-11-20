@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { cardStatus, cardTransactions, cycleOf, dueAfterTooMany, fixedDueDay, interestFree, needsReminder, parseDueAfter, payFromAccount } from './creditCard';
+import {
+  cardStatus, cardTransactions, cycleOf, dueAfterTooMany, fixedDueDay, instalmentPlans, interestFree, needsReminder, parseDueAfter, payFromAccount,
+  statementFor,
+} from './creditCard';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
 
 const day = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h);
@@ -286,4 +289,65 @@ it('dueAfterTooMany flags a whole number above 30, in any digits', () => {
   expect(dueAfterTooMany('55')).toBe(true);
   expect(dueAfterTooMany('٥٥')).toBe(true);
   for (const fine of ['', '0', '25', '30', '2.5']) expect(dueAfterTooMany(fine)).toBe(false);
+});
+
+const inst = (amount: number, date: Date, n: number, of: number, planId = 'p') =>
+  tx({ type: 'expense', amount, date: date.toISOString(), instalment: { planId, n, of } });
+
+describe('instalments on the card', () => {
+  const today = day(2026, 11, 28);
+  const plan = [1, 2, 3].map((n) => inst(1000, day(2026, 10 + n, 26), n, 3)); // 26 Nov, 26 Dec, 26 Jan
+
+  it('owes the full price at once', () => {
+    expect(cardStatus(card(), plan, today).byCurrency.EGP.owed).toBe(3000);
+  });
+
+  it('counts only what is dated up to today as spent, and the rest as still to come', () => {
+    const s = cardStatus(card(), plan, today).byCurrency.EGP;
+    expect(s.spent).toBe(1000);
+    expect(s.toCome).toBe(2000);
+  });
+
+  it('leaves later statements’ instalments out of the next statement', () => {
+    expect(cardStatus(card(), plan, today).byCurrency.EGP.later).toBe(2000); // 26 Dec and 26 Jan land after the 25 Dec statement
+  });
+
+  it('bills one instalment per statement', () => {
+    expect(cardStatus(card(), plan, day(2026, 12, 28)).byCurrency.EGP.due).toBe(1000); // the 25 Dec statement holds only 26 Nov's
+  });
+
+  it('asks the instalments plus the minimum % of the rest', () => {
+    const c = card({ credit: credit({ minPercent: 5 }) });
+    const s = cardStatus(c, [inst(1000, day(2026, 11, 10), 1, 12), spend(2000, day(2026, 11, 11))], today);
+    expect(s.byCurrency.EGP.minimum).toBe(1000 + 100);
+  });
+
+  it('tracks instalments in a second currency on their own', () => {
+    const s = cardStatus(
+      card({ currency2: 'USD' }),
+      [tx({ type: 'expense', amount: 50, currency: 'USD', date: day(2027, 1, 26).toISOString(), instalment: { planId: 'u', n: 2, of: 2 } })],
+      today,
+    );
+    expect(s.byCurrency.USD.toCome).toBe(50);
+    expect(s.byCurrency.EGP.toCome).toBe(0);
+  });
+});
+
+it('statementFor gives the statement a charge lands on, and its due date', () => {
+  const s = statementFor(credit(), day(2026, 11, 25));
+  expect(ymd(s.statementOn)).toEqual([2026, 11, 25]);
+  expect(ymd(s.dueOn)).toEqual([2026, 12, 20]);
+  expect(ymd(statementFor(credit(), day(2026, 11, 26)).statementOn)).toEqual([2026, 12, 25]);
+});
+
+it('instalmentPlans lists running plans with what is charged and still to come', () => {
+  const txs = [1, 2, 3].map((n) => inst(1000, day(2026, 10 + n, 26), n, 3));
+  const [p] = instalmentPlans('card', txs, day(2026, 11, 28));
+  expect(p).toMatchObject({ planId: 'p', of: 3, monthly: 1000, charged: 1, toCome: 2000, currency: 'EGP' });
+  expect(instalmentPlans('card', txs, day(2027, 2, 1))).toEqual([]);
+});
+
+it('cardTransactions leaves out charges after the next statement', () => {
+  const r = cardTransactions('card', [inst(1, day(2026, 11, 27), 1, 2), inst(2, day(2027, 1, 2), 2, 2)], cycleOf(credit(), day(2026, 11, 28)));
+  expect(r.thisCycle.map((t) => t.amount)).toEqual([1]);
 });
