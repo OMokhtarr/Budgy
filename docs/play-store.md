@@ -1,7 +1,7 @@
 # Budgy on Google Play
 
 > Everything entered in Play Console, kept here so it can be checked and updated. Matches the app as of
-> 2026-11-07: optional Google/Apple sign-in, cloud sync on Supabase, no ads, no analytics, no SMS
+> 2026-11-20: optional Google/Apple sign-in, cloud sync on Supabase, no ads, no analytics, no SMS
 > access in release builds. **When the app changes, go through [When the app changes](#when-the-app-changes)
 > first.**
 
@@ -202,25 +202,68 @@ In both full descriptions, replace the sign-in line under "Your data, your choic
 • Budgy Pro: سجّل الدخول عبر Google أو Apple لنسخ بياناتك احتياطيًا ومزامنتها بين أجهزتك، مع فترة تجريبية مجانية
 ```
 
+In both full descriptions, replace the "No ads, no analytics" line too, because RevenueCat's purchase
+analytics make it untrue:
+
+```
+• No ads, no tracking, and your data is never sold
+```
+
+```
+• بلا إعلانات ولا تتبّع، ولا تُباع بياناتك أبدًا
+```
+
 When bank texts ship in release builds, add a line for them to both descriptions too (they're part of Pro).
 
 ### Data safety
 
-- **Financial info → Purchase history:** already ticked. It now also covers Budgy Pro purchases, which
-  RevenueCat processes as a service provider (not sharing). Purpose stays App functionality.
-- **Personal info → User IDs:** already ticked. It now also covers the RevenueCat app user ID, which exists
-  for everyone once Pro is on, so check whether Play wants it marked **Required** rather than "Users can
-  choose". Compare with RevenueCat's own Play Data safety guidance before submitting.
-- **Device or other IDs:** stays unticked unless RevenueCat's guidance says its Android SDK collects one.
-- Nothing else changes: no ads, no analytics.
+These answers follow RevenueCat's Play Data safety guidance. Change two rows in the [Data types](#data-types)
+table:
+
+| Data type | Collected or shared | Ephemeral | Required or optional | Purposes |
+|---|---|---|---|---|
+| Personal info → User IDs | Collected | No | **Required** | App functionality, Account management |
+| Financial info → Purchase history | Collected | No | **Required** | App functionality, **Analytics** |
+
+- **User IDs are Required:** RevenueCat gives every install an anonymous app user ID when the app starts,
+  whether or not anyone signs in or buys. Signing in swaps it for the Budgy account ID.
+- **Purchase history is Required:** Pro can't be bought without the store receipt going to RevenueCat. It's
+  also used for **Analytics**, because RevenueCat's dashboard charts (trials, conversions, renewals,
+  cancellations) are built from it.
+- **Still not shared:** RevenueCat is a service provider, like Supabase.
+- **Device or other IDs:** stays unticked.
+- **Notes under Data types:** "Users can choose" now covers only the sign-in rows (Name, Email address,
+  Other financial info, Other user-generated content). Take Analytics out of "Purposes never ticked".
+- No ads, so the Ads declaration stays "No".
+
+### App access
+
+Sign-in and bank texts need Budgy Pro, so choose **All or some functionality is restricted** and give the
+reviewer a free way in:
+
+1. In Play Console → Monetize with Play → Promo codes, create a **one-time code** for `budgy_pro_lifetime`.
+   Give it an end date well after the review, and make a fresh one for each submission (codes are
+   single-use).
+2. Before submitting, redeem one yourself on a release build to check the steps below still work.
+3. Paste these instructions, with the code, into App access:
+
+```
+Budgy Pro unlocks sign-in with cloud sync, and bank texts. To unlock it for free:
+1. Open the menu, then Profile.
+2. Under Budgy Pro, tap Get Pro and choose Lifetime.
+3. In the Google Play purchase sheet, tap the payment method, choose "Redeem code" and enter: <CODE>
+Budgy Pro unlocks right away.
+
+If the code doesn't work: choose Monthly or Yearly instead and start the 7-day free trial. You can cancel
+it in Google Play before it ends, at no charge.
+```
 
 ### Other declarations and setup
 
 | Item | Change |
 |---|---|
-| App access | Sign-in and bank texts need Budgy Pro. Add instructions for reviewers: a promotional Pro grant in RevenueCat for the reviewer, or "start the free trial" |
 | Monetization | Products, created 2026-11-19: subscription `budgy_pro` with base plans `monthly` (US$0.99) and `yearly` (US$4.99), each with a 7-day free trial for new customers; one-time product `budgy_pro_lifetime` (US$14.99). Play shows "In-app purchases" on the listing once they exist |
-| Privacy policy | Already updated for Pro (`docs/privacy-policy.md`, 2026-11-19); the `gh-pages` pages must match before release |
+| Privacy policy | Already updated for Pro, including RevenueCat's purchase analytics (`docs/privacy-policy.md`, 2026-11-20); the `gh-pages` pages must match before release |
 
 ## When the app changes
 
@@ -229,7 +272,7 @@ Check these before releasing a change of the kind listed:
 | If you… | Update |
 |---|---|
 | Sync a new kind of data, or add a field to what's uploaded | Data safety types and purposes, `docs/privacy-policy.md`, and the `gh-pages` privacy pages |
-| Add an SDK (analytics, crash reporting, ads, push, payments; RevenueCat is in from Budgy Pro) | Data safety (crash logs, device IDs, etc.), the Ads declaration, the privacy policy, and "No ads, no analytics" in both descriptions |
+| Add an SDK (analytics, crash reporting, ads, push, payments; RevenueCat is in from Budgy Pro) | Data safety (crash logs, device IDs, etc.), the Ads declaration, the privacy policy, and the "No ads, no tracking" line in both descriptions ("No ads, no analytics" until Budgy Pro turns on) |
 | Add a sign-in method | The account creation methods question, the privacy policy, and the descriptions |
 | Change how deletion works | The delete account URL page, the partial deletion question, and the privacy policy |
 | Add a permission, e.g. `READ_SMS` for SMS import | Permissions Declaration Form, Data safety (SMS → Messages), the privacy policy, a demo video, and the descriptions. See the SMS stage 3 items in `TODO.md` |
