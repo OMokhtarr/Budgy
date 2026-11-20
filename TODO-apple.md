@@ -24,7 +24,12 @@ Everything for iOS and the App Store, left until after Android. The rest is in `
    RevenueCat, and add the iOS key. Apple requires a Restore button (in the app) and the subscription terms on
    the paywall (RevenueCat's paywall shows them).
 8. [ ] **App lock on iPhone:** turn on the lock for iOS in `src/core/lock/native.ts` (`lockSupported`), add
-   `NSFaceIDUsageDescription` to `Info.plist`, and run the app lock checks from `TODO.md` with Face ID and the
-   iPhone passcode. The recent-apps preview needs its own iOS code (a cover when the app goes to the background).
-9. [ ] **Later, maybe:** sign in with Apple on Android. It needs Apple's web flow and a deep link back
+   `NSFaceIDUsageDescription` to `Info.plist`, and check it with Face ID and the iPhone passcode: turning it on
+   and off, locking on open and after the chosen time away, the locked cover, and Arabic and dark mode (the
+   Android checks are in `docs/superpowers/specs/2026-11-20-app-lock-design.md`). The recent-apps preview needs
+   its own iOS code (a cover when the app goes to the background).
+9. [ ] **Recurring reminders on iPhone:** check phone reminders on iOS: the notification permission, a reminder
+   at the set time, tapping it opens Recurring (or Accounts for a card), and the next one is scheduled again
+   after a restart.
+10. [ ] **Later, maybe:** sign in with Apple on Android. It needs Apple's web flow and a deep link back
    into the app.

@@ -51,6 +51,7 @@ EVERYTHING IN ONE PLACE
 • Categories around a spending donut for the current period, with monthly budgets and subcategories
 • Accounts with live balances, transfers, savings groups and archived accounts
 • Debts: keep track of who owes you and whom you owe
+• Recurring transactions: rent, salary and subscriptions come back on their day, added with one tap or automatically
 • My finances: assets, debts and net worth per currency
 • Overview: income, expenses, net, daily average, trends and budget progress
 
@@ -59,10 +60,12 @@ BUILT FOR REAL LIFE
 • A calculator keypad when adding transactions (250+120 → 370)
 • Day, week, month, year or custom periods. Swipe to move between them
 • Search, plus bulk edits to change the date, account or category of several transactions at once
+• Phone reminders on the day a recurring transaction is due and before a credit card's due date
 • English and Arabic, light and dark themes
 
 YOUR DATA, YOUR CHOICE
 • Works fully offline. Without an account, your data never leaves your phone
+• Lock Budgy with your fingerprint, face or phone PIN
 • Optional Google or Apple sign-in backs up your data and keeps it the same across your devices
 • CSV export and import, plus backup and restore files
 • No ads, no analytics, and your data is never sold or shared
@@ -78,6 +81,7 @@ YOUR DATA, YOUR CHOICE
 • فئات حول مخطط دائري لمصروفات الفترة، مع ميزانيات شهرية وفئات فرعية
 • حسابات بأرصدة مباشرة وتحويلات ومجموعات للادخار وأرشفة للحسابات
 • الديون: تابع من يدين لك ولمن تدين
+• المعاملات المتكررة: الإيجار والراتب والاشتراكات تعود في يومها، وتُضاف بلمسة واحدة أو تلقائيًا
 • أموالي: الأصول والديون وصافي الثروة لكل عملة
 • نظرة عامة: الدخل والمصروفات والصافي والمتوسط اليومي والاتجاهات وتقدّم الميزانية
 
@@ -86,10 +90,12 @@ YOUR DATA, YOUR CHOICE
 • لوحة أرقام بآلة حاسبة عند إضافة المعاملات (250+120 ← 370)
 • يوم أو أسبوع أو شهر أو سنة أو فترة مخصّصة، واسحب للتنقل بينها
 • بحث، وتعديل عدة معاملات معًا لتغيير التاريخ أو الحساب أو الفئة
+• تذكيرات على الهاتف في يوم استحقاق المعاملة المتكررة وقبل موعد سداد بطاقة الائتمان
 • العربية والإنجليزية، والوضعان الفاتح والداكن
 
 بياناتك، واختيارك
 • يعمل بالكامل دون إنترنت. بدون حساب، لا تغادر بياناتك هاتفك
+• اقفل Budgy ببصمتك أو وجهك أو رمز الهاتف
 • تسجيل دخول اختياري عبر Google أو Apple لنسخ بياناتك احتياطيًا ومزامنتها بين أجهزتك
 • تصدير واستيراد CSV، وملفات نسخ احتياطي واستعادة
 • بلا إعلانات ولا تحليلات، ولا تُباع بياناتك أو تُشارك أبدًا
@@ -276,7 +282,7 @@ Check these before releasing a change of the kind listed:
 | Add an SDK (analytics, crash reporting, ads, push, payments; RevenueCat is in from Budgy Pro) | Data safety (crash logs, device IDs, etc.), the Ads declaration, the privacy policy, and the "No ads, no tracking" line in both descriptions ("No ads, no analytics" until Budgy Pro turns on) |
 | Add a sign-in method | The account creation methods question, the privacy policy, and the descriptions |
 | Change how deletion works | The delete account URL page, the partial deletion question, and the privacy policy |
-| Add a permission, e.g. `READ_SMS` for SMS import | Permissions Declaration Form, Data safety (SMS → Messages), the privacy policy, a demo video, and the descriptions. See the SMS stage 3 items in `TODO.md` |
+| Add a permission, e.g. `READ_SMS` for SMS import | Permissions Declaration Form, Data safety (SMS → Messages), the privacy policy, a demo video, and the descriptions. See the SMS import items in `TODO.md` |
 | Add or remove a visible feature | Full descriptions (both languages) and the screenshots (re-run `scripts/store-assets`) |
 | Change the look of a screen that's in a screenshot | Re-run `scripts/store-assets` |
 | Fix the Arabic "$US" amounts | Add the Arabic Overview, Budgets and Transactions shots back (see `scripts/store-assets/README.md`) |

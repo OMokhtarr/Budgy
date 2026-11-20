@@ -1,6 +1,6 @@
 # SMS import, stage 2: the import itself — design
 
-Date: 2026-11-07 · Status: draft for review
+Date: 2026-11-07 · Status: implemented; device checks done 2026-11-20.
 
 Builds on `docs/superpowers/specs/2026-11-03-sms-import-design.md` (the "main spec") and the finished
 stage 1 (`docs/superpowers/plans/2026-11-03-sms-import.md`). Read the main spec first: everything it
