@@ -95,7 +95,7 @@ export function createLockController(deps: LockDeps): LockController {
       if (prompting || !deps.settings().enabled) return;
       awayAt = deps.now();
       awayFromPrompt = false;
-      show('covered');
+      if (view !== 'locked') show('covered');
     },
     resume() {
       active = true;
@@ -104,7 +104,8 @@ export function createLockController(deps: LockDeps): LockController {
       const { enabled, afterMs } = deps.settings();
       const after = awayFromPrompt ? Math.max(afterMs, PROMPT_RETURN_GRACE_MS) : afterMs;
       awayAt = null;
-      if (enabled && away >= after) {
+      // Only a covered app opens on a short return: once locked, only an unlock opens it.
+      if (view === 'locked' || (enabled && away >= after)) {
         show('locked');
         void unlock();
       } else {

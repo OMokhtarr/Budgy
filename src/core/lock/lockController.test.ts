@@ -227,6 +227,36 @@ describe('app lock controller', () => {
     expect(controller.view()).toBe('locked');
   });
 
+  it('stays locked when the unlock prompt is left and Budgy is reopened at once', async () => {
+    const { state, controller } = fakeDeps();
+    controller.start();
+    await settle();
+    controller.pause();
+    // Leaving cancels the prompt; coming straight back must not skip the lock.
+    state.answer(false);
+    await settle();
+    state.clock += 50;
+    controller.resume();
+    await settle();
+    expect(controller.view()).toBe('locked');
+    expect(state.verifyCalls).toBe(2);
+  });
+
+  it('stays locked when Budgy is left from the lock cover and reopened within the lock time', async () => {
+    const { state, controller } = fakeDeps();
+    controller.start();
+    await settle();
+    state.answer(false);
+    await settle();
+    controller.pause();
+    expect(controller.view()).toBe('locked');
+    state.clock += 10_000;
+    controller.resume();
+    await settle();
+    expect(controller.view()).toBe('locked');
+    expect(state.verifyCalls).toBe(2);
+  });
+
   it('reports each view change once', async () => {
     const { state, controller } = fakeDeps();
     controller.start();
