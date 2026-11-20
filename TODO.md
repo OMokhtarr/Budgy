@@ -3,7 +3,19 @@
 ## Backlog
 
 - [ ] Passcode / biometric lock
-- [ ] Recurring transactions and reminders (`@capacitor/local-notifications`)
+- [x] **Recurring transactions and phone reminders** (`docs/superpowers/specs/2026-11-20-recurring-transactions-design.md`):
+      repeat from the editor, Menu → Recurring, due lines on Overview and Transactions, Auto, and Settings → Reminders
+      (also covers card due dates).
+  - [ ] **Before the release:** deploy `supabase/migrations/20261120120000_recurring_table.sql` (until then the
+        app syncs everything else and keeps recurring ones waiting to upload); copy the privacy policy's
+        "Reminders" paragraph to `privacy.html` and `privacy-ar.html` on `gh-pages`; mention recurring transactions
+        and reminders in both store descriptions; add a `RELEASE-NOTES.md` section (needs the `versionCode` bump).
+  - [ ] **Checks on a phone (debug build):** turning reminders on asks for the notification permission (Android 13+),
+        and refusing it turns the switch back off; a reminder comes at the picked time (set one for today a few minutes
+        ahead) with the Budgy icon; tapping it opens Recurring (and a card's opens Accounts); reminders still come after
+        a restart; no "Alarms & reminders" screen ever opens; the lock screen hides the amount when the phone hides
+        sensitive content; an Auto one is added on opening the app a day later, and on a second synced phone it
+        doesn't appear twice; iOS: `npx cap sync ios` and the same checks.
 - [ ] **SMS import:** see `docs/superpowers/specs/2026-11-03-sms-import-design.md` and
       `docs/superpowers/plans/2026-11-03-sms-import.md`. Android only, and not in the first Play release.
   - [ ] **Stage 1 checks still open:**
@@ -50,8 +62,7 @@
 - [x] **Credit cards:** limit, statement cycle, statement vs current balance, minimum payment, in-app due
       reminders, payments as transfers, interest and fees, credit vs debit
       (`docs/superpowers/specs/2026-11-08-credit-cards-design.md`).
-  - [ ] Phone notifications for card due dates (needs `@capacitor/local-notifications`, the notification
-        permission, and store/privacy wording).
+  - [x] Phone notifications for card due dates: part of phone reminders (above).
 
 ---
 

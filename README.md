@@ -19,13 +19,14 @@ offline-only and shows no sign-in at all.
 | **Transactions** | History grouped by day, with each day's net and search. Long-press to select several, then change their date, account or category, delete them, or filter by them. |
 | **Overview** | Income, expenses, net, average spend per day, trend bars, budget progress, and a breakdown by category and subcategory. |
 | **Header** | Total balance of the accounts in the accounts filter (tap it to change the filter). A warning appears when some currency has no exchange rate. |
-| **Side menu** | Profile (name, colour, account & sync), Settings, Data, Rate us, Support, About. |
+| **Side menu** | Profile (name, colour, account & sync), Settings, Recurring, Data, Rate us, Support, About. |
+| **Recurring** | Rent, salary, subscriptions: any transaction can repeat (daily, weekly, every 2 weeks, monthly, every 3 months, yearly). On its day it shows at the top of Overview and Transactions; one tap opens it filled in to add (or skip). Ones set to *Auto* are added by themselves when the app opens. Menu → Recurring lists them all. |
 | **Budgy Pro** | Bank texts (Android) and sign-in with sync are Budgy Pro: monthly, yearly or lifetime, with a free trial on the subscriptions. Everything else, credit cards included, stays free. When Pro ends, data stays on the phone, sync pauses and bank-text scanning stops. Switched by `VITE_PRO_GATE` (`off`, `test` or `on`); with it `off`, nothing is gated. |
-| **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week. |
-| **Data** | CSV export and import (adds to your data, skipping rows already there), backup / restore (a JSON file, version 5), erase all. |
+| **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week, and phone reminders (recurring transactions and credit-card due dates, at a time of day you pick; Android and iOS). |
+| **Data** | CSV export and import (adds to your data, skipping rows already there), backup / restore (a JSON file, version 7), erase all. |
 
 The add-transaction sheet has a calculator keypad (`250+120` → 370), From → To pickers, cross-currency
-transfers, a note and a date. The period bar (Day / Week / Month / Year / All / a custom range) is shared by
+transfers, a note, a date and a Repeat button. The period bar (Day / Week / Month / Year / All / a custom range) is shared by
 Categories, Transactions and Overview: tap it to choose a period, or swipe the page to move to the
 previous or next one. Swiping on Accounts changes its tabs. A fresh install asks for the user's currency.
 
@@ -141,4 +142,3 @@ docs/           privacy policy draft, design specs and plans
 ## Ideas
 
 - Passcode / biometric lock
-- Recurring transactions and reminders (`@capacitor/local-notifications`)
