@@ -10,12 +10,13 @@
         app syncs everything else and keeps recurring ones waiting to upload); copy the privacy policy's
         "Reminders" paragraph to `privacy.html` and `privacy-ar.html` on `gh-pages`; mention recurring transactions
         and reminders in both store descriptions; add a `RELEASE-NOTES.md` section (needs the `versionCode` bump).
-  - [ ] **Checks on a phone (debug build):** turning reminders on asks for the notification permission (Android 13+),
-        and refusing it turns the switch back off; a reminder comes at the picked time (set one for today a few minutes
-        ahead) with the Budgy icon; tapping it opens Recurring (and a card's opens Accounts); reminders still come after
-        a restart; no "Alarms & reminders" screen ever opens; the lock screen hides the amount when the phone hides
-        sensitive content; an Auto one is added on opening the app a day later, and on a second synced phone it
-        doesn't appear twice; iOS: `npx cap sync ios` and the same checks.
+  - [ ] **Checks on a phone (debug build).** Done on the Android 16 emulator (2026-11-20): turning reminders on
+        asks for the notification permission and Allow keeps it on; a reminder came at the set time with the Budgy
+        icon, green, on the "Reminders" channel and marked private; tapping it opened Recurring; the next one was
+        scheduled again after a restart; no exact-alarm permission or "Alarms & reminders" screen. Still to check:
+        refusing the permission turns the switch back off; a card's reminder opens Accounts; the lock screen hides the
+        amount when the phone hides sensitive content; an Auto one is added on opening the app a day later, and on a
+        second synced phone it doesn't appear twice; iOS, once the iOS project exists (`TODO-apple.md`).
 - [ ] **SMS import:** see `docs/superpowers/specs/2026-11-03-sms-import-design.md` and
       `docs/superpowers/plans/2026-11-03-sms-import.md`. Android only, and not in the first Play release.
   - [ ] **Stage 1 checks still open:**
