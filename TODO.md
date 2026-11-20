@@ -61,7 +61,8 @@
    - [x] **RevenueCat:** project "Budgy", app "Budgy (Android)", entitlement `budgy_pro`, offering `default`
      (Monthly → `budgy_pro:monthly`, Annual → `budgy_pro:yearly`, Lifetime → `budgy_pro_lifetime`), Customer
      Center on, Android key in `.env.local` (2026-11-19).
-   - [ ] **RevenueCat paywall** for `default`, in Arabic and English.
+   - [ ] **RevenueCat paywall** for `default`, in Arabic and English. With the phone in English and Budgy in
+     Arabic, check it reads right to left (Android 13+; older versions keep the paywall left to right).
    - [x] **Play Console products** (2026-11-19, all active): subscription `budgy_pro` with base plans `monthly`
      (US$0.99, backwards compatible) and `yearly` (US$4.99), each with a 7-day free-trial offer for new customers
      (`free-trial-7d-monthly`, `free-trial-7d-yearly`; one trial per person across both plans); one-time product

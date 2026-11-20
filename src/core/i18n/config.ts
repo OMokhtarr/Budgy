@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from './locales/en.json';
 import ar from './locales/ar.json';
+import { followNativeLanguage, setNativeLanguage } from './nativeLocale';
 
 const STORAGE_KEY = 'budgy-lang';
 
@@ -38,8 +39,13 @@ i18n.on('languageChanged', (lng) => {
     /* ignore */
   }
   applyDir(lng);
+  void setNativeLanguage(lng === 'ar' ? 'ar' : 'en');
 });
 
 applyDir(savedLang);
+followNativeLanguage(
+  () => (i18n.language === 'ar' ? 'ar' : 'en'),
+  (lng) => i18n.changeLanguage(lng),
+);
 
 export default i18n;

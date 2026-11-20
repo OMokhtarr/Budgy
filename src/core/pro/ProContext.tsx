@@ -265,6 +265,8 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       // A purchase made before logIn finishes would attach to the anonymous id. No paywall was shown, so nothing
       // was attempted: "unavailable", not "failed".
       if (!(await identitySettled())) return 'unavailable';
+      // Again here, as the language effect above may not have run yet. If this fails, the paywall still opens.
+      await setRevenueCatLocale(lang).catch((err) => console.warn('Budgy: paywall language failed', err));
       result = await presentPaywall();
     } catch (err) {
       console.warn('Budgy: paywall failed', err);
@@ -280,7 +282,7 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       console.warn('Budgy: customer info after the paywall failed', err);
       return 'subscribed';
     }
-  }, [available, sessionReady, identitySettled, refresh]);
+  }, [available, sessionReady, identitySettled, refresh, lang]);
 
   const showCustomerCenter = useCallback(async () => {
     if (!available || !sessionReady) throw new Error('Budgy Pro is not available right now');
