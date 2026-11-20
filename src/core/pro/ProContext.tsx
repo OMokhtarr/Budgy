@@ -16,6 +16,7 @@ import {
   logOutRevenueCat,
   onCustomerInfo,
   presentCustomerCenter,
+  paywallPriceVariables,
   presentPaywall,
   proPlanFromCustomerInfo,
   restore as restorePurchases,
@@ -267,7 +268,12 @@ export function ProProvider({ children }: { children: React.ReactNode }) {
       if (!(await identitySettled())) return 'unavailable';
       // Again here, as the language effect above may not have run yet. If this fails, the paywall still opens.
       await setRevenueCatLocale(lang).catch((err) => console.warn('Budgy: paywall language failed', err));
-      result = await presentPaywall();
+      // Without them the paywall's text falls back to the defaults set in the dashboard.
+      const prices = await paywallPriceVariables(lang).catch((err) => {
+        console.warn('Budgy: paywall prices failed', err);
+        return {};
+      });
+      result = await presentPaywall(prices);
     } catch (err) {
       console.warn('Budgy: paywall failed', err);
       return 'unavailable';

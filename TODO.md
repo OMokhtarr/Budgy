@@ -85,6 +85,11 @@
    and setup".
    - [ ] **RevenueCat paywall** for `default`, in Arabic and English. With the phone in English and Budgy in
      Arabic, check it reads right to left (Android 13+; older versions keep the paywall left to right).
+     RevenueCat writes its own price variables in Arabic-Indic digits (٦٠٫٩٩) for Arabic in Egypt. For Western
+     digits, the Arabic texts use the prices Budgy passes in: `{{ custom.price_monthly }}`,
+     `{{ custom.price_yearly }}` and `{{ custom.price_lifetime }}` (e.g. `{{ custom.price_monthly }}/شهر`). Give
+     each a default in the dashboard (shown if Budgy can't read the prices). The trial line follows the selected
+     plan, so it needs per-plan text to use them.
    - [ ] **Play ↔ RevenueCat:** upload the Play service account's credentials in RevenueCat, turn on Google
      developer notifications, then check Product catalog → Products no longer says "Could not check". Add a license tester.
    - [ ] **Test** with `VITE_PRO_GATE=test` on a testing-track build: buy, reinstall and restore; sign in and

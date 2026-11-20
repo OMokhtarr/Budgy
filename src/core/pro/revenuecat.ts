@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Purchases } from '@revenuecat/purchases-capacitor';
 import type { CustomerInfo } from '@revenuecat/purchases-capacitor';
 import { PAYWALL_RESULT, RevenueCatUI } from '@revenuecat/purchases-capacitor-ui';
+import { decimalsOf, numberLocale } from '@/core/utils/currency';
 import { TEST_STORE_KEY_PREFIX, revenueCatKey } from './gate';
 
 /**
@@ -145,11 +146,48 @@ export function proPlanFromCustomerInfo(info: CustomerInfo): ProPlan | null {
   };
 }
 
+/** A store price in Budgy's own format, with all of the currency's decimals ("60.99 ج.م." in Arabic). */
+export function formatPrice(price: number, currency: string, lang: string): string {
+  const digits = decimalsOf(currency);
+  try {
+    return new Intl.NumberFormat(numberLocale(lang), {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(price);
+  } catch {
+    return `${price.toFixed(digits)} ${currency}`;
+  }
+}
+
+/** Paywall text can use these as {{ custom.price_monthly }} and so on. */
+export type PaywallPriceVariables = Partial<Record<'price_monthly' | 'price_yearly' | 'price_lifetime', string>>;
+
+/**
+ * The current offering's prices for the paywall's text. RevenueCat formats its own price variables for the paywall's
+ * language and the store's country, which in Arabic in Egypt gives Arabic-Indic digits (٦٠٫٩٩); these keep Budgy's
+ * Western digits. A package the offering lacks is left out.
+ */
+export async function paywallPriceVariables(lang: string): Promise<PaywallPriceVariables> {
+  const { current } = await Purchases.getOfferings();
+  const vars: PaywallPriceVariables = {};
+  const packages = [
+    ['price_monthly', current?.monthly],
+    ['price_yearly', current?.annual],
+    ['price_lifetime', current?.lifetime],
+  ] as const;
+  for (const [key, pkg] of packages) {
+    if (pkg) vars[key] = formatPrice(pkg.product.price, pkg.product.currencyCode, lang);
+  }
+  return vars;
+}
+
 export type PaywallResult = 'purchased' | 'restored' | 'cancelled' | 'error';
 
 /** Shows the current offering's paywall and resolves once it is dismissed. */
-export async function presentPaywall(): Promise<PaywallResult> {
-  const { result } = await RevenueCatUI.presentPaywall();
+export async function presentPaywall(customVariables: PaywallPriceVariables = {}): Promise<PaywallResult> {
+  const { result } = await RevenueCatUI.presentPaywall({ customVariables });
   switch (result) {
     case PAYWALL_RESULT.PURCHASED:
       return 'purchased';
