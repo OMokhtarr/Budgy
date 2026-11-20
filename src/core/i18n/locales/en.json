@@ -774,5 +774,18 @@
     "copied": "Copied",
     "checkFailed": "Couldn't check Budgy Pro. Check your connection and try again.",
     "tryAgain": "Try again"
+  },
+  "lock": {
+    "promptTitle": "Unlock Budgy",
+    "locked": "Budgy is locked",
+    "unlock": "Unlock",
+    "security": "Security",
+    "toggle": "Lock Budgy",
+    "toggleHint": "Ask for your fingerprint, face or phone PIN when Budgy opens",
+    "after": "Lock after",
+    "afterImmediately": "Immediately",
+    "afterOneMinute": "1 minute away",
+    "afterFiveMinutes": "5 minutes away",
+    "noScreenLock": "Set a screen lock (PIN, pattern or password) in your phone's settings first."
   }
 }

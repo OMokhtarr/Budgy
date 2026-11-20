@@ -5,6 +5,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { decimalsOf, roundTo } from '@/core/utils/currency';
 import { stampAfter } from '@/core/utils/stamp';
 import type { Amounts } from '@/shared/models';
+import { DEFAULT_LOCK_AFTER_MS, type AppLockSettings } from '@/core/lock/lockController';
 
 export type ThemePref = 'system' | 'light' | 'dark';
 export type BalanceView = 'sum' | 'split';
@@ -30,6 +31,8 @@ export interface Settings {
   syncedDirty?: boolean;
   /** Reading bank texts (Android). Per device: not backed up or synced, since it's about this phone's inbox. */
   smsImport: SmsImportSettings;
+  /** The app lock (Android). Per device like `smsImport`: not backed up or synced. */
+  appLock: AppLockSettings;
 }
 
 export interface SmsImportSettings {
@@ -71,6 +74,7 @@ const DEFAULTS: Settings = {
   theme: 'system',
   weekStart: 6,
   smsImport: { enabled: false, senders: [] },
+  appLock: { enabled: false, afterMs: DEFAULT_LOCK_AFTER_MS },
 };
 
 function load(): Settings {

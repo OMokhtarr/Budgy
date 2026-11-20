@@ -3,7 +3,7 @@
 > **Published at https://omokhtarr.github.io/Budgy/privacy.html from the `gh-pages` branch.** When this
 > changes, update `privacy.html` and `privacy-ar.html` there too. Keep it in line with what the app actually
 > does: it matches the code as of 2026-11-20 (optional Google/Apple sign-in, cloud sync on Supabase, optional
-> SMS import on Android, Budgy Pro purchases through Google Play / the App Store and RevenueCat, including
+> SMS import and app lock on Android, Budgy Pro purchases through Google Play / the App Store and RevenueCat, including
 > RevenueCat's purchase analytics; no ads, no usage analytics, no tracking).
 
 _Last updated: November 20, 2026_
@@ -20,6 +20,8 @@ explains what data the app handles and why.
   messages themselves never leave it.
 - If you buy **Budgy Pro**, the store handles the payment and RevenueCat keeps the record of your purchase.
   We never see your card or payment details.
+- If you turn on **Lock Budgy** (Android only), the app asks for your phone's own unlock: your fingerprint,
+  face, or the phone's PIN, pattern or password. Your phone checks it; Budgy never sees or stores it.
 - No ads, no tracking, and your data is never sold.
 - You can delete your account and all its data from inside the app at any time.
 
