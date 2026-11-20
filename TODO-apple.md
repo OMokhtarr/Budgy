@@ -23,5 +23,8 @@ Everything for iOS and the App Store, left until after Android. The rest is in `
 7. [ ] **Budgy Pro on iPhone:** after `npx cap add ios`, create the App Store Connect products and link them in
    RevenueCat, and add the iOS key. Apple requires a Restore button (in the app) and the subscription terms on
    the paywall (RevenueCat's paywall shows them).
-8. [ ] **Later, maybe:** sign in with Apple on Android. It needs Apple's web flow and a deep link back
+8. [ ] **App lock on iPhone:** turn on the lock for iOS in `src/core/lock/native.ts` (`lockSupported`), add
+   `NSFaceIDUsageDescription` to `Info.plist`, and run the app lock checks from `TODO.md` with Face ID and the
+   iPhone passcode. The recent-apps preview needs its own iOS code (a cover when the app goes to the background).
+9. [ ] **Later, maybe:** sign in with Apple on Android. It needs Apple's web flow and a deep link back
    into the app.

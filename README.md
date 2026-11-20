@@ -21,7 +21,7 @@ offline-only and shows no sign-in at all.
 | **Header** | Total balance of the accounts in the accounts filter (tap it to change the filter). A warning appears when some currency has no exchange rate. |
 | **Side menu** | Profile (name, colour, account & sync), Settings, Data, Rate us, Support, About. |
 | **Budgy Pro** | Bank texts (Android) and sign-in with sync are Budgy Pro: monthly, yearly or lifetime, with a free trial on the subscriptions. Everything else, credit cards included, stays free. When Pro ends, data stays on the phone, sync pauses and bank-text scanning stops. Switched by `VITE_PRO_GATE` (`off`, `test` or `on`); with it `off`, nothing is gated. |
-| **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week. |
+| **Settings** | Main currency (rates and budgets are converted when it changes), exchange rates, language, theme, first day of the week, and *Lock Budgy* (Android): asks for the phone's own unlock (fingerprint, face or phone PIN) when Budgy opens and after a chosen time away, and hides it in the recent-apps screen (Android 13+). |
 | **Data** | CSV export and import (adds to your data, skipping rows already there), backup / restore (a JSON file, version 5), erase all. |
 
 The add-transaction sheet has a calculator keypad (`250+120` → 370), From → To pickers, cross-currency
