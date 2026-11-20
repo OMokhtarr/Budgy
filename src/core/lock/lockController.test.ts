@@ -233,6 +233,51 @@ describe('app lock controller', () => {
     expect(state.verifyCalls).toBe(2);
   });
 
+  it("doesn't open on an unlock answer Android held while Budgy was away", async () => {
+    const { state, controller } = fakeDeps();
+    controller.start();
+    await settle();
+    controller.leave();
+    await settle();
+    state.clock += 600_000;
+    const back = controller.comeBack();
+    state.answer(true);
+    await back;
+    await settle();
+    expect(controller.view()).toBe('locked');
+    expect(state.verifyCalls).toBe(2);
+  });
+
+  it("doesn't take a Settings answer Android held while Budgy was away", async () => {
+    const { state, controller } = await openWithLockOn();
+    const result = controller.confirm();
+    await settle();
+    controller.leave();
+    await settle();
+    state.clock += 600_000;
+    const back = controller.comeBack();
+    state.answer(true);
+    await back;
+    expect(await result).toBe('cancelled');
+    await settle();
+    expect(controller.view()).toBe('locked');
+  });
+
+  it('keeps Budgy covered when it is left again while a return is being handled', async () => {
+    const { state, controller } = await openWithLockOn();
+    controller.leave();
+    await settle();
+    state.clock += 1_000;
+    const back = controller.comeBack();
+    controller.leave();
+    await back;
+    await settle();
+    expect(controller.view()).toBe('covered');
+    state.clock += 600_000;
+    await controller.comeBack();
+    expect(controller.view()).toBe('locked');
+  });
+
   it('reports each view change once', async () => {
     const { state, controller } = fakeDeps();
     controller.start();

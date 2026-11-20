@@ -45,8 +45,13 @@ export interface LockController {
  */
 export function createLockController(deps: LockDeps): LockController {
   let view: LockView = 'open';
+  let away = false;
   let awayAt: number | null = null;
   let leaving: Promise<void> = Promise.resolve();
+  /** Bumped by each leave: a return still being handled when Budgy is left again is dropped. */
+  let leaveCount = 0;
+  /** Bumped by each leave and lock: a prompt answer from before them (one Android held) doesn't count. */
+  let promptCount = 0;
   let prompting = false;
   let unlockWhenPromptEnds = false;
 
@@ -56,14 +61,19 @@ export function createLockController(deps: LockDeps): LockController {
     deps.onView(next);
   };
 
-  /** Runs the prompt once at a time; null when another prompt is already open. */
+  /**
+   * Runs the prompt once at a time; null when another prompt is already open. An answer that arrives after
+   * Budgy was left or locked again counts as cancelled.
+   */
   const prompt = async (): Promise<ConfirmResult | null> => {
     if (prompting) return null;
     prompting = true;
+    const asked = promptCount;
     try {
       // Without a screen lock anyone could open the phone, so there's nothing to ask for.
-      if (!(await deps.isSecure())) return 'no-screen-lock';
-      return (await deps.verify()) ? 'ok' : 'cancelled';
+      if (!(await deps.isSecure())) return asked === promptCount ? 'no-screen-lock' : 'cancelled';
+      const ok = await deps.verify();
+      return ok && asked === promptCount ? 'ok' : 'cancelled';
     } finally {
       prompting = false;
       if (unlockWhenPromptEnds) {
@@ -76,10 +86,11 @@ export function createLockController(deps: LockDeps): LockController {
   const unlock = async () => {
     const result = await prompt();
     // Still away (the answer came before the return): stay covered until the return decides.
-    if (result === 'ok' || result === 'no-screen-lock') show(awayAt === null ? 'open' : 'covered');
+    if (result === 'ok' || result === 'no-screen-lock') show(away ? 'covered' : 'open');
   };
 
   const lock = () => {
+    promptCount++;
     show('locked');
     if (prompting) unlockWhenPromptEnds = true;
     else void unlock();
@@ -93,19 +104,29 @@ export function createLockController(deps: LockDeps): LockController {
     },
     leave() {
       if (!deps.settings().enabled) return;
+      const count = ++leaveCount;
+      promptCount++;
+      away = true;
+      awayAt = null;
       if (view === 'open') show('covered');
       leaving = deps.now().then((t) => {
-        awayAt = t;
+        if (count === leaveCount) awayAt = t;
       });
     },
     async comeBack() {
+      if (!away) return;
+      const count = leaveCount;
       await leaving;
-      if (awayAt === null) return;
-      const away = (await deps.now()) - awayAt;
+      const now = await deps.now();
+      // Left again meanwhile: that leave's own return decides.
+      if (count !== leaveCount) return;
+      const left = awayAt;
+      away = false;
       awayAt = null;
       const { enabled, afterMs } = deps.settings();
-      // A negative time away means the clock can't be trusted, so lock.
-      if (view === 'locked' || (enabled && (away >= afterMs || away < 0))) lock();
+      // No time to measure from, or a negative time away: the clock can't be trusted, so lock.
+      const timeAway = left === null ? Infinity : now - left;
+      if (view === 'locked' || (enabled && (timeAway >= afterMs || timeAway < 0))) lock();
       else show('open');
     },
     unlock,
