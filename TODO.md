@@ -4,9 +4,8 @@
 
 - [ ] **Next release: recurring transactions, phone reminders and app lock.** All three work on Android and
       were checked on a device (2026-11-20); iOS is in `TODO-apple.md`.
-  - [ ] Raise `versionCode`, then put it in the draft's heading and release name in `RELEASE-NOTES.md`. The
-        draft is written for the release that turns on Budgy Pro; if this one goes out first, take the Pro lines out.
-  - [ ] Enter the new lines of both full descriptions (`docs/play-store.md`) in Play Console with that release.
+  - [ ] Build 3 (`versionCode` 3) is set and its notes are in `RELEASE-NOTES.md`. Enter the new lines of both
+        full descriptions (`docs/play-store.md`) in Play Console with that release.
 - [ ] **SMS import** (Android only; `docs/superpowers/specs/2026-11-03-sms-import-design.md`). Works in debug
       builds and was checked on a device (2026-11-20), including several texts at once, money back and combining.
       Before it goes into a release:

@@ -21,17 +21,42 @@ from the owner (`TODO.md`), so say that sync is now part of Budgy Pro.
 • Budgy Pro is here: bank texts and sync across your phones are now part of Budgy Pro
 • Start with a free trial, then choose monthly, yearly or lifetime
 • Everything else stays free, including credit cards
-• New: Lock Budgy in Settings asks for your fingerprint, face or phone PIN when Budgy opens
-• New: recurring transactions, with phone reminders when they're due
 • Your data stays on your phone. Without Pro, sync pauses and bank texts stop being read
 </en-US>
 <ar>
 • وصل Budgy Pro: الرسائل المصرفية والمزامنة بين هواتفك أصبحت الآن ضمن Budgy Pro
 • جرّبه مجانًا خلال فترة تجريبية، ثم اختر الاشتراك الشهري أو السنوي أو مدى الحياة
 • كل ما عدا ذلك يبقى مجانيًا، ومنه بطاقات الائتمان
-• جديد: قفل Budgy في الإعدادات يطلب بصمتك أو وجهك أو رمز الهاتف عند فتح Budgy
-• جديد: المعاملات المتكررة، مع تذكيرات على الهاتف في يوم استحقاقها
 • تبقى بياناتك على هاتفك. وبدون Pro تتوقف المزامنة ولا تُقرأ الرسائل المصرفية
+</ar>
+```
+
+---
+
+## 1.0 (versionCode 3) — 2026-11-20
+
+**Release name:** `3 (1.0)`
+
+Recurring transactions, phone reminders, app lock and the new Settings. Budgy Pro is in this build but not
+switched on (`VITE_PRO_GATE` isn't `on`), so the notes don't mention it. Build 2 (2026-11-19) got no notes of its
+own, so these cover everything testers see since build 1. Bank texts are still left out of release builds.
+
+```
+<en-US>
+• New: recurring transactions. Rent, salary and subscriptions come back on their day, added with one tap or automatically
+• Phone reminders on the day a recurring transaction is due and before a credit card's due date
+• Lock Budgy in Settings asks for your fingerprint, face or phone PIN when Budgy opens
+• Hold a category to see its transactions
+• Welcome slides and page tips, which you can replay from Settings
+• Settings rearranged, and back now leaves menu pages
+</en-US>
+<ar>
+• جديد: المعاملات المتكررة. الإيجار والراتب والاشتراكات تعود في يومها، وتُضاف بلمسة واحدة أو تلقائيًا
+• تذكيرات على الهاتف في يوم استحقاق المعاملة المتكررة وقبل موعد سداد بطاقة الائتمان
+• قفل Budgy في الإعدادات يطلب بصمتك أو وجهك أو رمز الهاتف عند فتح Budgy
+• اضغط مطولًا على فئة لرؤية معاملاتها
+• شرائح ترحيب ونصائح للصفحات، ويمكنك إعادة عرضها من الإعدادات
+• إعدادات بترتيب جديد، وزر الرجوع يخرج من صفحات القائمة الآن
 </ar>
 ```
 
