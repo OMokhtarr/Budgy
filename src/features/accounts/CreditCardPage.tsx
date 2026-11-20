@@ -11,6 +11,7 @@ import { useAccounts, useCardTransactions, useLookups, useNames } from '@/core/d
 import { cardStatus, cardTransactions, interestFree, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
 import { changeOn } from '@/core/utils/lending';
 import Avatar from '@/shared/components/Avatar';
+import { useRevealWhen } from '@/shared/splash';
 import MoneyText from '@/shared/components/MoneyText';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
 import AccountEditModal from './AccountEditModal';
@@ -27,6 +28,8 @@ export default function CreditCardPage() {
   const card = account && isCreditCard(account) ? account : undefined;
   // Worked out from the same account the page shows, so a currency just added in Edit is always in it.
   const status = useMemo(() => (card && txs ? cardStatus(card, txs, new Date()) : undefined), [card, txs]);
+  // When the app opens straight onto this page, the launch screen goes once there's something to show.
+  useRevealWhen(!!accounts && (!card || !!status));
   // A card that was deleted, archived or turned back into a debit card has nothing to show here. Ionic keeps
   // this page mounted under other tabs, so it only sends the user away while it's the page on screen.
   if (accounts && !card) return pathname === `/cards/${id}` ? <Redirect to="/accounts" /> : <IonPage />;
@@ -87,7 +90,7 @@ function CardPage({ account, status, txs }: { account: Account & { credit: Credi
           <div className="b-section-title">{t('cards.txThisCycle')}</div>
           <div className="b-card b-rlist">
             {thisCycle.length ? thisCycle.map((x) => <CardTxRow key={x.id} tx={x} cardId={account.id!} />) : (
-              <div className="b-muted b-cc">{t('cards.noTx')}</div>
+              <div className="b-cc__empty">{t('cards.noTx')}</div>
             )}
             {lastCycle.length > 0 && (
               <button className="b-row" onClick={() => setShowEarlier((v) => !v)} aria-expanded={showEarlier}>

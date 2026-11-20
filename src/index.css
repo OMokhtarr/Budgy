@@ -2071,6 +2071,9 @@ ion-popover.b-popmenu { --width: 230px; }
 .b-cc__next { font-size: 13px; margin-top: 4px; }
 .b-cc__cycle { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--b-border); }
 .b-cc--flat > .b-cc__cycle { margin-top: 0; padding-top: 0; border-top: none; }
+/* An empty transaction list: lined up with the rows, and the Earlier row below keeps its divider. */
+.b-cc__empty { padding: 12px 14px; color: var(--b-faint); font-size: 14px; }
+.b-cc__empty + .b-row { border-top: 1px solid var(--b-border); }
 
 .b-cc__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .b-cc__actions .b-btn { flex: 1 1 auto; height: 40px; font-size: 13.5px; }

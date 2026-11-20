@@ -15,6 +15,8 @@ const HOME_PATH = '/categories';
 export function backFallback(pathname: string): string | null {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
   if (path === '/' || TAB_PATHS.includes(path)) return null;
+  // A credit card's page (/cards/<id>) is opened from Accounts.
+  if (path.startsWith('/cards/')) return '/accounts';
   return PARENT_PATHS[path] ?? HOME_PATH;
 }
 

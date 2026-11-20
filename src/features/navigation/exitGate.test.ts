@@ -51,4 +51,9 @@ describe('backFallback', () => {
   it('sends linked numbers back to bank texts, like its back arrow', () => {
     expect(backFallback('/sms/links')).toBe('/sms');
   });
+
+  it('goes back to Accounts from a credit card page, like its back arrow', () => {
+    expect(backFallback('/cards/341b4450-b5ec')).toBe('/accounts');
+    expect(backFallback('/cards/abc/')).toBe('/accounts');
+  });
 });
