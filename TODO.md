@@ -2,7 +2,19 @@
 
 ## Backlog
 
-- [ ] Passcode / biometric lock
+- [ ] **App lock** (`docs/superpowers/specs/2026-11-20-app-lock-design.md`) — **checks still open (need a debug
+      build on a device):**
+    - Turn Lock Budgy on and off with a fingerprint, and with the phone PIN; cancelling leaves the switch as it was.
+    - A phone with no screen lock: turning it on says to set one first.
+    - Closing and reopening Budgy asks to unlock; cancel → the locked cover → Unlock asks again.
+    - Away less than / more than the chosen time (1 and 5 minutes), and Immediately; no second prompt right after
+      unlocking or after the Settings prompt.
+    - Leave Budgy while a prompt is open, come back: it is still locked (or locks after the time away).
+    - Back on the locked cover leaves the app; the cover sits above an open sheet, alert and the side menu.
+    - Recent-apps preview hidden on Android 13+, screenshots still work; preview still shows on older Android.
+    - Remove the phone's screen lock after turning the lock on: Budgy opens without asking.
+    - Arabic (RTL) layout and dark mode of the cover and the Security section.
+    - The privacy policy now mentions the app lock: copy it to `privacy.html` and `privacy-ar.html` on `gh-pages`.
 - [ ] Recurring transactions and reminders (`@capacitor/local-notifications`)
 - [ ] **SMS import:** see `docs/superpowers/specs/2026-11-03-sms-import-design.md` and
       `docs/superpowers/plans/2026-11-03-sms-import.md`. Android only, and not in the first Play release.
