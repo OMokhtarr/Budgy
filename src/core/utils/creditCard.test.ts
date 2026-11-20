@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardStatus, cycleOf, needsReminder, payFromAccount } from './creditCard';
+import { cardStatus, cardTransactions, cycleOf, fixedDueDay, interestFree, needsReminder, parseDueAfter, payFromAccount } from './creditCard';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
 
 const day = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h);
@@ -174,4 +174,104 @@ describe('payFromAccount', () => {
   it('falls back to any account that can pay', () => {
     expect(payFromAccount([visa, acc('usd', { currency: 'USD' })], visa, undefined)).toBe('usd');
   });
+});
+
+describe('due days after the statement', () => {
+  it('counts the due date from the statement', () => {
+    const c = cycleOf(credit({ statementDay: 5, dueAfter: 25 }), day(2026, 11, 21));
+    expect(ymd(c.previousStatementOn)).toEqual([2026, 10, 5]);
+    expect(ymd(c.statementOn)).toEqual([2026, 11, 5]);
+    expect(ymd(c.dueOn)).toEqual([2026, 11, 30]);
+    expect(ymd(c.nextStatementOn)).toEqual([2026, 12, 5]);
+    expect(ymd(c.nextDueOn)).toEqual([2026, 12, 30]);
+  });
+
+  it('wins over the due day', () => {
+    expect(ymd(cycleOf(credit({ statementDay: 5, dueDay: 3, dueAfter: 25 }), day(2026, 11, 21)).dueOn)).toEqual([2026, 11, 30]);
+  });
+
+  it('crosses into the next month', () => {
+    expect(ymd(cycleOf(credit({ statementDay: 25, dueAfter: 25 }), day(2026, 10, 28)).dueOn)).toEqual([2026, 11, 19]);
+  });
+
+  it('counts days after from the last day of a short month', () => {
+    const c = cycleOf(credit({ statementDay: 31, dueAfter: 25 }), day(2026, 3, 5));
+    expect(ymd(c.statementOn)).toEqual([2026, 2, 28]);
+    expect(ymd(c.dueOn)).toEqual([2026, 3, 25]);
+  });
+});
+
+it('gives the next statement’s due date for a due day too', () => {
+  expect(ymd(cycleOf(credit(), day(2026, 11, 28)).nextDueOn)).toEqual([2027, 1, 20]);
+});
+
+describe('spent', () => {
+  // The statement is on 25 Nov (the default), today is 28 Nov.
+  it('adds up money going out of the card since the statement, not payments or exchanges', () => {
+    const txs = [
+      spend(50, day(2026, 11, 20)),
+      spend(100, day(2026, 11, 26)),
+      tx({ type: 'transfer', amount: 20, toAccountId: 'bank', date: day(2026, 11, 27).toISOString() }),
+      tx({ type: 'transfer', amount: 10, toAccountId: 'card', toCurrency: 'USD', toAmount: 0.2, date: day(2026, 11, 27).toISOString() }),
+      pay(30, day(2026, 11, 27)),
+    ];
+    expect(cardStatus(card(), txs, day(2026, 11, 28)).byCurrency.EGP.spent).toBe(120);
+  });
+
+  it('tracks spending in each currency', () => {
+    const s = cardStatus(
+      card({ currency2: 'USD' }),
+      [tx({ type: 'expense', amount: 7, currency: 'USD', date: day(2026, 11, 26).toISOString() })],
+      day(2026, 11, 28),
+    );
+    expect(s.byCurrency.USD.spent).toBe(7);
+    expect(s.byCurrency.EGP.spent).toBe(0);
+  });
+});
+
+describe('interestFree', () => {
+  const c = credit({ statementDay: 5, dueAfter: 25 });
+
+  it('says when something bought today is due, and the best day to buy', () => {
+    const f = interestFree(c, day(2026, 11, 21));
+    expect(ymd(f.today.payBy)).toEqual([2026, 12, 30]);
+    expect(f.today.days).toBe(39);
+    expect(ymd(f.best.buyOn)).toEqual([2026, 12, 6]);
+    expect(ymd(f.best.payBy)).toEqual([2027, 1, 30]);
+    expect(f.best.days).toBe(55);
+  });
+
+  it('puts a purchase on the statement day on that statement', () => {
+    const f = interestFree(c, day(2026, 12, 5));
+    expect(ymd(f.today.payBy)).toEqual([2026, 12, 30]);
+    expect(f.today.days).toBe(25);
+  });
+});
+
+it('fixedDueDay is the current due date’s day of the month', () => {
+  expect(fixedDueDay(credit({ statementDay: 5, dueAfter: 25 }), day(2026, 11, 21))).toBe(30);
+});
+
+it('parseDueAfter takes whole numbers from 1 to 30 only', () => {
+  expect(parseDueAfter('25')).toBe(25);
+  expect(parseDueAfter('30')).toBe(30);
+  for (const bad of ['', '0', '31', '55', '2.5', 'abc']) expect(parseDueAfter(bad)).toBeUndefined();
+});
+
+it('cardTransactions splits this cycle from the last one, newest first, this card only', () => {
+  const cyc = cycleOf(credit(), day(2026, 11, 28)); // last cycle 26 Oct–25 Nov, this one from 26 Nov
+  const r = cardTransactions(
+    'card',
+    [
+      spend(1, day(2026, 10, 20)),
+      spend(2, day(2026, 11, 1)),
+      spend(3, day(2026, 11, 25, 23)),
+      pay(4, day(2026, 11, 26)),
+      spend(5, day(2026, 11, 27)),
+      tx({ type: 'expense', amount: 6, accountId: 'bank', date: day(2026, 11, 27).toISOString() }),
+    ],
+    cyc,
+  );
+  expect(r.thisCycle.map((t) => t.amount)).toEqual([5, 4]);
+  expect(r.lastCycle.map((t) => t.amount)).toEqual([3, 2]);
 });

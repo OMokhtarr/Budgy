@@ -18,30 +18,103 @@ const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDat
 const nextDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
 const daysBetween = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / 86400000);
 
+/** The most days after the statement a payment can be due. */
+export const MAX_DUE_AFTER = 30;
+
 export interface CardCycle {
+  /** The statement before the last one; its cycle ended on `statementOn`. */
+  previousStatementOn: Date;
   /** The last statement: everything dated up to the end of this day is on it. */
   statementOn: Date;
   /** When what's on that statement has to be paid. */
   dueOn: Date;
   nextStatementOn: Date;
+  /** When what will be on the next statement has to be paid. */
+  nextDueOn: Date;
+}
+
+/** When a statement made on `statementOn` has to be paid: `dueAfter` days later, or the first `dueDay` after it. */
+export function dueOf(statementOn: Date, { dueDay, dueAfter }: CreditCard): Date {
+  const y = statementOn.getFullYear();
+  const m = statementOn.getMonth();
+  if (dueAfter) return new Date(y, m, statementOn.getDate() + dueAfter);
+  const sameMonth = dayIn(y, m, dueDay);
+  return sameMonth > statementOn ? sameMonth : dayIn(y, m + 1, dueDay);
 }
 
 /**
  * The statement cycle `today` is in. The statement is made at the end of its day, so on the statement day
  * itself the previous one is still the latest.
  */
-export function cycleOf({ statementDay, dueDay }: CreditCard, today: Date): CardCycle {
+export function cycleOf(credit: CreditCard, today: Date): CardCycle {
+  const { statementDay } = credit;
   const now = startOfDay(today);
   const thisMonth = dayIn(now.getFullYear(), now.getMonth(), statementDay);
   const statementOn = thisMonth < now ? thisMonth : dayIn(now.getFullYear(), now.getMonth() - 1, statementDay);
   const y = statementOn.getFullYear();
   const m = statementOn.getMonth();
-  const sameMonth = dayIn(y, m, dueDay);
+  const nextStatementOn = dayIn(y, m + 1, statementDay);
   return {
+    previousStatementOn: dayIn(y, m - 1, statementDay),
     statementOn,
-    dueOn: sameMonth > statementOn ? sameMonth : dayIn(y, m + 1, dueDay),
-    nextStatementOn: dayIn(y, m + 1, statementDay),
+    dueOn: dueOf(statementOn, credit),
+    nextStatementOn,
+    nextDueOn: dueOf(nextStatementOn, credit),
   };
+}
+
+/** The day of the month the current cycle's payment is due, saved alongside `dueAfter` for older builds. */
+export function fixedDueDay(credit: CreditCard, today: Date): number {
+  return cycleOf(credit, today).dueOn.getDate();
+}
+
+/** Typed "days after the statement": a whole number from 1 to `MAX_DUE_AFTER`, otherwise undefined. */
+export function parseDueAfter(typed: string): number | undefined {
+  const s = typed.trim();
+  if (!/^\d+$/.test(s)) return undefined;
+  const n = Number(s);
+  return n >= 1 && n <= MAX_DUE_AFTER ? n : undefined;
+}
+
+export interface InterestFree {
+  /** A purchase made today: when it has to be paid, and how many days away that is. */
+  today: { payBy: Date; days: number };
+  /** The day a purchase gets the longest time before it's due (the day after the next statement). */
+  best: { buyOn: Date; payBy: Date; days: number };
+}
+
+/** How long purchases go before they're due, as long as each statement is paid in full. */
+export function interestFree(credit: CreditCard, today: Date): InterestFree {
+  const now = startOfDay(today);
+  const { nextStatementOn, nextDueOn } = cycleOf(credit, now);
+  const buyOn = nextDay(nextStatementOn);
+  const payBy = dueOf(dayIn(nextStatementOn.getFullYear(), nextStatementOn.getMonth() + 1, credit.statementDay), credit);
+  return {
+    today: { payBy: nextDueOn, days: daysBetween(now, nextDueOn) },
+    best: { buyOn, payBy, days: daysBetween(buyOn, payBy) },
+  };
+}
+
+const newestFirst = (a: Transaction, b: Transaction) =>
+  a.date === b.date ? b.createdAt.localeCompare(a.createdAt) : b.date.localeCompare(a.date);
+
+/** A card's transactions in this cycle (after the last statement) and in the one before, newest first. */
+export function cardTransactions(
+  cardId: string,
+  txs: Transaction[],
+  cycle: CardCycle,
+): { thisCycle: Transaction[]; lastCycle: Transaction[] } {
+  const thisStart = nextDay(cycle.statementOn).getTime();
+  const lastStart = nextDay(cycle.previousStatementOn).getTime();
+  const thisCycle: Transaction[] = [];
+  const lastCycle: Transaction[] = [];
+  for (const t of txs) {
+    if (t.accountId !== cardId && t.toAccountId !== cardId) continue;
+    const at = new Date(t.date).getTime();
+    if (at >= thisStart) thisCycle.push(t);
+    else if (at >= lastStart) lastCycle.push(t);
+  }
+  return { thisCycle: thisCycle.sort(newestFirst), lastCycle: lastCycle.sort(newestFirst) };
 }
 
 /** One currency of a credit card. Every amount is what you owe or pay, so never below zero. */
@@ -52,6 +125,8 @@ export interface CardAmounts {
   statement: number;
   /** Money that reached the card since then: payments and refunds. */
   paid: number;
+  /** Money that went out of the card since then: purchases and transfers out. */
+  spent: number;
   /** What's left to pay of the statement. */
   due: number;
   /** What's left to pay of the minimum payment; undefined when the card has no minimum set. */
@@ -83,13 +158,16 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
   const balance: Amounts = openingOf(card);
   const atStatement: Amounts = { ...balance };
   const paid: Amounts = {};
+  const spent: Amounts = {};
   for (const t of txs) {
     const after = new Date(t.date).getTime() >= cutoff;
     const exchange = t.type === 'transfer' && t.accountId === id && t.toAccountId === id;
     for (const [delta, cur] of changeOn(t, id)) {
       balance[cur] = roundTo((balance[cur] ?? 0) + delta, cur);
       if (!after) atStatement[cur] = roundTo((atStatement[cur] ?? 0) + delta, cur);
-      else if (delta > 0 && !exchange) paid[cur] = roundTo((paid[cur] ?? 0) + delta, cur);
+      else if (exchange) continue;
+      else if (delta > 0) paid[cur] = roundTo((paid[cur] ?? 0) + delta, cur);
+      else spent[cur] = roundTo((spent[cur] ?? 0) - delta, cur);
     }
   }
 
@@ -101,7 +179,7 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     const statement = Math.max(0, -(atStatement[cur] ?? 0));
     const p = paid[cur] ?? 0;
     const due = roundTo(Math.min(owed, Math.max(0, statement - p)), cur);
-    const amounts: CardAmounts = { owed, statement, paid: p, due };
+    const amounts: CardAmounts = { owed, statement, paid: p, spent: spent[cur] ?? 0, due };
     if (hasMinimum) {
       const floor = cur === card.currency ? minAmount ?? 0 : 0;
       const full = statement ? Math.min(statement, Math.max(roundTo((statement * (minPercent ?? 0)) / 100, cur), floor)) : 0;

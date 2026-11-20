@@ -22,7 +22,13 @@ const rent: Recurring = {
 
 const visa = { id: 'visa', name: 'Visa', type: 'card', icon: 'card', color: '#000', currency: 'EGP', initialBalance: 0, order: 0, createdAt: 'x' } as Account;
 const status = (state: CardStatus['state'], dueOn: Date): CardStatus => ({
-  cycle: { statementOn: new Date(2026, 10, 25), dueOn, nextStatementOn: new Date(2026, 11, 25) },
+  cycle: {
+    previousStatementOn: new Date(2026, 9, 25),
+    statementOn: new Date(2026, 10, 25),
+    dueOn,
+    nextStatementOn: new Date(2026, 11, 25),
+    nextDueOn: new Date(2027, 0, 20),
+  },
   byCurrency: {},
   state,
   daysLeft: 0,
