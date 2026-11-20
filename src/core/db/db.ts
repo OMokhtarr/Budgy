@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable, type Table, type Transaction as DexieTx } from 'dexie';
-import type { Account, Category, Flow, MerchantRule, SmsLink, SmsPending, SmsSeen, Synced, Transaction } from '@/shared/models';
+import type { Account, Category, Flow, MerchantRule, Recurring, SmsLink, SmsPending, SmsSeen, Synced, Transaction } from '@/shared/models';
 import { backupSettingsOf, savedCurrency, type BackupSettings } from '@/core/contexts/SettingsContext';
 import { newId } from '@/core/utils/id';
 import { stampAfter } from '@/core/utils/stamp';
@@ -24,6 +24,8 @@ export class BudgyDB extends Dexie {
   smsPending!: Table<SmsPending, string>;
   /** Bank texts the user dismissed or skipped as already added. Local only. */
   smsSeen!: Table<SmsSeen, string>;
+  /** Transactions that come back on a schedule. Synced. */
+  recurring!: EntityTable<Recurring, 'id'>;
 
   /** `name` is only changed by tests (two "devices" in one process). */
   constructor(name = 'budgy2') {
@@ -43,11 +45,16 @@ export class BudgyDB extends Dexie {
       smsPending: 'fingerprint, date',
       smsSeen: 'fingerprint',
     });
+    // v3: recurring transactions, and the transactions added from them.
+    this.version(3).stores({
+      transactions: 'id, updatedAt, dirty, date, type, accountId, toAccountId, categoryId, [type+date], smsFingerprint, recurringId',
+      recurring: 'id, updatedAt, dirty',
+    });
     for (const name of SYNCED_TABLES) stampWrites(this.table(name));
   }
 }
 
-export const SYNCED_TABLES = ['accounts', 'categories', 'transactions', 'smsLinks', 'merchantRules'] as const;
+export const SYNCED_TABLES = ['accounts', 'categories', 'transactions', 'smsLinks', 'merchantRules', 'recurring'] as const;
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
 
 /** Transactions that apply changes downloaded by sync: they keep the cloud's stamps and aren't uploaded again. */
@@ -425,36 +432,39 @@ export interface BackupFile {
   /**
    * 1 = before currencies were stored per account/transaction; 2 = before account groups;
    * 3 = before settings (main currency, exchange rates…) were included; 4 = before UUID ids;
-   * 5 = before learned SMS links and merchant rules.
+   * 5 = before learned SMS links and merchant rules; 6 = before recurring transactions.
    */
-  version: 1 | 2 | 3 | 4 | 5 | 6;
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   exportedAt: string;
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
   smsLinks?: SmsLink[];
   merchantRules?: MerchantRule[];
+  recurring?: Recurring[];
   settings?: Partial<BackupSettings>;
 }
 
 export async function exportBackup(settings: BackupSettings): Promise<BackupFile> {
-  const [accounts, categories, transactions, smsLinks, merchantRules] = await Promise.all([
+  const [accounts, categories, transactions, smsLinks, merchantRules, recurring] = await Promise.all([
     db.accounts.filter(alive).toArray(),
     db.categories.filter(alive).toArray(),
     db.transactions.filter(alive).toArray(),
     db.smsLinks.filter(alive).toArray(),
     db.merchantRules.filter(alive).toArray(),
+    db.recurring.filter(alive).toArray(),
   ]);
   // Texts waiting for review (and dismissed ones) are never in a backup: they hold the message text.
   return {
     app: 'budgy',
-    version: 6,
+    version: 7,
     exportedAt: now(),
     accounts: accounts.map(withoutDirty),
     categories: categories.map(withoutDirty),
     transactions: transactions.map(withoutDirty),
     smsLinks: smsLinks.map(withoutDirty),
     merchantRules: merchantRules.map(withoutDirty),
+    recurring: recurring.map(withoutDirty),
     settings: backupSettingsOf(settings),
   };
 }
@@ -484,6 +494,8 @@ export async function importBackup(data: unknown): Promise<Partial<BackupSetting
   // Before version 6 there were no learned links or rules.
   const smsLinks = Array.isArray(b.smsLinks) ? b.smsLinks : [];
   const merchantRules = Array.isArray(b.merchantRules) ? b.merchantRules : [];
+  // Before version 7 there were no recurring transactions.
+  const recurring = Array.isArray(b.recurring) ? b.recurring : [];
   // Restored records are marked "upload me" by the write hooks, like any local change. Texts waiting for
   // review stay: the ones already imported are known by their transactions' fingerprints.
   await db.transaction('rw', SYNCED_TABLES.map((t) => db.table(t)), async () => {
@@ -493,6 +505,7 @@ export async function importBackup(data: unknown): Promise<Partial<BackupSetting
     await db.transactions.bulkAdd(transactions.map(withoutDirty));
     await db.smsLinks.bulkAdd(smsLinks.map(withoutDirty));
     await db.merchantRules.bulkAdd(merchantRules.map(withoutDirty));
+    await db.recurring.bulkAdd(recurring.map(withoutDirty));
   });
   return settings;
 }

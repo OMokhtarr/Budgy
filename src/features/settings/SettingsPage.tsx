@@ -17,6 +17,7 @@ import { tourAttr } from '@/features/onboarding/tourCatalog';
 import ToursSettingsSection from '@/features/onboarding/ToursSettingsSection';
 import AppLockSettingsSection from './AppLockSettingsSection';
 import { usePageTour } from '@/features/onboarding/usePageTour';
+import RemindersSettingsSection from '@/features/reminders/RemindersSettingsSection';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -176,6 +177,8 @@ export default function SettingsPage() {
               </IonItem>
             </IonList>
           )}
+
+          <RemindersSettingsSection />
 
           <div {...tourAttr('settings.tours')}>
             <ToursSettingsSection />

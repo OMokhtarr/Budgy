@@ -126,6 +126,31 @@ export interface Transaction extends Synced {
   moneyBack?: true;
   /** Transactions with the same id show as one entry: a purchase, the cards or accounts it was paid from, and money back. */
   groupId?: string;
+  /** The recurring transaction this one was added from. */
+  recurringId?: string;
+}
+
+export type RepeatUnit = 'day' | 'week' | 'month' | 'year';
+
+/** What each occurrence of a recurring transaction adds: a transaction without its id, date and stamps. */
+export type RecurringTx = Pick<
+  Transaction,
+  'type' | 'amount' | 'currency' | 'accountId' | 'toAccountId' | 'toAmount' | 'toCurrency' | 'categoryId' | 'subcategoryId' | 'note' | 'moneyBack'
+>;
+
+/** A transaction that comes back on a schedule (rent, salary, a subscription). Synced. */
+export interface Recurring extends Synced {
+  tx: RecurringTx;
+  unit: RepeatUnit;
+  /** Every how many units: 1, or 2 (weeks), or 3 (months). */
+  every: number;
+  /** The first occurrence's day (YYYY-MM-DD). Its day of the month anchors monthly and yearly ones. */
+  start: string;
+  /** The first occurrence not added or skipped yet (YYYY-MM-DD). */
+  next: string;
+  /** Added by itself when the app opens, instead of waiting for the user to confirm. */
+  auto?: true;
+  createdAt: string;
 }
 
 /** Learned: texts from this sender with these masked digits belong to this account. Synced. */

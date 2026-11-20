@@ -17,6 +17,9 @@ import ProfilePage from '@/features/profile/ProfilePage';
 import DataPage from '@/features/data/DataPage';
 import LinkedNumbersPage from '@/features/sms/LinkedNumbersPage';
 import SmsReviewPage from '@/features/sms/SmsReviewPage';
+import RecurringPage from '@/features/recurring/RecurringPage';
+import AutoRecurring from '@/features/recurring/AutoRecurring';
+import PhoneReminders from '@/features/reminders/PhoneReminders';
 import AppMenu, { MENU_CONTENT_ID } from '@/features/menu/AppMenu';
 import { TourProvider } from '@/features/onboarding/TourProvider';
 import type { OnboardingState } from '@/features/onboarding/onboardingStore';
@@ -53,6 +56,7 @@ export default function App({ onboarding }: { onboarding: OnboardingState | null
             <Route exact path="/data" component={DataPage} />
             <Route exact path="/sms" component={SmsReviewPage} />
             <Route exact path="/sms/links" component={LinkedNumbersPage} />
+            <Route exact path="/recurring" component={RecurringPage} />
             <Route exact path="/">
               <Redirect to="/categories" />
             </Route>
@@ -80,6 +84,8 @@ export default function App({ onboarding }: { onboarding: OnboardingState | null
         </div>
         <BackupReminder />
         <AutoScan />
+        <AutoRecurring />
+        <PhoneReminders />
         <BackToExit />
       </TxEditorProvider>
       </TourProvider>

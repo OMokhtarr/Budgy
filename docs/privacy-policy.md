@@ -4,7 +4,7 @@
 > changes, update `privacy.html` and `privacy-ar.html` there too. Keep it in line with what the app actually
 > does: it matches the code as of 2026-11-20 (optional Google/Apple sign-in, cloud sync on Supabase, optional
 > SMS import and app lock on Android, Budgy Pro purchases through Google Play / the App Store and RevenueCat, including
-> RevenueCat's purchase analytics; no ads, no usage analytics, no tracking).
+> RevenueCat's purchase analytics, reminders scheduled on the phone; no ads, no usage analytics, no tracking).
 
 _Last updated: November 20, 2026_
 
@@ -27,8 +27,8 @@ explains what data the app handles and why.
 
 ## Data the app handles
 
-**Your budget data:** accounts, categories, transactions, notes, budgets, currencies and exchange
-rates, and your profile name and colour.
+**Your budget data:** accounts, categories, transactions, recurring transactions, notes, budgets, currencies
+and exchange rates, and your profile name and colour.
 - **Not signed in:** this is stored only on your device. Backups you make are files you control.
 - **Signed in:** it is also stored in our cloud database as a backup, so you can get it back on a new
   phone or after reinstalling.
@@ -68,6 +68,12 @@ payment under their own terms and privacy policies. We never see your card, bank
   tracking.
 - Even if you never buy it, the app asks RevenueCat whether you have Budgy Pro, so RevenueCat receives that
   random ID and basic technical details (app version, platform, language). It receives no budget data.
+
+**Reminders, only if you turn on phone reminders:** Budgy can show a notification on the day a recurring
+transaction is due and before a credit card's due date. The reminders are made and scheduled on your phone
+from the data already on it; nothing is sent to us or anyone else. The notification shows the name and
+amount; on a locked phone, your phone's own lock-screen setting decides whether that shows. You can turn
+reminders off in Settings → Reminders, or in your phone's notification settings.
 
 **Things we don't collect:** location, contacts, photos, advertising IDs, or usage analytics (what you do
 in the app).

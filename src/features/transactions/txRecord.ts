@@ -23,6 +23,8 @@ export interface TxDraft {
   /** Kept on expenses and income, so an edit doesn't take a transaction out of its group. */
   groupId?: string;
   rate?: Pick<Transaction, 'rate' | 'rateCurrency'>;
+  /** Kept from the transaction being edited, so an edit doesn't unlink it from its recurring transaction. */
+  recurringId?: string;
   /** Kept from the transaction being edited. */
   createdAt?: string;
 }
@@ -51,6 +53,7 @@ export function buildTxRecord(d: TxDraft): Omit<Transaction, 'id'> {
     smsFingerprint: d.smsFingerprint,
     moneyBack: d.type === 'income' && d.moneyBack ? true : undefined,
     groupId: transfer ? undefined : d.groupId,
+    recurringId: d.recurringId,
     createdAt: d.createdAt ?? now,
     // put() replaces the whole record, so set this here rather than relying on the update hook.
     updatedAt: now,

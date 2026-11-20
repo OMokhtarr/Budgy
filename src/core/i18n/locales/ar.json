@@ -269,7 +269,8 @@
     "deleteGroup_other": "حذف هذه المعاملات الـ{{count}}؟",
     "deleteGroupButton": "حذف الكل",
     "groupSpent": "مشتريات مُجمّعة",
-    "groupReceived": "مبالغ مُستلمة مُجمّعة"
+    "groupReceived": "مبالغ مُستلمة مُجمّعة",
+    "recurring": "متكررة"
   },
   "icons": {
     "groups": {
@@ -502,7 +503,8 @@
     "support": "الدعم",
     "about": "حول",
     "noBackup": "لم يتم النسخ الاحتياطي بعد",
-    "bankTexts": "رسائل البنك"
+    "bankTexts": "رسائل البنك",
+    "recurring": "المعاملات المتكررة"
   },
   "profile": {
     "name": "اسمك",
@@ -899,5 +901,76 @@
     "afterOneMinute": "دقيقة من مغادرته",
     "afterFiveMinutes": "5 دقائق من مغادرته",
     "noScreenLock": "اضبط قفل الشاشة (رمز أو نقش أو كلمة مرور) في إعدادات هاتفك أولًا."
+  },
+  "recurring": {
+    "title": "المعاملات المتكررة",
+    "add": "معاملة متكررة جديدة",
+    "repeat": "تكرار",
+    "never": "بدون تكرار",
+    "every": {
+      "daily": "يومياً",
+      "weekly": "أسبوعياً",
+      "biweekly": "كل أسبوعين",
+      "monthly": "شهرياً",
+      "quarterly": "كل 3 أشهر",
+      "yearly": "سنوياً"
+    },
+    "auto": "تلقائي",
+    "autoOn": "تُضاف وحدها في يومها عندما تفتح Budgy",
+    "autoOff": "سيسألك Budgy قبل إضافتها",
+    "skip": "تخطّي",
+    "addOne": "إضافة",
+    "stop": "إيقاف التكرار",
+    "stopTitle": "إيقاف التكرار؟",
+    "stopMessage": "تبقى المعاملات التي أُضيفت بالفعل.",
+    "nextOn": "التالية: {{date}}",
+    "next": "التالية {{date}}",
+    "editHeader": "معاملة متكررة. تسري التغييرات من المرة التالية.",
+    "newHeader": "معاملة متكررة جديدة. اختر يوم أول مرة.",
+    "dueHeader": "{{name}} كانت مستحقة في {{date}}. راجع المبلغ ثم احفظ.",
+    "dueTodayHeader": "مستحقة اليوم: {{name}}. راجع المبلغ ثم احفظ.",
+    "dueTitle": "مستحقة",
+    "allTitle": "تتكرر",
+    "empty": "لا شيء يتكرر بعد. اضغط + أو استخدم «تكرار» عند إضافة معاملة.",
+    "hint": "يسألك Budgy قبل إضافة معاملة متكررة، إلا إذا كانت على «تلقائي».",
+    "remindToday": "{{name}}: {{amount}} مستحق اليوم",
+    "remindWas": "{{name}}: {{amount}} كان مستحقاً في {{date}}",
+    "transferName": "{{from}} → {{to}}",
+    "dueCount_zero": "مستحقة {{date}}",
+    "dueCount_one": "مستحقة {{date}}",
+    "dueCount_two": "مستحقتان، منذ {{date}}",
+    "dueCount_few": "{{count}} مستحقة، منذ {{date}}",
+    "dueCount_many": "{{count}} مستحقة، منذ {{date}}",
+    "dueCount_other": "{{count}} مستحقة، منذ {{date}}",
+    "remindMany_zero": "{{name}}: {{amount}}",
+    "remindMany_one": "{{name}}: {{amount}}، مرة مستحقة",
+    "remindMany_two": "{{name}}: {{amount}}، مرتان مستحقتان",
+    "remindMany_few": "{{name}}: {{amount}}، {{count}} مرات مستحقة",
+    "remindMany_many": "{{name}}: {{amount}}، {{count}} مرة مستحقة",
+    "remindMany_other": "{{name}}: {{amount}}، {{count}} مرة مستحقة",
+    "autoAdded_zero": "لم تُضف أي معاملة متكررة",
+    "autoAdded_one": "أُضيفت معاملة متكررة واحدة",
+    "autoAdded_two": "أُضيفت معاملتان متكررتان",
+    "autoAdded_few": "أُضيفت {{count}} معاملات متكررة",
+    "autoAdded_many": "أُضيفت {{count}} معاملة متكررة",
+    "autoAdded_other": "أُضيفت {{count}} معاملة متكررة"
+  },
+  "reminders": {
+    "title": "التذكيرات",
+    "phone": "تذكيرات على الهاتف",
+    "time": "الوقت",
+    "hint": "إشعار في يوم استحقاق المعاملة المتكررة، وقبل موعد سداد بطاقة الائتمان. تُنشأ على هذا الهاتف ولا يُرسل أي شيء إلى أي مكان.",
+    "channel": "التذكيرات",
+    "recurringAsk": "مستحقة اليوم. اضغط لإضافتها.",
+    "recurringAuto": "مستحقة اليوم. يضيفها Budgy عندما تفتح التطبيق.",
+    "cardToday": "مستحق اليوم",
+    "deniedTitle": "الإشعارات متوقفة",
+    "deniedMessage": "اسمح بإشعارات Budgy من إعدادات الهاتف، ثم فعّل هذا الخيار مرة أخرى.",
+    "cardSoon_zero": "مستحق اليوم",
+    "cardSoon_one": "مستحق بعد يوم واحد",
+    "cardSoon_two": "مستحق بعد يومين",
+    "cardSoon_few": "مستحق بعد {{count}} أيام",
+    "cardSoon_many": "مستحق بعد {{count}} يوماً",
+    "cardSoon_other": "مستحق بعد {{count}} يوم"
   }
 }

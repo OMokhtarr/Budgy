@@ -1021,6 +1021,43 @@ ion-modal.b-date-modal .ion-page {
   font-weight: 600;
 }
 
+/* The date, and how often it repeats, under the keypad */
+.b-editor__when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 8px;
+  padding: 6px 12px calc(12px + env(safe-area-inset-bottom));
+}
+.b-editor__when .b-editor__date { width: auto; padding: 4px 2px; }
+.b-editor__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--b-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--b-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.b-editor__chip ion-icon { font-size: 15px; }
+.b-editor__chip.is-on { border-color: var(--accent); color: var(--accent); }
+.b-typeline__skip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; }
+.b-typeline__skip ion-icon { font-size: 17px; }
+/* Menu → Recurring */
+.b-rlist { overflow: hidden; }
+.b-rdue__actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+/* The amount and day can take two lines next to the buttons, rather than be cut short. */
+.b-rdue .b-row__sub { white-space: normal; }
+.b-rhint { margin: 14px 6px; color: var(--b-muted); font-size: 12.5px; line-height: 1.4; }
+
+/* The picked choice in a sheet of choices (e.g. how often it repeats) */
+ion-action-sheet .action-sheet-button.is-on { font-weight: 700; color: var(--ion-color-primary); }
+
 /* Account / category picker takes the keypad's place */
 .b-picker {
   padding: 12px;

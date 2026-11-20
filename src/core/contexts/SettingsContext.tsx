@@ -33,6 +33,14 @@ export interface Settings {
   smsImport: SmsImportSettings;
   /** The app lock (Android). Per device like `smsImport`: not backed up or synced. */
   appLock: AppLockSettings;
+  /** Phone notifications for recurring transactions and card due dates. Per device; undefined = off. */
+  reminders?: ReminderSettings;
+}
+
+export interface ReminderSettings {
+  enabled: boolean;
+  /** When they come: "HH:MM", local time. */
+  time: string;
 }
 
 export interface SmsImportSettings {

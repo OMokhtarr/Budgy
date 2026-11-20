@@ -50,6 +50,7 @@ const CLOUD_TABLE: Record<SyncedTable, string> = {
   transactions: 'transactions',
   smsLinks: 'sms_links',
   merchantRules: 'merchant_rules',
+  recurring: 'recurring',
 };
 
 /** Keeps the HTTP status with the error, so sync can tell a rejected session (401) from other failures. */

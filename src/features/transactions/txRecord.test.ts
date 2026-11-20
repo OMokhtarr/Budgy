@@ -24,6 +24,11 @@ describe('buildTxRecord', () => {
     expect(record.groupId).toBe('g');
   });
 
+  it('keeps the link to its recurring transaction, on every type', () => {
+    expect(buildTxRecord(draft({ recurringId: 'r1' })).recurringId).toBe('r1');
+    expect(buildTxRecord(draft({ type: 'transfer', toAccountId: 'b', recurringId: 'r1' })).recurringId).toBe('r1');
+  });
+
   it('keeps the group on an expense but never marks it money back', () => {
     const record = buildTxRecord(draft({ moneyBack: true, groupId: 'g' }));
     expect(record.groupId).toBe('g');

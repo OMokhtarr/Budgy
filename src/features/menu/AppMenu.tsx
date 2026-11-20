@@ -1,6 +1,7 @@
 import { IonBadge, IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuToggle, useIonAlert } from '@ionic/react';
 import {
-  chatboxEllipsesOutline, cloudOutline, headsetOutline, informationCircleOutline, personCircleOutline, serverOutline, settingsOutline, starOutline,
+  chatboxEllipsesOutline, cloudOutline, headsetOutline, informationCircleOutline, personCircleOutline, repeatOutline, serverOutline, settingsOutline,
+  starOutline,
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { version } from '../../../package.json';
@@ -11,6 +12,7 @@ import ProfileAvatar from '@/shared/components/ProfileAvatar';
 import { useCloud } from '@/core/cloud/CloudContext';
 import { usePendingCount } from '@/features/sms/hooks';
 import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
+import { useDue } from '@/features/recurring/hooks';
 
 export const MENU_CONTENT_ID = 'main-content';
 
@@ -21,6 +23,7 @@ export default function AppMenu() {
   const { profileName, lastBackupAt, smsImport } = useSettings();
   const showBankTexts = useSmsAvailable();
   const pending = usePendingCount();
+  const due = useDue();
   const { user, status, lastSyncedAt } = useCloud();
   // A paused account (no Budgy Pro) isn't backed up by sync.
   const synced = !!user && status !== 'paused';
@@ -67,6 +70,7 @@ export default function AppMenu() {
         <IonList lines="none" className="b-menu__list">
           {page('/profile', personCircleOutline, t('menu.profile'))}
           {page('/settings', settingsOutline, t('menu.settings'))}
+          {page('/recurring', repeatOutline, t('menu.recurring'), due?.length)}
           {page('/data', serverOutline, t('menu.data'))}
           {showBankTexts && page('/sms', chatboxEllipsesOutline, t('menu.bankTexts'), smsImport.enabled ? pending : undefined)}
           <IonMenuToggle autoHide={false}>
