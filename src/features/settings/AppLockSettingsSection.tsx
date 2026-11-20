@@ -24,7 +24,8 @@ export default function AppLockSettingsSection() {
 
   const change = async (enabled: boolean) => {
     const result = await confirm();
-    if (result === 'ok') update({ appLock: { ...appLock, enabled } });
+    // With no screen lock anyone can open the phone anyway, so turning the lock off needs no unlock.
+    if (result === 'ok' || (!enabled && result === 'no-screen-lock')) update({ appLock: { ...appLock, enabled } });
     else if (result === 'no-screen-lock') void presentAlert({ message: t('lock.noScreenLock'), buttons: [t('common.close')] });
     setToggleKey((k) => k + 1);
   };

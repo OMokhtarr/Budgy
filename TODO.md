@@ -10,9 +10,13 @@
     - Away less than / more than the chosen time (1 and 5 minutes), and Immediately; no second prompt right after
       unlocking or after the Settings prompt.
     - Leave Budgy while a prompt is open, come back: it is still locked (or locks after the time away).
-    - Back on the locked cover leaves the app; the cover sits above an open sheet, alert and the side menu.
+    - Back on the locked cover leaves the app; the cover sits above an open sheet, alert and the side menu, and
+      TalkBack can't read or reach what's behind it.
+    - One misread fingerprint keeps the prompt open (up to 5 tries), and "Use PIN" still works.
+    - Change the phone's time back while Budgy is away: it still locks.
     - Recent-apps preview hidden on Android 13+, screenshots still work; preview still shows on older Android.
-    - Remove the phone's screen lock after turning the lock on: Budgy opens without asking.
+    - Remove the phone's screen lock after turning the lock on: Budgy opens without asking, and the switch can
+      still be turned off.
     - Arabic (RTL) layout and dark mode of the cover and the Security section.
     - The privacy policy now mentions the app lock: copy it to `privacy.html` and `privacy-ar.html` on `gh-pages`.
 - [ ] Recurring transactions and reminders (`@capacitor/local-notifications`)

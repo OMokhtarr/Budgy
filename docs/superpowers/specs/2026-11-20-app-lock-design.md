@@ -39,7 +39,9 @@ phone's PIN is not a goal (chosen by the owner).
   `deviceIsSecure`. With `DEVICE_CREDENTIAL` Android allows no Cancel button; the system back gesture still
   cancels.
 - The prompt is a separate Android activity, so Capacitor fires `pause` and `resume` around every unlock. Coming
-  back from Budgy's own prompt must not start the away timer or lock again.
+  back from Budgy's own prompt must not start the away timer or lock again. (Built: the prompt is translucent, so
+  Budgy is paused but not stopped; the lock listens to `appStateChange`, which fires only on leaving / coming
+  back, and times the time away with `SystemClock.elapsedRealtime()` so changing the phone's time can't skip it.)
 - Per device: stored in `budgy-settings` like `smsImport`, never synced or backed up (not in `BACKUP_KEYS`).
 - The cover must be up before the first screen shows on start (the splash is revealed by `revealApp`), and must
   go up when the app goes to the background so nothing sensitive is on screen when it comes back.

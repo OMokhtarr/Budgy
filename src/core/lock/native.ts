@@ -22,6 +22,8 @@ export async function verifyOwner(title: string): Promise<boolean> {
     await NativeBiometric.verifyIdentity({
       title,
       allowedBiometryTypes: [BiometryType.MULTIPLE, BiometryType.DEVICE_CREDENTIAL],
+      // Android's most: one misread fingerprint shouldn't close the prompt before the PIN can be used.
+      maxAttempts: 5,
     });
     return true;
   } catch {
@@ -32,9 +34,22 @@ export async function verifyOwner(title: string): Promise<boolean> {
 /** The app's own `AppPrivacy` plugin (android/app/.../AppPrivacyPlugin.java). */
 interface AppPrivacyPlugin {
   setRecentsHidden(options: { hidden: boolean }): Promise<void>;
+  elapsedRealtime(): Promise<{ ms: number }>;
 }
 
 const AppPrivacy = registerPlugin<AppPrivacyPlugin>('AppPrivacy');
+
+/**
+ * The app lock's clock: time since the phone booted, sleep included, so setting the phone's time back can't
+ * shorten the time away. Falls back to the wall clock if the plugin is missing.
+ */
+export async function uptimeNow(): Promise<number> {
+  try {
+    return (await AppPrivacy.elapsedRealtime()).ms;
+  } catch {
+    return Date.now();
+  }
+}
 
 /** Hides Budgy's preview in the recent-apps screen (Android 13+; older versions keep it). */
 export async function setRecentsHidden(hidden: boolean): Promise<void> {

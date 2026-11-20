@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { App as CapApp } from '@capacitor/app';
 import { useSettings } from '@/core/contexts/SettingsContext';
 import { createLockController, type ConfirmResult, type LockView } from './lockController';
-import { isPhoneSecure, lockSupported, setRecentsHidden, verifyOwner } from './native';
+import { isPhoneSecure, lockSupported, setRecentsHidden, uptimeNow, verifyOwner } from './native';
 import LockCover from './LockCover';
 
 interface AppLockValue {
@@ -40,7 +41,7 @@ function NativeLock({ children }: { children: React.ReactNode }) {
   const controller = useMemo(
     () =>
       createLockController({
-        now: Date.now,
+        now: uptimeNow,
         settings: () => settingsRef.current,
         isSecure: isPhoneSecure,
         verify: () => verifyOwner(tRef.current('lock.promptTitle')),
@@ -51,12 +52,22 @@ function NativeLock({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     controller.start();
-    const handles = [
-      CapApp.addListener('pause', () => controller.pause()),
-      CapApp.addListener('resume', () => controller.resume()),
-    ];
-    return () => handles.forEach((h) => void h.then((l) => l.remove()));
+    // Leaving and coming back, not pause/resume: the unlock prompt pauses Budgy without leaving it.
+    const handle = CapApp.addListener('appStateChange', ({ isActive }) =>
+      isActive ? void controller.comeBack() : controller.leave(),
+    );
+    return () => void handle.then((l) => l.remove());
   }, [controller]);
+
+  // While covered, the app behind can't be read by TalkBack, focused or typed into (also drops the keyboard).
+  useEffect(() => {
+    const app = document.querySelector('ion-app');
+    if (!app) return;
+    app.inert = view !== 'open';
+    return () => {
+      app.inert = false;
+    };
+  }, [view]);
 
   useEffect(() => {
     void setRecentsHidden(appLock.enabled);
@@ -75,7 +86,8 @@ function NativeLock({ children }: { children: React.ReactNode }) {
   return (
     <AppLockContext.Provider value={value}>
       {children}
-      <LockCover view={view} onUnlock={() => void controller.unlock()} />
+      {/* Outside ion-app, so it stays usable while the app behind it is inert. */}
+      {createPortal(<LockCover view={view} onUnlock={() => void controller.unlock()} />, document.body)}
     </AppLockContext.Provider>
   );
 }
