@@ -6,7 +6,7 @@ import { App as CapApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useAccounts, useCardStatuses, useNames } from '@/core/db/hooks';
-import { useRecurring, useRecurringLabel } from '@/features/recurring/hooks';
+import { useRecurring } from '@/features/recurring/hooks';
 import { planReminders, type PlannedReminder, type ReminderTexts } from './plan';
 
 export const DEFAULT_TIME = '09:00';
@@ -56,7 +56,6 @@ export default function PhoneReminders() {
   const recurring = useRecurring();
   const accounts = useAccounts();
   const statuses = useCardStatuses();
-  const label = useRecurringLabel();
   const { accountName } = useNames();
   const [resumed, setResumed] = useState(0);
   const router = useIonRouter();
@@ -78,17 +77,15 @@ export default function PhoneReminders() {
   }, [native]);
 
   const texts = useMemo((): ReminderTexts => ({
-    recurringTitle: (r) => {
-      const { name, amount } = label(r);
-      return `${name} · ${amount}`;
-    },
+    // General on purpose: notifications show on the lock screen, so no name or amount.
+    recurringTitle: () => t('reminders.recurringTitle'),
     recurringBody: (r) => t(r.auto ? 'reminders.recurringAuto' : 'reminders.recurringAsk'),
     cardTitle: (a, s) => {
       const amount = Object.entries(s.byCurrency).filter(([, x]) => x.due > 0).map(([c, x]) => money.format(x.due, c)).join(' + ');
       return `${accountName(a)} · ${amount}`;
     },
     cardBody: (days) => (days ? t('reminders.cardSoon', { count: days }) : t('reminders.cardToday')),
-  }), [label, t, money, accountName]);
+  }), [t, money, accountName]);
 
   useEffect(() => {
     if (!native) return;
