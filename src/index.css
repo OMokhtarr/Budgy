@@ -300,12 +300,14 @@ ion-toolbar.b-toolbar {
 
 /* ─── Category grid (1Money-style ring layout) ─────────────────────────────── */
 /* Rows stack from the top, so with few categories the empty space stays below the donut. */
-.b-page.b-catpage { padding: 16px 2px 12px; }
+.b-page.b-catpage { padding: 8px 2px; }
 
+/* Kept tight so a full month of categories and accounts fits a phone screen without scrolling;
+   the 4px between columns keeps neighbouring names and amounts from running together. */
 .b-catgrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px 0;
+  gap: 10px 4px;
 }
 
 .b-catgrid .b-bubble { gap: 3px; }
@@ -320,8 +322,6 @@ ion-toolbar.b-toolbar {
 .b-catgrid .b-bubble__icon { border-width: 2px; font-size: 26px; }
 
 .b-catgrid .b-bubble__amount {
-  max-width: 100%;
-  overflow: hidden;
   color: color-mix(in srgb, var(--c) 65%, var(--b-amount-grey));
   font-size: 14px;
 }
@@ -341,7 +341,7 @@ ion-toolbar.b-toolbar {
   grid-row: 2 / span 2;
   /* two rows of bubbles, so the donut sits the same whether or not there are bubbles beside it */
   min-width: 0;
-  min-height: 224px;
+  min-height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -424,6 +424,9 @@ ion-toolbar.b-toolbar {
 }
 
 .b-bubble__amount {
+  /* useFitWidth shrinks a longer amount to this width */
+  max-width: 100%;
+  overflow: hidden;
   color: var(--c);
   font-size: 13px;
   font-weight: 700;
@@ -458,7 +461,7 @@ ion-toolbar.b-toolbar {
 }
 
 /* Account tiles start on a row of their own, below the categories and the add button */
-.b-catgrid__break { grid-column: 1 / -1; height: 0; }
+.b-catgrid__first-account { grid-column-start: 1; }
 
 /* ─── Category / account icon chip ─────────────────────────────────────────── */
 .b-avatar {
@@ -1068,9 +1071,14 @@ ion-action-sheet .action-sheet-button.is-on { font-weight: 700; color: var(--ion
 
 .b-picker__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 6px;
 }
+
+/* Icon first, then its name and amount close under it, so each label clearly belongs to the icon above it
+   and not to the row below. */
+.b-picker__item { gap: 2px; }
+.b-picker__item .b-bubble__ring { order: -1; margin-bottom: 2px; }
 
 .b-picker__item.is-selected .b-bubble__ring { box-shadow: 0 0 0 2px var(--accent); }
 

@@ -177,11 +177,11 @@ export default function CategoriesPage() {
               <Bubble name={t('categories.add')} icon="other" color="" variant="add" amount="" onClick={() => setEditing('new')} />
             )}
 
-            {isExpense && shownAccounts.length > 0 && <div className="b-catgrid__break" aria-hidden="true" />}
             {isExpense &&
-              shownAccounts.map((a) => (
+              shownAccounts.map((a, i) => (
                 <Bubble
                   key={a.id}
+                  className={i === 0 ? 'b-catgrid__first-account' : undefined}
                   square
                   name={accountName(a)}
                   icon={a.icon}

@@ -2,6 +2,7 @@ import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
 import { IonIcon } from '@ionic/react';
 import { addOutline } from 'ionicons/icons';
 import { iconFor } from '@/shared/icons';
+import { useFitWidth } from '@/shared/hooks/useFitWidth';
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 'onClick'> {
   name: string;
@@ -23,6 +24,8 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color' | 
 
 /** Round category/account button used in the category grid and pickers. */
 export default function Bubble({ name, icon, color, amount, progress, muted, selected, variant, square, dragging, className, onClick, ...rest }: Props) {
+  // A long amount shrinks to its column rather than running into the next bubble's.
+  const amountRef = useFitWidth<HTMLSpanElement>();
   let ring = 'transparent';
   if (progress != null) {
     const pct = Math.min(progress, 1) * 360;
@@ -41,7 +44,9 @@ export default function Bubble({ name, icon, color, amount, progress, muted, sel
         </span>
       </span>
       {amount != null && (
-        <span className="b-bubble__amount b-num">{amount}</span>
+        <span ref={amountRef} className="b-bubble__amount b-num">
+          {amount}
+        </span>
       )}
     </button>
   );
