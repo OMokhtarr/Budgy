@@ -5,7 +5,7 @@ import {
 } from '@ionic/react';
 import {
   addOutline, arrowDownOutline, arrowUpOutline, checkboxOutline, checkmarkOutline, closeCircle,
-  ellipsisVertical, linkOutline, receiptOutline, squareOutline, swapHorizontalOutline, trashOutline,
+  ellipsisVertical, linkOutline, receiptOutline, repeatOutline, squareOutline, swapHorizontalOutline, trashOutline,
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -13,6 +13,7 @@ import { useLocation } from 'react-router-dom';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
+import RecurringReminders from '@/features/recurring/RecurringReminders';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
 import { spentOnTile } from '@/core/utils/accountTiles';
@@ -338,6 +339,9 @@ export default function TransactionsPage() {
     return <Avatar icon={cat?.icon ?? 'other'} color={cat?.color ?? '#64748b'} />;
   };
 
+  const repeatIcon = (x: Transaction) =>
+    x.recurringId && <IonIcon className="b-row__link" icon={repeatOutline} aria-label={t('transactions.recurring')} />;
+
   /** One transaction's row; `withDate` adds its date for lists not split by day. */
   const txRow = (x: Transaction, withDate = false) => {
     const acc = accounts.get(x.accountId);
@@ -351,7 +355,10 @@ export default function TransactionsPage() {
         <button key={x.id} className={cls} {...tourAttr('transactions.row')} {...bind(x)}>
           {avatarFor(x)}
           <div className="b-row__main">
-            <div className="b-row__title">{t('type.transfer')}</div>
+            <div className="b-row__title">
+              {t('type.transfer')}
+              {repeatIcon(x)}
+            </div>
             <div className="b-row__sub">
               <IonIcon icon={iconFor(acc?.icon)} />
               <span>{accountName(acc)} → {accountName(to)}</span>
@@ -381,6 +388,7 @@ export default function TransactionsPage() {
             {categoryName(cat)}{sub ? ` · ${sub}` : ''}
             {back && <span className="b-row__tag">{t('transactions.moneyBack')}</span>}
             {x.groupId && <IonIcon className="b-row__link" icon={linkOutline} aria-label={t('transactions.inGroup')} />}
+            {repeatIcon(x)}
           </div>
           <div className="b-row__sub">
             <IonIcon icon={iconFor(acc?.icon)} />
@@ -442,6 +450,7 @@ export default function TransactionsPage() {
 
       <IonContent ref={contentRef}>
         <div className="b-page">
+          {!selecting && <RecurringReminders />}
           {searchOpen && (
             <IonSearchbar
               className="b-search"

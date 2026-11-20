@@ -1,6 +1,7 @@
 import { alive, db, softDelete, type BudgyDB } from '@/core/db/db';
 import { dayKey } from '@/core/utils/period';
 import { dueDays, nextAfter, occurrenceDate, occurrenceTxId, type Repeat } from '@/core/utils/recurring';
+import { stampAfter } from '@/core/utils/stamp';
 import { buildTxRecord } from '@/features/transactions/txRecord';
 import type { Recurring, RecurringTx, Transaction } from '@/shared/models';
 
@@ -58,8 +59,9 @@ export async function saveRecurring(existing: Recurring | undefined, d: Recurrin
     next: moved ? d.day : existing.next,
     ...(d.auto ? { auto: true as const } : {}),
     createdAt: existing?.createdAt ?? now,
-    // put() replaces the whole record, so set this here rather than relying on the update hook.
-    updatedAt: now,
+    // put() replaces the whole record, so stamp it here, later than the stored stamp so an edit on a phone
+    // whose clock is behind isn't reverted by sync.
+    updatedAt: existing ? stampAfter(existing.updatedAt) : now,
   };
   if (!existing) delete record.id;
   if (existing) {
@@ -97,7 +99,7 @@ async function putOccurrence(
     let tx = existing;
     if (!tx) {
       const rate = values.rate != null ? { rate: values.rate, rateCurrency: values.rateCurrency } : rateFor(values.currency);
-      tx = { ...buildTxRecord({ ...values, date: values.date ?? occurrenceDate(day), rate }), id, recurringId: r.id };
+      tx = { ...buildTxRecord({ ...values, date: values.date ?? occurrenceDate(day), rate, recurringId: r.id }), id };
       await database.transactions.add(tx);
     }
     await moveNext(database, r.id!, day);

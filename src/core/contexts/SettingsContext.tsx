@@ -30,6 +30,14 @@ export interface Settings {
   syncedDirty?: boolean;
   /** Reading bank texts (Android). Per device: not backed up or synced, since it's about this phone's inbox. */
   smsImport: SmsImportSettings;
+  /** Phone notifications for recurring transactions and card due dates. Per device; undefined = off. */
+  reminders?: ReminderSettings;
+}
+
+export interface ReminderSettings {
+  enabled: boolean;
+  /** When they come: "HH:MM", local time. */
+  time: string;
 }
 
 export interface SmsImportSettings {

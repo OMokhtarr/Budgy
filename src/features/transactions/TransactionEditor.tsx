@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { IonDatetime, IonIcon, IonModal, useIonAlert, useIonToast } from '@ionic/react';
-import { arrowForwardOutline, backspaceOutline, calendarOutline, checkmarkOutline, trashOutline } from 'ionicons/icons';
+import { IonDatetime, IonIcon, IonModal, useIonActionSheet, useIonAlert, useIonToast } from '@ionic/react';
+import {
+  arrowForwardOutline, backspaceOutline, calendarOutline, checkmarkOutline, flashOutline, playSkipForwardOutline, repeatOutline, trashOutline,
+} from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, softDelete } from '@/core/db/db';
+import { alive, db, softDelete } from '@/core/db/db';
 import { groupRows } from './bulk';
 import { useAccounts, useBalances, useCategories, useNames } from '@/core/db/hooks';
 import { evaluate, hasOperator, pressKey } from '@/core/utils/calc';
@@ -23,6 +25,10 @@ import { useDuplicatePrompt } from '@/features/sms/useDuplicatePrompt';
 import { buildTxRecord, saveTx } from './txRecord';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 import { usePageTour } from '@/features/onboarding/usePageTour';
+import { REPEATS, repeatOf, type RepeatName } from '@/core/utils/recurring';
+import { addOccurrence, makeRecurring, saveRecurring, skipOccurrence, stopRecurring } from '@/features/recurring/actions';
+import { useRateFor } from '@/features/recurring/hooks';
+import { useOpenRecurring } from '@/features/recurring/useOpenRecurring';
 
 const LAST_ACCOUNT_KEY = 'budgy-last-account';
 
@@ -53,6 +59,9 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [presentToast] = useIonToast();
   const [presentAlert] = useIonAlert();
   const askDuplicate = useDuplicatePrompt();
+  const [presentSheet] = useIonActionSheet();
+  const rateFor = useRateFor();
+  const { openRule } = useOpenRecurring();
 
   const accounts = useAccounts();
   const allAccounts = useAccounts(true);
@@ -66,7 +75,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [accountId, setAccountId] = useState<string | undefined>(tx?.accountId ?? init.accountId);
   const [toAccountId, setToAccountId] = useState<string | undefined>(tx?.toAccountId ?? init.toAccountId);
   const [categoryId, setCategoryId] = useState<string | undefined>(tx?.categoryId ?? init.categoryId);
-  const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId);
+  const [subcategoryId, setSubcategoryId] = useState<string | undefined>(tx?.subcategoryId ?? init.subcategoryId);
   // Money back on a purchase: income in an expense category (see Transaction.moneyBack). Only income keeps it.
   const [moneyBack, setMoneyBack] = useState(!!(tx?.moneyBack ?? init.moneyBack));
   // A grouped transaction's category belongs to its group, and is changed there, while the group has other rows.
@@ -75,11 +84,12 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [expr, setExpr] = useState<string>(tx ? String(tx.amount) : init.amount ? String(init.amount) : '');
   // Currency the user picked for the amount, and for what arrives in a transfer.
   const [curPick, setCurPick] = useState<string | undefined>(tx?.currency ?? init.currency);
-  const [toCurPick, setToCurPick] = useState<string | undefined>(tx?.toCurrency);
+  const [toCurPick, setToCurPick] = useState<string | undefined>(tx?.toCurrency ?? init.toCurrency);
   // Received amount of a cross-currency transfer. Follows the exchange rate until the user types it,
   // and `touchedPair` remembers which currency pair the typed value belongs to.
-  const [expr2, setExpr2] = useState<string>(tx?.toAmount != null ? String(tx.toAmount) : '');
-  const [touchedPair, setTouchedPair] = useState<string | null>(tx?.toAmount != null ? `${tx.currency}>${tx.toCurrency}` : null);
+  const startTo = tx?.toAmount != null ? tx : init.toAmount != null ? init : undefined;
+  const [expr2, setExpr2] = useState<string>(startTo ? String(startTo.toAmount) : '');
+  const [touchedPair, setTouchedPair] = useState<string | null>(startTo ? `${startTo.currency}>${startTo.toCurrency}` : null);
   const [active, setActive] = useState<Side>('from');
   // Exchange rate the user typed, and the currency (or pair) it belongs to.
   const [rateEdit, setRateEdit] = useState<{ key: string; text: string } | null>(null);
@@ -90,6 +100,22 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [picking, setPicking] = useState<Side | null>(null);
   const [dateOpen, setDateOpen] = useState(false);
   const saving = useRef(false);
+
+  // ── repeating ──
+  // Editing a recurring transaction ('new' makes one), or adding one of its occurrences that's due.
+  const ruleMode = init.recurring != null;
+  const editingRule = typeof init.recurring === 'object' ? init.recurring : undefined;
+  const due = init.due;
+  // The recurring transaction this one was added from, while it still repeats.
+  const linkedRule = useLiveQuery(async () => {
+    if (!tx?.recurringId) return null;
+    const r = await db.recurring.get(tx.recurringId);
+    return r && alive(r) ? r : null;
+  }, [tx?.recurringId]);
+  const [repeat, setRepeat] = useState<RepeatName | null>(
+    editingRule ? repeatOf(editingRule) : (init.repeat ?? (ruleMode ? 'monthly' : null)),
+  );
+  const [auto, setAuto] = useState(!!editingRule?.auto);
 
   const account = allAccounts?.find((a) => a.id === accountId);
   const toAccount = allAccounts?.find((a) => a.id === toAccountId);
@@ -252,7 +278,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     if (saving.current) return;
     saving.current = true;
 
-    let saved: Transaction;
+    let saved: Transaction | undefined;
     try {
       if (fromBankText) {
         const choice = await askDuplicate({ type, amount, currency, accountId, date: iso });
@@ -285,9 +311,17 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
         smsFingerprint: tx?.smsFingerprint ?? init.smsFingerprint,
         moneyBack: back,
         groupId: tx?.groupId,
+        recurringId: tx?.recurringId,
         createdAt: tx?.createdAt,
       });
-      saved = await saveTx(record, tx?.id);
+      if (ruleMode) {
+        await saveRecurring(editingRule, { tx: record, ...REPEATS[repeat ?? 'monthly'], day: date, auto });
+      } else if (due) {
+        saved = await addOccurrence(due.r, due.day, record, rateFor);
+      } else {
+        saved = await saveTx(record, tx?.id);
+        if (repeat && !linkedRule) await makeRecurring(saved, REPEATS[repeat], auto);
+      }
     } catch (err) {
       saving.current = false;
       throw err;
@@ -300,25 +334,52 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     }
     Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
     onClose();
-    init.onSaved?.(saved);
+    if (saved) init.onSaved?.(saved);
   };
 
-  const remove = () =>
+  const remove = () => {
+    if (due) {
+      void skipOccurrence(due.r, due.day);
+      onClose();
+      return;
+    }
     presentAlert({
-      header: t('editor.deleteTitle'),
-      message: t('editor.deleteMessage'),
+      header: t(editingRule ? 'recurring.stopTitle' : 'editor.deleteTitle'),
+      message: t(editingRule ? 'recurring.stopMessage' : 'editor.deleteMessage'),
       buttons: [
         { text: t('common.cancel'), role: 'cancel' },
         {
-          text: t('common.delete'),
+          text: t(editingRule ? 'recurring.stop' : 'common.delete'),
           role: 'destructive',
           handler: async () => {
-            if (tx?.id != null) await softDelete(db.transactions, [tx.id]);
+            if (editingRule) await stopRecurring(editingRule.id!);
+            else if (tx?.id != null) await softDelete(db.transactions, [tx.id]);
             onClose();
           },
         },
       ],
     });
+  };
+
+  /** How often it repeats; on a transaction added from a recurring one, opens that instead. */
+  const pickRepeat = () => {
+    if (linkedRule) return openRule(linkedRule);
+    const names = Object.keys(REPEATS) as RepeatName[];
+    void presentSheet({
+      header: t('recurring.repeat'),
+      buttons: [
+        // A recurring transaction stops from its delete button instead.
+        ...(ruleMode ? [] : [{ text: t('recurring.never'), cssClass: repeat ? undefined : 'is-on', handler: () => setRepeat(null) }]),
+        ...names.map((n) => ({ text: t(`recurring.every.${n}`), cssClass: repeat === n ? 'is-on' : undefined, handler: () => setRepeat(n) })),
+        { text: t('common.cancel'), role: 'cancel' },
+      ],
+    });
+  };
+
+  const toggleAuto = () => {
+    setAuto(!auto);
+    void presentToast({ message: t(auto ? 'recurring.autoOff' : 'recurring.autoOn'), duration: 2600, position: 'top', color: 'medium' });
+  };
 
   // The two coloured halves at the top: what the money leaves, and where it goes.
   type BoxItem = { name: string; icon: string; color: string };
@@ -464,8 +525,13 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
             ) : (
               <span className="b-typeline__label">{t(back ? 'editor.moneyBack' : `type.${type}`)}</span>
             )}
-            {tx?.id != null ? (
-              <button className="b-typeline__del" onClick={remove} aria-label={t('common.delete')}>
+            {due ? (
+              <button className="b-typeline__del b-typeline__skip" onClick={remove}>
+                <IonIcon icon={playSkipForwardOutline} />
+                <span>{t('recurring.skip')}</span>
+              </button>
+            ) : tx?.id != null || editingRule ? (
+              <button className="b-typeline__del" onClick={remove} aria-label={t(editingRule ? 'recurring.stop' : 'common.delete')}>
                 <IonIcon icon={trashOutline} />
               </button>
             ) : (
@@ -493,7 +559,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
               {t('editor.receivedIn', { currency: toCurrency })}
             </button>
           )}
-          {(cross || foreignAmount) && (
+          {/* A recurring transaction takes the saved rate on each day it's added, so it keeps none of its own. */}
+          {(cross || (foreignAmount && !ruleMode)) && (
             <label className="b-rate b-rate--tx" dir="ltr">
               <span>1 {rateUnit} =</span>
               <input
@@ -592,9 +659,23 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
           </div>
         )}
 
-        <button className="b-editor__date" onClick={() => setDateOpen(true)}>
-          {dateLabel}
-        </button>
+        <div className="b-editor__when">
+          <button className="b-editor__date" onClick={() => setDateOpen(true)}>
+            {ruleMode ? t('recurring.nextOn', { date: dateLabel }) : dateLabel}
+          </button>
+          {!due && (
+            <button className={`b-editor__chip ${repeat || linkedRule ? 'is-on' : ''}`} onClick={pickRepeat}>
+              <IonIcon icon={repeatOutline} />
+              {linkedRule ? t(`recurring.every.${repeatOf(linkedRule)}`) : repeat ? t(`recurring.every.${repeat}`) : t('recurring.repeat')}
+            </button>
+          )}
+          {repeat && !linkedRule && !due && (
+            <button className={`b-editor__chip ${auto ? 'is-on' : ''}`} onClick={toggleAuto} aria-pressed={auto}>
+              <IonIcon icon={flashOutline} />
+              {t('recurring.auto')}
+            </button>
+          )}
+        </div>
       </div>
 
       <IonModal className="b-date-modal" isOpen={dateOpen} onDidDismiss={() => setDateOpen(false)}>

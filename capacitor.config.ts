@@ -17,6 +17,11 @@ const config: CapacitorConfig = {
     Keyboard: {
       resize: 'body',
     },
+    // Reminders: the status bar icon (android/app/src/main/res/drawable/ic_stat_budgy.xml) and Budgy's green.
+    LocalNotifications: {
+      smallIcon: 'ic_stat_budgy',
+      iconColor: '#10b981',
+    },
     // Native sign-in (@capgo/capacitor-social-login): only Google and Apple are used. Disabled providers
     // aren't bundled, so no Facebook SDK ends up in the app. Changes need `npx cap sync`.
     SocialLogin: {

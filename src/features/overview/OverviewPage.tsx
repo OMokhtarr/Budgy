@@ -20,6 +20,7 @@ import Donut from '@/shared/components/Donut';
 import type { Account, Category, Flow, PeriodMode } from '@/shared/models';
 import AccountEditModal from '@/features/accounts/AccountEditModal';
 import CardReminders from '@/features/accounts/CardReminders';
+import RecurringReminders from '@/features/recurring/RecurringReminders';
 import CreditCardSheet from '@/features/accounts/CreditCardSheet';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
@@ -129,6 +130,7 @@ export default function OverviewPage() {
       </IonHeader>
       <IonContent ref={contentRef}>
         <div className="b-page">
+          <RecurringReminders />
           <CardReminders onOpen={setViewing} />
           <div className="b-tiles" {...tourAttr('overview.tiles')}>
             <div className="b-card b-tile">

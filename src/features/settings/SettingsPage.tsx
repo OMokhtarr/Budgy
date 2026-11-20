@@ -16,6 +16,7 @@ import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 import ToursSettingsSection from '@/features/onboarding/ToursSettingsSection';
 import { usePageTour } from '@/features/onboarding/usePageTour';
+import RemindersSettingsSection from '@/features/reminders/RemindersSettingsSection';
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
@@ -173,6 +174,8 @@ export default function SettingsPage() {
               </IonItem>
             </IonList>
           )}
+
+          <RemindersSettingsSection />
 
           <div {...tourAttr('settings.tours')}>
             <ToursSettingsSection />

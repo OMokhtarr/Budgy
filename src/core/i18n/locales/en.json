@@ -213,7 +213,8 @@
     "deleteGroup_other": "Delete these {{count}} transactions?",
     "deleteGroupButton": "Delete all",
     "groupSpent": "Combined purchase",
-    "groupReceived": "Combined money in"
+    "groupReceived": "Combined money in",
+    "recurring": "Repeats"
   },
   "icons": {
     "groups": {
@@ -426,7 +427,8 @@
     "support": "Support",
     "about": "About",
     "noBackup": "Not backed up yet",
-    "bankTexts": "Bank texts"
+    "bankTexts": "Bank texts",
+    "recurring": "Recurring"
   },
   "profile": {
     "name": "Your name",
@@ -774,5 +776,60 @@
     "copied": "Copied",
     "checkFailed": "Couldn't check Budgy Pro. Check your connection and try again.",
     "tryAgain": "Try again"
+  },
+  "recurring": {
+    "title": "Recurring",
+    "add": "New recurring transaction",
+    "repeat": "Repeat",
+    "never": "Doesn't repeat",
+    "every": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "biweekly": "Every 2 weeks",
+      "monthly": "Monthly",
+      "quarterly": "Every 3 months",
+      "yearly": "Yearly"
+    },
+    "auto": "Auto",
+    "autoOn": "Added by itself on its day, when you open Budgy",
+    "autoOff": "Budgy will ask you before adding it",
+    "skip": "Skip",
+    "addOne": "Add",
+    "stop": "Stop repeating",
+    "stopTitle": "Stop repeating?",
+    "stopMessage": "Transactions already added stay.",
+    "nextOn": "Next: {{date}}",
+    "next": "next {{date}}",
+    "editHeader": "Recurring transaction. Changes apply from the next one.",
+    "newHeader": "New recurring transaction. Pick the day of the first one.",
+    "dueHeader": "{{name}} was due on {{date}}. Check the amount, then save.",
+    "dueTodayHeader": "Due today: {{name}}. Check the amount, then save.",
+    "dueTitle": "Due",
+    "allTitle": "Repeating",
+    "dueCount_one": "due {{date}}",
+    "dueCount_other": "{{count}} due, from {{date}}",
+    "empty": "Nothing repeats yet. Tap + or use Repeat when adding a transaction.",
+    "hint": "Budgy asks before adding a recurring transaction, unless it's set to Auto.",
+    "remindToday": "{{name}}: {{amount}} due today",
+    "remindWas": "{{name}}: {{amount}} was due on {{date}}",
+    "remindMany_one": "{{name}}: {{amount}}, {{count}} due",
+    "remindMany_other": "{{name}}: {{amount}}, {{count}} due",
+    "autoAdded_one": "Added {{count}} recurring transaction",
+    "autoAdded_other": "Added {{count}} recurring transactions",
+    "transferName": "{{from}} → {{to}}"
+  },
+  "reminders": {
+    "title": "Reminders",
+    "phone": "Phone reminders",
+    "time": "Time",
+    "hint": "A notification on the day a recurring transaction is due, and before a credit card's due date. They're made on this phone; nothing is sent anywhere.",
+    "channel": "Reminders",
+    "recurringAsk": "Due today. Tap to add it.",
+    "recurringAuto": "Due today. Budgy adds it when you open the app.",
+    "cardSoon_one": "Due in {{count}} day",
+    "cardSoon_other": "Due in {{count}} days",
+    "cardToday": "Due today",
+    "deniedTitle": "Notifications are off",
+    "deniedMessage": "Allow notifications for Budgy in your phone's settings, then turn this on again."
   }
 }

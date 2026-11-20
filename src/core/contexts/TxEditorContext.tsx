@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { IonModal } from '@ionic/react';
-import type { Transaction, TxType } from '@/shared/models';
+import type { Recurring, Transaction, TxType } from '@/shared/models';
+import type { RepeatName } from '@/core/utils/recurring';
 import TransactionEditor from '@/features/transactions/TransactionEditor';
 
 export interface EditorInit {
@@ -12,6 +13,16 @@ export interface EditorInit {
   amount?: number;
   /** Starting note for a new transaction. */
   note?: string;
+  /** Starting subcategory, and a transfer's received amount and currency (filled from a recurring transaction). */
+  subcategoryId?: string;
+  toAmount?: number;
+  toCurrency?: string;
+  /** A new transaction starts with this repeat picked. */
+  repeat?: RepeatName;
+  /** Edits this recurring transaction ('new' makes one) instead of a transaction. */
+  recurring?: Recurring | 'new';
+  /** Adds the occurrence of this recurring transaction due on `day`; the delete button skips it instead. */
+  due?: { r: Recurring; day: string };
   /** Pass an existing transaction to edit it. */
   tx?: Transaction;
   /** Starting currency for a new transaction, e.g. a bank text's; kept even when the account doesn't hold it. */
