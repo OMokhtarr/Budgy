@@ -4,11 +4,11 @@ import {
 } from '@ionic/react';
 import { addOutline, chevronDownOutline, chevronForwardOutline, createOutline, receiptOutline, swapHorizontalOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
-import { Redirect, useParams } from 'react-router-dom';
+import { Redirect, useLocation, useParams } from 'react-router-dom';
 import { useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
-import { useAccounts, useCardStatuses, useCardTransactions, useLookups, useNames } from '@/core/db/hooks';
-import { cardTransactions, interestFree, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
+import { useAccounts, useCardTransactions, useLookups, useNames } from '@/core/db/hooks';
+import { cardStatus, cardTransactions, interestFree, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
 import { changeOn } from '@/core/utils/lending';
 import Avatar from '@/shared/components/Avatar';
 import MoneyText from '@/shared/components/MoneyText';
@@ -20,19 +20,20 @@ import { useCardActions } from './card/useCardActions';
 /** Everything about one credit card: what's owed, the last statement, this cycle, interest-free days and its transactions. */
 export default function CreditCardPage() {
   const { id } = useParams<{ id: string }>();
+  const { pathname } = useLocation();
   const accounts = useAccounts();
-  const status = useCardStatuses()?.get(id);
+  const txs = useCardTransactions(id);
   const account = accounts?.find((a) => a.id === id);
-  // A card that was deleted, archived or turned back into a debit card has nothing to show here.
-  if (accounts && (!account || !isCreditCard(account))) return <Redirect to="/accounts" />;
-  return (
-    <IonPage>
-      {account && isCreditCard(account) && status ? <CardPage account={account} status={status} /> : null}
-    </IonPage>
-  );
+  const card = account && isCreditCard(account) ? account : undefined;
+  // Worked out from the same account the page shows, so a currency just added in Edit is always in it.
+  const status = useMemo(() => (card && txs ? cardStatus(card, txs, new Date()) : undefined), [card, txs]);
+  // A card that was deleted, archived or turned back into a debit card has nothing to show here. Ionic keeps
+  // this page mounted under other tabs, so it only sends the user away while it's the page on screen.
+  if (accounts && !card) return pathname === `/cards/${id}` ? <Redirect to="/accounts" /> : <IonPage />;
+  return <IonPage>{card && status && txs ? <CardPage account={card} status={status} txs={txs} /> : null}</IonPage>;
 }
 
-function CardPage({ account, status }: { account: Account & { credit: CreditCard }; status: CardStatus }) {
+function CardPage({ account, status, txs }: { account: Account & { credit: CreditCard }; status: CardStatus; txs: Transaction[] }) {
   const { t } = useTranslation();
   const money = useMoney();
   const { accountName } = useNames();
@@ -41,8 +42,7 @@ function CardPage({ account, status }: { account: Account & { credit: CreditCard
   const actions = useCardActions(account, status);
   const [editing, setEditing] = useState(false);
   const [showEarlier, setShowEarlier] = useState(false);
-  const txs = useCardTransactions(account.id!);
-  const { thisCycle, lastCycle } = useMemo(() => cardTransactions(account.id!, txs ?? [], status.cycle), [account.id, txs, status.cycle]);
+  const { thisCycle, lastCycle } = useMemo(() => cardTransactions(account.id!, txs, status.cycle), [account.id, txs, status.cycle]);
   const free = interestFree(account.credit, new Date());
   const own = status.byCurrency[account.currency];
 

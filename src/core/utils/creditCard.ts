@@ -1,5 +1,6 @@
 import { currenciesOf, groupOf, openingOf, roundTo } from './currency';
 import { changeOn } from './lending';
+import { parseNumber } from './number';
 import type { Account, Amounts, CreditCard, Transaction } from '@/shared/models';
 
 /** A reminder shows from this many days before the due date. */
@@ -68,12 +69,21 @@ export function fixedDueDay(credit: CreditCard, today: Date): number {
   return cycleOf(credit, today).dueOn.getDate();
 }
 
+/** A typed whole number of days, in any of the digits the keyboard types; undefined when it isn't one. */
+function typedDays(typed: string): number | undefined {
+  const n = parseNumber(typed);
+  return Number.isInteger(n) ? n : undefined;
+}
+
 /** Typed "days after the statement": a whole number from 1 to `MAX_DUE_AFTER`, otherwise undefined. */
 export function parseDueAfter(typed: string): number | undefined {
-  const s = typed.trim();
-  if (!/^\d+$/.test(s)) return undefined;
-  const n = Number(s);
-  return n >= 1 && n <= MAX_DUE_AFTER ? n : undefined;
+  const n = typedDays(typed);
+  return n != null && n >= 1 && n <= MAX_DUE_AFTER ? n : undefined;
+}
+
+/** Whether typed "days after" is a whole number above the limit, most likely the bank's total from the day you buy. */
+export function dueAfterTooMany(typed: string): boolean {
+  return (typedDays(typed) ?? 0) > MAX_DUE_AFTER;
 }
 
 export interface InterestFree {

@@ -12,7 +12,7 @@ import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { countsInExpenses, countsInTotal, switchesOnByDefault } from '@/core/utils/accountFilter';
 import { currenciesOf, openingOf, roundTo } from '@/core/utils/currency';
 import { debtSideOf, signedFor, unsigned, type DebtSide } from '@/core/utils/debtSide';
-import { fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter } from '@/core/utils/creditCard';
+import { dueAfterTooMany, fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter } from '@/core/utils/creditCard';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
@@ -144,7 +144,7 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const cycleDraft: CreditCard | undefined =
     dueMode === 'day' ? { statementDay, dueDay } : daysAfter ? { statementDay, dueDay, dueAfter: daysAfter } : undefined;
   // A number above the limit is most likely the bank's total from the day you buy (e.g. 55).
-  const tooManyDays = dueMode === 'after' && !daysAfter && /^\d+$/.test(dueAfter.trim()) && Number(dueAfter) > MAX_DUE_AFTER;
+  const tooManyDays = dueMode === 'after' && dueAfterTooMany(dueAfter);
   const creditInvalid = credit && !cycleDraft;
   const plainSide: DebtSide | undefined = plainAmounts ? side : owedOnCard ? 'owe' : undefined;
   const pickSide = (s: DebtSide) => {
@@ -397,7 +397,7 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
                     className="b-input b-num"
                     inputMode="numeric"
                     value={dueAfter}
-                    onChange={(e) => setDueAfter(e.target.value.replace(/[^\d]/g, ''))}
+                    onChange={(e) => setDueAfter(cleanNumberInput(e.target.value))}
                   />
                 </label>
               )}

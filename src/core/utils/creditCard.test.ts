@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardStatus, cardTransactions, cycleOf, fixedDueDay, interestFree, needsReminder, parseDueAfter, payFromAccount } from './creditCard';
+import { cardStatus, cardTransactions, cycleOf, dueAfterTooMany, fixedDueDay, interestFree, needsReminder, parseDueAfter, payFromAccount } from './creditCard';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
 
 const day = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h);
@@ -274,4 +274,16 @@ it('cardTransactions splits this cycle from the last one, newest first, this car
   );
   expect(r.thisCycle.map((t) => t.amount)).toEqual([5, 4]);
   expect(r.lastCycle.map((t) => t.amount)).toEqual([3, 2]);
+});
+
+it('parseDueAfter reads Arabic-Indic and Persian digits', () => {
+  expect(parseDueAfter('٢٥')).toBe(25);
+  expect(parseDueAfter('۲۵')).toBe(25);
+  expect(parseDueAfter('٢٫٥')).toBeUndefined();
+});
+
+it('dueAfterTooMany flags a whole number above 30, in any digits', () => {
+  expect(dueAfterTooMany('55')).toBe(true);
+  expect(dueAfterTooMany('٥٥')).toBe(true);
+  for (const fine of ['', '0', '25', '30', '2.5']) expect(dueAfterTooMany(fine)).toBe(false);
 });
