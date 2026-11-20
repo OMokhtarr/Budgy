@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import {
-  IonBackButton, IonButtons, IonContent, IonHeader, IonItem, IonLabel, IonList, IonListHeader, IonNote, IonPage,
+  IonBackButton, IonButtons, IonContent, IonHeader, IonIcon, IonItem, IonList, IonListHeader, IonNote, IonPage,
   IonSelect, IonSelectOption, IonTitle, IonToolbar, useIonAlert,
 } from '@ionic/react';
+import { cloudDoneOutline, phonePortraitOutline, shieldCheckmarkOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { version } from '../../../package.json';
+import { privacyPolicyUrl } from '@/core/config/links';
 import { CURRENCIES, rebaseRates, useSettings, type ThemePref } from '@/core/contexts/SettingsContext';
 import { db, moveAccountsToCurrency, unusedAccountsIn } from '@/core/db/db';
 import { useAccounts, useCategories, useCurrenciesInUse } from '@/core/db/hooks';
@@ -112,19 +114,6 @@ export default function SettingsPage() {
         <div className="b-page" style={{ paddingInline: 0 }}>
           <IonList inset>
             <IonListHeader>{t('settings.general')}</IonListHeader>
-            <IonItem {...tourAttr('settings.currency')}>
-              <IonSelect
-                key={currencyKey}
-                label={t('settings.currency')}
-                value={settings.currency}
-                interface="action-sheet"
-                onIonChange={(e) => void changeCurrency(e.detail.value)}
-              >
-                {CURRENCIES.map((c) => (
-                  <IonSelectOption key={c} value={c}>{c}</IonSelectOption>
-                ))}
-              </IonSelect>
-            </IonItem>
             <IonItem>
               <IonSelect
                 label={t('settings.language')}
@@ -148,7 +137,7 @@ export default function SettingsPage() {
                 <IonSelectOption value="dark">{t('settings.themeDark')}</IonSelectOption>
               </IonSelect>
             </IonItem>
-            <IonItem>
+            <IonItem lines="none">
               <IonSelect
                 label={t('settings.weekStart')}
                 value={settings.weekStart}
@@ -162,39 +151,67 @@ export default function SettingsPage() {
             </IonItem>
           </IonList>
 
-          <AppLockSettingsSection />
-
-          {foreign.length > 0 && (
-            <IonList inset>
-              <IonListHeader>{t('settings.rates')}</IonListHeader>
-              {foreign.map((c) => (
-                <IonItem key={`${settings.currency}-${c}`}>
-                  <RateInput currency={c} />
-                </IonItem>
-              ))}
-              <IonItem lines="none">
-                <IonNote style={{ fontSize: 12.5, padding: '8px 0' }}>{t('settings.ratesHint', { currency: settings.currency })}</IonNote>
+          {/* The main currency and the rates that convert the others into it. */}
+          <IonList inset>
+            <IonListHeader>{t('settings.currencySection')}</IonListHeader>
+            <IonItem {...tourAttr('settings.currency')}>
+              <IonSelect
+                key={currencyKey}
+                label={t('settings.currency')}
+                value={settings.currency}
+                interface="action-sheet"
+                onIonChange={(e) => void changeCurrency(e.detail.value)}
+              >
+                {CURRENCIES.map((c) => (
+                  <IonSelectOption key={c} value={c}>{c}</IonSelectOption>
+                ))}
+              </IonSelect>
+            </IonItem>
+            {foreign.map((c) => (
+              <IonItem key={`${settings.currency}-${c}`}>
+                <RateInput currency={c} />
               </IonItem>
-            </IonList>
-          )}
+            ))}
+            <IonItem lines="none">
+              <IonNote style={{ fontSize: 12.5, padding: '8px 0' }}>
+                {foreign.length > 0 ? t('settings.ratesHint', { currency: settings.currency }) : t('settings.currencyHint')}
+              </IonNote>
+            </IonItem>
+          </IonList>
 
           <RemindersSettingsSection />
+
+          <AppLockSettingsSection />
 
           <div {...tourAttr('settings.tours')}>
             <ToursSettingsSection />
           </div>
 
-          <IonList inset>
-            <IonItem lines="none">
-              <IonLabel>
-                Budgy
-                <p>{t(synced ? 'settings.aboutSynced' : 'settings.about')}</p>
-              </IonLabel>
-              <IonNote slot="end">v{version}</IonNote>
-            </IonItem>
-          </IonList>
+          <AboutCard synced={synced} />
         </div>
       </IonContent>
     </IonPage>
+  );
+}
+
+/** The last card: the app's icon, name and version, what happens to the data, and the privacy policy. */
+function AboutCard({ synced }: { synced: boolean }) {
+  const { t, i18n } = useTranslation();
+  return (
+    <div className="b-about">
+      <img className="b-about__icon" src="/icon.png" alt="" />
+      <div className="b-about__name">Budgy</div>
+      <div className="b-about__version">
+        {t('settings.version')} <bdi>{version}</bdi>
+      </div>
+      <p className="b-about__line">
+        <IonIcon icon={synced ? cloudDoneOutline : phonePortraitOutline} aria-hidden="true" />
+        {t(synced ? 'settings.aboutSynced' : 'settings.about')}
+      </p>
+      <a className="b-about__link" href={privacyPolicyUrl(i18n.language)} target="_blank" rel="noopener">
+        <IonIcon icon={shieldCheckmarkOutline} aria-hidden="true" />
+        {t('settings.privacy')}
+      </a>
+    </div>
   );
 }

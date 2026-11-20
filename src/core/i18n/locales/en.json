@@ -335,8 +335,11 @@
     "erased": "All data erased",
     "about": "Your data stays on this device",
     "aboutSynced": "Your data is on this device and synced to your account",
-    "rates": "Exchange rates",
-    "ratesHint": "Used to add up balances and reports in {{currency}}."
+    "ratesHint": "Used to add up balances and reports in {{currency}}.",
+    "currencySection": "Currency",
+    "currencyHint": "Totals and reports are shown in it.",
+    "version": "Version",
+    "privacy": "Privacy policy"
   },
   "header": {
     "accounts": "Accounts • {{count}}"
