@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { IonIcon, IonSpinner, useIonToast } from '@ionic/react';
-import { alertCircleOutline, copyOutline } from 'ionicons/icons';
+import { alertCircleOutline, copyOutline, sparkles } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useCloud } from '@/core/cloud/CloudContext';
 import { useLocale } from '@/core/contexts/SettingsContext';
 import { usePro } from '@/core/pro/ProContext';
+import { planStatus } from '@/core/pro/planStatus';
 import { usePaywall } from '@/core/pro/useRequirePro';
 
 /** How long the section waits for RevenueCat before saying it couldn't be reached. */
@@ -14,8 +15,10 @@ const SLOW_MS = 8000;
 const shortId = (id: string) => (id.length > 12 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id);
 
 /**
- * Profile → "Budgy Pro": the pitch with Get Pro / Restore for a free user, the plan and Manage for a subscriber,
- * and the Support ID either way. The caller renders it only when Budgy Pro is available in this build.
+ * Profile → "Subscription": the Budgy Pro card. A free user sees the pitch with Get Pro / Restore; a subscriber sees
+ * an Active pill, what Pro turns on, one line on the plan (amber when it won't renew or the store couldn't charge)
+ * and Manage subscription. The Support ID shows either way. The caller renders it only when Budgy Pro is available
+ * in this build.
  */
 export default function ProSection() {
   const { t } = useTranslation();
@@ -87,16 +90,32 @@ export default function ProSection() {
     }
   };
 
-  const { plan } = pro;
-  const date = (iso: string) => new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
-  const planName = plan && plan.period !== 'other' ? t(`pro.${plan.period}`) : null;
-  const dateLine =
-    plan && plan.period !== 'lifetime' && plan.endsAt ? t(plan.willRenew ? 'pro.renewsOn' : 'pro.endsOn', { date: date(plan.endsAt) }) : null;
+  const date = (iso: string) => new Date(iso).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+  const active = pro.ready && pro.isPro;
+  const status = active && pro.plan ? planStatus(pro.plan) : null;
+  const statusText = status && t(status.key, { plan: status.plan ? t(status.plan) : undefined, date: status.date ? date(status.date) : undefined });
 
   return (
     <>
-      <div className="b-section-title">{t('pro.title')}</div>
-      <div className="b-card" style={{ padding: 14 }}>
+      <div className="b-section-title">{t('pro.subscription')}</div>
+      <div className={`b-card b-pro${active ? ' b-pro--active' : ''}`}>
+        <div className="b-pro__head">
+          <span className="b-pro__mark" aria-hidden="true">
+            <IonIcon icon={sparkles} />
+          </span>
+          <div className="b-pro__text">
+            <div className="b-pro__title">{t('pro.title')}</div>
+            {pro.ready && <p className="b-pro__line">{t(pro.isPro ? 'pro.activeLine' : 'pro.pitch')}</p>}
+            {status && (
+              <p className={`b-pro__status${status.attention ? ' b-pro__status--attention' : ''}`}>
+                {status.attention && <IonIcon icon={alertCircleOutline} />}
+                {statusText}
+              </p>
+            )}
+          </div>
+          {active && <span className="b-pro__pill">{t('pro.active')}</span>}
+        </div>
+
         {!pro.ready && slow ? (
           <>
             <p className="b-muted" style={{ margin: '0 0 12px', fontSize: 13.5, lineHeight: 1.5 }}>{t('pro.checkFailed')}</p>
@@ -110,27 +129,11 @@ export default function ProSection() {
             <IonSpinner name="dots" />
           </div>
         ) : pro.isPro ? (
-          <>
-            {(planName || plan?.trial) && (
-              <div style={{ fontWeight: 600 }}>
-                {planName}
-                {plan?.trial && <span className="b-muted" style={{ fontWeight: 400 }}>{planName ? ` · ${t('pro.trial')}` : t('pro.trial')}</span>}
-              </div>
-            )}
-            {dateLine && <div className="b-muted" style={{ marginTop: 4, fontSize: 13.5 }}>{dateLine}</div>}
-            {plan?.billingIssue && (
-              <div style={{ display: 'flex', gap: 6, marginTop: 8, fontSize: 13.5, color: 'var(--b-expense)' }}>
-                <IonIcon icon={alertCircleOutline} style={{ flexShrink: 0, marginTop: 2 }} />
-                {t('pro.billingIssue')}
-              </div>
-            )}
-            <button className="b-btn b-btn--muted" style={{ width: '100%', marginTop: 12 }} disabled={busy} onClick={() => void manage()}>
-              {t('pro.manage')}
-            </button>
-          </>
+          <button className="b-btn b-btn--muted" style={{ width: '100%' }} disabled={busy} onClick={() => void manage()}>
+            {t('pro.manage')}
+          </button>
         ) : (
           <>
-            <p className="b-muted" style={{ margin: '0 0 12px', fontSize: 13.5, lineHeight: 1.5 }}>{t('pro.pitch')}</p>
             <button className="b-btn b-btn--primary" style={{ width: '100%' }} disabled={busy} onClick={() => void getPro()}>
               {t('pro.get')}
             </button>
