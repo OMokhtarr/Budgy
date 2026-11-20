@@ -2069,6 +2069,7 @@ ion-popover.b-popmenu { --width: 230px; }
 .b-cc__row.is-strong { font-weight: 800; font-size: 16px; }
 .b-cc__due { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--b-border); font-weight: 700; }
 .b-cc__next { font-size: 13px; margin-top: 4px; }
+.b-cc__cycle { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--b-border); }
 
 .b-cc__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .b-cc__actions .b-btn { flex: 1 1 auto; height: 40px; font-size: 13.5px; }
