@@ -22,6 +22,7 @@ from the owner (`TODO.md`), so say that sync is now part of Budgy Pro.
 • Start with a free trial, then choose monthly, yearly or lifetime
 • Everything else stays free, including credit cards
 • New: Lock Budgy in Settings asks for your fingerprint, face or phone PIN when Budgy opens
+• New: recurring transactions, with phone reminders when they're due
 • Your data stays on your phone. Without Pro, sync pauses and bank texts stop being read
 </en-US>
 <ar>
@@ -29,6 +30,7 @@ from the owner (`TODO.md`), so say that sync is now part of Budgy Pro.
 • جرّبه مجانًا خلال فترة تجريبية، ثم اختر الاشتراك الشهري أو السنوي أو مدى الحياة
 • كل ما عدا ذلك يبقى مجانيًا، ومنه بطاقات الائتمان
 • جديد: قفل Budgy في الإعدادات يطلب بصمتك أو وجهك أو رمز الهاتف عند فتح Budgy
+• جديد: المعاملات المتكررة، مع تذكيرات على الهاتف في يوم استحقاقها
 • تبقى بياناتك على هاتفك. وبدون Pro تتوقف المزامنة ولا تُقرأ الرسائل المصرفية
 </ar>
 ```

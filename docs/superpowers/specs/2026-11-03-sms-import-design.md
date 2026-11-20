@@ -1,6 +1,6 @@
 # Import bank transactions from SMS — design
 
-Date: 2026-11-03 · Status: draft for review
+Date: 2026-11-03 · Status: implemented; device checks done 2026-11-20. Play release (stage 3) still open.
 
 ## Why
 
