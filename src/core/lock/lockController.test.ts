@@ -178,6 +178,55 @@ describe('app lock controller', () => {
     expect(state.verifyCalls).toBe(1);
   });
 
+  it('locks after the lock time when the owner leaves during a Settings prompt', async () => {
+    const { state, controller } = fakeDeps({ enabled: false });
+    controller.start();
+    state.settings.enabled = true;
+    const result = controller.confirm();
+    await settle();
+    controller.pause();
+    // Android cancels the prompt once Budgy goes to the background.
+    state.answer(false);
+    expect(await result).toBe('cancelled');
+    expect(controller.view()).toBe('covered');
+    state.clock += 600_000;
+    controller.resume();
+    await settle();
+    expect(controller.view()).toBe('locked');
+    expect(state.verifyCalls).toBe(2);
+  });
+
+  it("doesn't lock on the return from Budgy's own prompt, even with Immediately", async () => {
+    const { state, controller } = fakeDeps({ enabled: false, afterMs: 0 });
+    controller.start();
+    state.settings.enabled = true;
+    const result = controller.confirm();
+    await settle();
+    controller.pause();
+    // The prompt's answer can reach Budgy just before its resume.
+    state.answer(true);
+    expect(await result).toBe('ok');
+    state.clock += 50;
+    controller.resume();
+    await settle();
+    expect(controller.view()).toBe('open');
+    expect(state.verifyCalls).toBe(1);
+  });
+
+  it('stays covered when an unlock prompt ends while Budgy is away', async () => {
+    const { state, controller } = fakeDeps();
+    controller.start();
+    await settle();
+    controller.pause();
+    state.answer(true);
+    await settle();
+    expect(controller.view()).toBe('covered');
+    state.clock += 600_000;
+    controller.resume();
+    await settle();
+    expect(controller.view()).toBe('locked');
+  });
+
   it('reports each view change once', async () => {
     const { state, controller } = fakeDeps();
     controller.start();

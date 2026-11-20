@@ -34,13 +34,23 @@ export interface LockController {
 }
 
 /**
+ * After a prompt that ended while Budgy was in the background, a return within this long is the prompt's own
+ * return (its answer can reach Budgy just before the resume), not the owner coming back later.
+ */
+export const PROMPT_RETURN_GRACE_MS = 2_000;
+
+/**
  * The app lock's rules. Android's unlock prompt is a separate screen, so it pauses and resumes Budgy around
- * every unlock: pause and resume are ignored while a prompt is open, so coming back from it never locks again.
+ * every unlock: pause and resume don't cover or lock while a prompt is open, so coming back from it never locks
+ * again. If the prompt ends while Budgy is in the background (Android cancels it when the owner leaves), the
+ * time away starts then, so leaving mid-prompt still locks.
  */
 export function createLockController(deps: LockDeps): LockController {
   let view: LockView = 'open';
   let awayAt: number | null = null;
+  let awayFromPrompt = false;
   let prompting = false;
+  let active = true;
 
   const show = (next: LockView) => {
     if (next === view) return;
@@ -58,12 +68,19 @@ export function createLockController(deps: LockDeps): LockController {
       return (await deps.verify()) ? 'ok' : 'cancelled';
     } finally {
       prompting = false;
+      if (!active && deps.settings().enabled) {
+        awayAt = deps.now();
+        awayFromPrompt = true;
+      }
     }
   };
 
+  /** Shows the app, or keeps it covered while Budgy is still away. */
+  const showUnlessAway = () => show(awayAt === null ? 'open' : 'covered');
+
   const unlock = async () => {
     const result = await prompt();
-    if (result === 'ok' || result === 'no-screen-lock') show('open');
+    if (result === 'ok' || result === 'no-screen-lock') showUnlessAway();
   };
 
   return {
@@ -74,15 +91,20 @@ export function createLockController(deps: LockDeps): LockController {
       void unlock();
     },
     pause() {
+      active = false;
       if (prompting || !deps.settings().enabled) return;
       awayAt = deps.now();
+      awayFromPrompt = false;
       show('covered');
     },
     resume() {
+      active = true;
       if (prompting || awayAt === null) return;
       const away = deps.now() - awayAt;
+      const { enabled, afterMs } = deps.settings();
+      const after = awayFromPrompt ? Math.max(afterMs, PROMPT_RETURN_GRACE_MS) : afterMs;
       awayAt = null;
-      if (deps.settings().enabled && away >= deps.settings().afterMs) {
+      if (enabled && away >= after) {
         show('locked');
         void unlock();
       } else {
@@ -91,7 +113,9 @@ export function createLockController(deps: LockDeps): LockController {
     },
     unlock,
     async confirm() {
-      return (await prompt()) ?? 'cancelled';
+      const result = (await prompt()) ?? 'cancelled';
+      if (view === 'open' && awayAt !== null) show('covered');
+      return result;
     },
   };
 }
