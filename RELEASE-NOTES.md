@@ -10,13 +10,16 @@ Before adding a section, raise `versionCode` (and `versionName` if it's a new ve
 
 ---
 
-## 1.0 (versionCode 5) — 2026-11-21
+## 1.0 (versionCode 6) — 2026-11-21
 
-**Release name:** `5 (1.0)`
+**Release name:** `6 (1.0)`
 
 Bank texts, the first release with `READ_SMS` in the main manifest. It can only roll out once Play approves the
 Permissions Declaration Form (`TODO.md` → SMS import). Built with the same `.env.local` as build 4
 (`VITE_PRO_GATE=test`), so the notes don't mention Budgy Pro.
+
+Build 5 was uploaded to Closed testing as a draft and never released: `READ_SMS` made Play require a phone
+radio and drop 4,508 devices. Build 6 marks it optional and replaces it, with the same notes.
 
 ```
 <en-US>
