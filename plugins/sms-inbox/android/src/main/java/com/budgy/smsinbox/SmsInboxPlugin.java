@@ -17,7 +17,7 @@ import java.util.Arrays;
 
 /**
  * Reads bank texts from the SMS inbox for Budgy's SMS import. The permission is declared by the app,
- * not here, so builds without it (release, until Play approval) report isAvailable = false.
+ * not here, so an app without it reports isAvailable = false.
  */
 @CapacitorPlugin(name = "SmsInbox", permissions = @Permission(alias = "sms", strings = { Manifest.permission.READ_SMS }))
 public class SmsInboxPlugin extends Plugin {

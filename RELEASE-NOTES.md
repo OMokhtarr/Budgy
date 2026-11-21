@@ -10,6 +10,27 @@ Before adding a section, raise `versionCode` (and `versionName` if it's a new ve
 
 ---
 
+## Next: bank texts (versionCode 5, draft)
+
+**Draft, not for a build yet.** The first release with `READ_SMS` in the main manifest. Raise `versionCode` to 5
+first and set the release name to `5 (1.0)`. It can only roll out once Play approves the Permissions Declaration
+Form (`TODO.md` → SMS import). If it goes out with `VITE_PRO_GATE=on`, add the Budgy Pro lines from the next section.
+
+```
+<en-US>
+• Bank texts: Budgy can read your bank's texts and turn them into transactions for you to review. Open the menu, then Bank texts, to turn it on
+• Only texts from the bank senders you choose are read, and the messages never leave your phone
+• Save several texts at once, combine them into one purchase, or mark money that came back
+</en-US>
+<ar>
+• رسائل البنك: يستطيع Budgy قراءة رسائل البنك وتحويلها إلى معاملات تراجعها بنفسك. افتح القائمة ثم رسائل البنك لتفعيلها
+• لا تُقرأ إلا رسائل أرقام البنوك التي تختارها، والرسائل نفسها لا تغادر هاتفك
+• احفظ عدة رسائل معًا، أو ادمجها في عملية شراء واحدة، أو سجّل المبالغ المستردة
+</ar>
+```
+
+---
+
 ## Next: the release that turns on Budgy Pro (raise versionCode first)
 
 **Draft, not for a build yet.** Use it for the release built with `VITE_PRO_GATE=on`. Raise `versionCode` (and

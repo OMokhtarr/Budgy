@@ -3,7 +3,7 @@ import type { SmsMessage } from './parser/types';
 
 /** The local `plugins/sms-inbox` plugin (Android only). */
 export interface SmsInboxPlugin {
-  /** Whether this build declares READ_SMS (false on release builds until Play approval). */
+  /** Whether this build declares READ_SMS (the app's main manifest does, so every Android build). */
   isAvailable(): Promise<{ available: boolean }>;
   checkPermissions(): Promise<{ sms: PermissionState }>;
   requestPermissions(): Promise<{ sms: PermissionState }>;

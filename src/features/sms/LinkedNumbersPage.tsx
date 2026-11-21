@@ -10,7 +10,7 @@ import type { SmsLink } from '@/shared/models';
 import { useLearned } from './hooks';
 import { linkCardLabel } from './linkLabel';
 import PickerSheet, { type PickerItem } from './PickerSheet';
-import { useSmsAvailability } from './useSmsAvailable';
+import { bankTextsListed } from './useSmsAvailable';
 
 const PATH = '/sms/links';
 
@@ -19,7 +19,7 @@ export default function LinkedNumbersPage() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const router = useIonRouter();
-  const available = useSmsAvailability();
+  const listed = bankTextsListed();
   const { accountName } = useNames();
   const learned = useLearned();
   const accounts = useAccounts(true);
@@ -36,10 +36,10 @@ export default function LinkedNumbersPage() {
     [accounts, accountName],
   );
 
-  // Waits for the availability check; hidden pages stay mounted in Ionic's stack, so only leaves while showing.
+  // Hidden pages stay mounted in Ionic's stack, so only leaves while showing.
   useEffect(() => {
-    if (available === false && pathname === PATH) router.push('/categories', 'root', 'replace');
-  }, [available, pathname, router]);
+    if (!listed && pathname === PATH) router.push('/categories', 'root', 'replace');
+  }, [listed, pathname, router]);
 
   const pick = async (accountId: string) => {
     if (!editing) return;
@@ -61,7 +61,7 @@ export default function LinkedNumbersPage() {
         </IonToolbar>
       </IonHeader>
       <IonContent>
-        {available === true && learned && accounts && (
+        {listed && learned && accounts && (
           <div className="b-page">
             {links.length === 0 ? (
               <div className="b-empty b-smsempty">

@@ -40,6 +40,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Bank texts (plugins/sms-inbox): reads the inbox only when the user turns it on. Needs Play's
+         Permissions Declaration Form approved before a release with it can go out. -->
+    <uses-permission android:name="android.permission.READ_SMS" />
     <!-- Reminders (@capacitor/local-notifications) are inexact: a few minutes late is fine, and Play restricts exact alarms. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
 </manifest>
