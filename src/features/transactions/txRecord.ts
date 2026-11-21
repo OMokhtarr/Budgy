@@ -25,6 +25,8 @@ export interface TxDraft {
   rate?: Pick<Transaction, 'rate' | 'rateCurrency'>;
   /** Kept from the transaction being edited, so an edit doesn't unlink it from its recurring transaction. */
   recurringId?: string;
+  /** Kept from the transaction being edited, so an edit doesn't take an instalment out of its plan. Expenses only. */
+  instalment?: Transaction['instalment'];
   /** Kept from the transaction being edited. */
   createdAt?: string;
 }
@@ -54,6 +56,7 @@ export function buildTxRecord(d: TxDraft): Omit<Transaction, 'id'> {
     moneyBack: d.type === 'income' && d.moneyBack ? true : undefined,
     groupId: transfer ? undefined : d.groupId,
     recurringId: d.recurringId,
+    instalment: d.type === 'expense' ? d.instalment : undefined,
     createdAt: d.createdAt ?? now,
     // put() replaces the whole record, so set this here rather than relying on the update hook.
     updatedAt: now,

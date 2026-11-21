@@ -24,6 +24,12 @@ describe('buildTxRecord', () => {
     expect(record.groupId).toBe('g');
   });
 
+  it('keeps an instalment in its plan on an expense, and never on a transfer', () => {
+    const instalment = { planId: 'p', n: 3, of: 12 };
+    expect(buildTxRecord(draft({ instalment })).instalment).toEqual(instalment);
+    expect(buildTxRecord(draft({ type: 'transfer', toAccountId: 'b', instalment })).instalment).toBeUndefined();
+  });
+
   it('keeps the link to its recurring transaction, on every type', () => {
     expect(buildTxRecord(draft({ recurringId: 'r1' })).recurringId).toBe('r1');
     expect(buildTxRecord(draft({ type: 'transfer', toAccountId: 'b', recurringId: 'r1' })).recurringId).toBe('r1');
