@@ -54,7 +54,7 @@ export interface Account extends Synced {
   credit?: CreditCard;
 }
 
-/** A credit card's limit, statement cycle and minimum payment. */
+/** A credit card's limit and statement cycle. */
 export interface CreditCard {
   /** Credit limit in the card's main currency. Undefined = not set. */
   limit?: number;
@@ -64,10 +64,6 @@ export interface CreditCard {
   dueDay: number;
   /** Payment is due this many days after the statement (1–30); when set, `dueDay` is ignored. */
   dueAfter?: number;
-  /** Minimum payment as a percent of the statement balance. */
-  minPercent?: number;
-  /** The minimum payment is at least this much, in the main currency. */
-  minAmount?: number;
 }
 
 /** A part of a category that people add themselves. Stored inside its category, so it syncs with it. */

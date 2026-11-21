@@ -413,9 +413,6 @@
     "dueAfterTooMany": "That sounds like the total from the day you buy. Payment is usually due 21–30 days after the statement; for 55 days in total, enter about 25.",
     "upToDays_one": "Up to {{count}} day interest-free.",
     "upToDays_other": "Up to {{count}} days interest-free.",
-    "minPercent": "Minimum payment (%)",
-    "minAmount": "At least ({{currency}})",
-    "minHint": "Optional: the minimum your bank asks for, as a share of the statement with a lowest amount.",
     "owedNow": "Owed now ({{currency}})",
     "owedNowTitle": "Owed now",
     "available": "{{amount}} available",
@@ -425,7 +422,6 @@
     "statementBalance": "Statement balance",
     "paidSince": "Paid since",
     "leftToPay": "Left to pay",
-    "minimumLeft": "Minimum to pay",
     "dueIn_one": "Due {{date}} · in {{count}} day",
     "dueIn_other": "Due {{date}} · in {{count}} days",
     "dueToday": "Due today",
@@ -455,11 +451,9 @@
     "noTx": "Nothing yet",
     "pay": "Pay card",
     "payAmount": "Pay {{amount}}",
-    "payMinimum": "Pay the minimum",
     "addPurchase": "Add purchase",
     "addFee": "Add interest or fee",
     "feeNote": "Interest / fees",
-    "edit": "Edit card",
     "hint": "Pay your card with a transfer from your bank account. It isn't counted as spending, because your purchases already were.",
     "rowDue": "Due {{date}}",
     "rowOverdue": "Overdue",
@@ -574,7 +568,7 @@
         },
         "row": {
           "title": "Open an account",
-          "body": "Tap to edit it. A credit card opens its statement."
+          "body": "Tap to edit it. A credit card's arrow opens its statement."
         }
       },
       "transactions": {

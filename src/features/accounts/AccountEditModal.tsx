@@ -89,8 +89,6 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const [dueDay, setDueDay] = useState(NEW_CREDIT.dueDay);
   const [dueMode, setDueMode] = useState<DueMode>('day');
   const [dueAfter, setDueAfter] = useState(NEW_DUE_AFTER);
-  const [minPercent, setMinPercent] = useState('');
-  const [minAmount, setMinAmount] = useState('');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -122,8 +120,6 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     setDueDay(credit?.dueDay ?? NEW_CREDIT.dueDay);
     setDueMode(credit?.dueAfter ? 'after' : 'day');
     setDueAfter(credit?.dueAfter ? String(credit.dueAfter) : NEW_DUE_AFTER);
-    setMinPercent(credit?.minPercent ? String(credit.minPercent) : '');
-    setMinAmount(credit?.minAmount ? String(credit.minAmount) : '');
     setLoaded(true);
   }, [isOpen, account, newGroup, accountName, balances, loaded, base]);
 
@@ -226,8 +222,6 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
               // Kept with "days after" too, so an older version of the app still shows a close date.
               dueDay: cycleDraft.dueAfter ? fixedDueDay(cycleDraft, new Date()) : dueDay,
               dueAfter: cycleDraft.dueAfter,
-              minPercent: optional(minPercent),
-              minAmount: optional(minAmount),
             }
           : undefined,
     };
@@ -408,29 +402,6 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
                     ? `${t('cards.upToDays', { count: interestFree(cycleDraft, new Date()).best.days })} ${dueMode === 'day' ? t('cards.daysHint') : ''}`.trim()
                     : t('cards.dueAfterRange', { max: MAX_DUE_AFTER })}
               </div>
-              <div className="b-field-row b-field-row--even">
-                <label className="b-field">
-                  <span>{t('cards.minPercent')}</span>
-                  <input
-                    className="b-input b-num"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={minPercent}
-                    onChange={(e) => setMinPercent(cleanNumberInput(e.target.value))}
-                  />
-                </label>
-                <label className="b-field">
-                  <span>{t('cards.minAmount', { currency })}</span>
-                  <input
-                    className="b-input b-num"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={minAmount}
-                    onChange={(e) => setMinAmount(cleanNumberInput(e.target.value))}
-                  />
-                </label>
-              </div>
-              <div className="b-field-hint">{t('cards.minHint')}</div>
             </>
           )}
           <div className="b-field">
