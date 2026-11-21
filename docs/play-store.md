@@ -13,9 +13,9 @@
 | 2 | Google sign-in for Play builds: Android OAuth clients for the **app signing** and **upload** key SHA-1s | Done |
 | 3 | Signed release bundle (`npm run android:aab:release`) | Done |
 | 4 | Keystore and passwords backed up off this machine | Done |
-| 5 | Store listing: text and graphics | Both full descriptions as below (with bank texts, without the Budgy Pro lines) saved 2026-11-21 with build 6, waiting to be sent for review. The AI asset declaration labels the assets as made or edited with AI |
-| 6 | App content forms: Data safety and declarations | Data safety and App access done; `READ_SMS` Permissions Declaration Form saved 2026-11-21. App-level trader status declaration left (blocks sending for review); its Terms of Service link is in [Links](#links) |
-| 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | Testers group ready; publish a build to the closed track for it |
+| 5 | Store listing: text and graphics | Both full descriptions as below (with bank texts, without the Budgy Pro lines) sent for review 2026-11-21 with build 6. The AI asset declaration labels the assets as made or edited with AI |
+| 6 | App content forms: Data safety and declarations | Data safety and App access done; `READ_SMS` Permissions Declaration Form and app-level trader status (Terms of Service in [Links](#links)) sent for review 2026-11-21 |
+| 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | Build 4 out to the testers group 2026-11-21; build 6 in review for the same track |
 
 Before every upload:
 - Raise `versionCode` in `android/app/build.gradle`, because Play refuses a number it has already seen.
