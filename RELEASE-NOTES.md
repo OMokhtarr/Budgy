@@ -33,6 +33,31 @@ from the owner (`TODO.md`), so say that sync is now part of Budgy Pro.
 
 ---
 
+## 1.0 (versionCode 4) — 2026-11-21
+
+**Release name:** `4 (1.0)`
+
+Credit cards: the due-date rule, the card page and instalments, with reminders for the next statement. Built with
+the same `.env.local` as build 3 (`VITE_PRO_GATE=test`), so the notes don't mention Budgy Pro. Bank texts are still
+left out of release builds.
+
+```
+<en-US>
+• Credit cards: choose when payment is due, a day of the month or a number of days after the statement
+• New card page: what's left to pay, this cycle's spending, and how long a purchase has before it's due
+• Pay a card purchase in instalments: one instalment a month on your statement and in your budget, with optional automatic payments
+• Card reminders before each due date, even if you don't open Budgy
+</en-US>
+<ar>
+• بطاقات الائتمان: اختر موعد السداد، يومًا من الشهر أو عدد أيام بعد كشف الحساب
+• صفحة جديدة للبطاقة: المتبقي للسداد، ومصروفات الدورة الحالية، والمدة المتاحة قبل استحقاق أي شراء
+• ادفع مشتريات البطاقة بالتقسيط: قسط واحد شهريًا في كشف حسابك وفي ميزانيتك، مع دفع تلقائي اختياري
+• تذكيرات البطاقة قبل كل موعد استحقاق، حتى إن لم تفتح Budgy
+</ar>
+```
+
+---
+
 ## 1.0 (versionCode 3) — 2026-11-20
 
 **Release name:** `3 (1.0)`
