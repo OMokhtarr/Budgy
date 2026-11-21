@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cardStatus, cardTransactions, cycleOf, dueAfterTooMany, fixedDueDay, instalmentPlans, interestFree, needsReminder, parseDueAfter, payFromAccount,
-  statementFor,
+  cardStatus, cardTransactions, cycleOf, dueAfterTooMany, fixedDueDay, instalmentPlans, interestFree, needsReminder, nextSoFar, parseDueAfter,
+  payFromAccount, statementFor, upcomingStatements,
 } from './creditCard';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
 
@@ -350,4 +350,71 @@ it('instalmentPlans lists running plans with what is charged and still to come',
 it('cardTransactions leaves out charges after the next statement', () => {
   const r = cardTransactions('card', [inst(1, day(2026, 11, 27), 1, 2), inst(2, day(2027, 1, 2), 2, 2)], cycleOf(credit(), day(2026, 11, 28)));
   expect(r.thisCycle.map((t) => t.amount)).toEqual([1]);
+});
+
+describe('upcomingStatements', () => {
+  const today = day(2026, 11, 28); // last statement 25 Nov, next 25 Dec
+  const upcoming = (c: Credit, txs: Transaction[], at = today) => upcomingStatements(c, txs, cardStatus(c, txs, at));
+  const egp = (list: ReturnType<typeof upcomingStatements>) => list.map((s) => s.byCurrency.EGP);
+
+  it('starts with the next statement so far, then one instalment on each one after', () => {
+    const plan = [1, 2, 3].map((n) => inst(1000, day(2026, 10 + n, 26), n, 3)); // 26 Nov, 26 Dec, 26 Jan
+    const list = upcoming(card(), [spend(200, day(2026, 11, 27)), ...plan]);
+    expect(list.map((s) => ymd(s.statementOn))).toEqual([[2026, 12, 25], [2027, 1, 25], [2027, 2, 25]]);
+    expect(list.map((s) => ymd(s.dueOn))).toEqual([[2027, 1, 20], [2027, 2, 20], [2027, 3, 20]]);
+    expect(egp(list)).toEqual([1200, 1000, 1000]);
+  });
+
+  it('shows the same first figure as "Next statement so far", unpaid statement included', () => {
+    const c = card();
+    const txs = [spend(500, day(2026, 11, 10)), spend(80, day(2026, 11, 27)), inst(300, day(2027, 1, 26), 2, 2)];
+    const s = cardStatus(c, txs, today);
+    expect(upcomingStatements(c, txs, s)[0].byCurrency.EGP).toBe(nextSoFar(s.byCurrency.EGP));
+    expect(s.byCurrency.EGP.statement).toBe(500);
+    expect(upcomingStatements(c, txs, s)[0].byCurrency.EGP).toBe(580);
+  });
+
+  it('puts a charge late on the statement day on that statement, and one the day after on the next', () => {
+    const list = upcoming(card(), [spend(1, day(2027, 1, 25, 23)), spend(2, day(2027, 1, 26))]);
+    expect(egp(list)).toEqual([0, 1, 2]);
+  });
+
+  it('shows at least three statements, and runs on to the last charge', () => {
+    expect(egp(upcoming(card(), []))).toEqual([0, 0, 0]);
+    const plan = [1, 2, 3, 4, 5, 6].map((n) => inst(100, day(2026, 10 + n, 26), n, 6));
+    const list = upcoming(card(), plan);
+    expect(list).toHaveLength(6);
+    expect(ymd(list[5].statementOn)).toEqual([2027, 5, 25]);
+  });
+
+  it('adds up to what is owed, later statements holding exactly the later charges', () => {
+    const c = card();
+    const plan = [1, 2, 3, 4].map((n) => inst(250, day(2026, 10 + n, 26), n, 4));
+    const s = cardStatus(c, plan, today);
+    const list = upcomingStatements(c, plan, s);
+    expect(list.slice(1).reduce((t, x) => t + x.byCurrency.EGP, 0)).toBe(s.byCurrency.EGP.later);
+    expect(list.reduce((t, x) => t + x.byCurrency.EGP, 0)).toBe(s.byCurrency.EGP.owed);
+  });
+
+  it('leaves payments and exchanges out of a later statement’s charges', () => {
+    const txs = [
+      spend(40, day(2027, 1, 10)),
+      pay(15, day(2027, 1, 11)),
+      tx({ type: 'transfer', amount: 10, toAccountId: 'card', toCurrency: 'USD', toAmount: 0.2, date: day(2027, 1, 12).toISOString() }),
+    ];
+    expect(egp(upcoming(card({ currency2: 'USD' }), txs))[1]).toBe(40);
+  });
+
+  it('keeps day 31 on the last day of each month, past February', () => {
+    const c = card({ credit: credit({ statementDay: 31, dueAfter: 25 }) });
+    const list = upcoming(c, [], day(2027, 1, 5));
+    expect(list.map((s) => ymd(s.statementOn))).toEqual([[2027, 1, 31], [2027, 2, 28], [2027, 3, 31]]);
+    expect(list.map((s) => ymd(s.dueOn))).toEqual([[2027, 2, 25], [2027, 3, 25], [2027, 4, 25]]);
+  });
+
+  it('follows each currency of a two-currency card on its own', () => {
+    const usd = tx({ type: 'expense', amount: 50, currency: 'USD', date: day(2027, 1, 26).toISOString(), instalment: { planId: 'u', n: 2, of: 2 } });
+    const list = upcoming(card({ currency2: 'USD' }), [usd]);
+    expect(list.map((s) => s.byCurrency)).toEqual([{ EGP: 0, USD: 0 }, { EGP: 0, USD: 0 }, { EGP: 0, USD: 50 }]);
+  });
 });

@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { IonButton, IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/react';
-import { addOutline, calculatorOutline, cashOutline, swapHorizontalOutline, swapVerticalOutline, walletOutline } from 'ionicons/icons';
+import {
+  addOutline, calculatorOutline, cashOutline, chevronForwardOutline, swapHorizontalOutline, swapVerticalOutline, walletOutline,
+} from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
@@ -17,6 +19,7 @@ import { addIcon } from '@/shared/icons';
 import AccountEditModal from './AccountEditModal';
 import CardReminders from './CardReminders';
 import CreditCardSheet from './CreditCardSheet';
+import { useOpenCardPage } from './card/useOpenCardPage';
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
@@ -32,6 +35,7 @@ export default function AccountsPage() {
   const conv = useConverter();
   const { balanceView, update } = useSettings();
   const openEditor = useTxEditor();
+  const openCardPage = useOpenCardPage();
   const { accountName } = useNames();
   const accounts = useAccounts();
   const archived = (useAccounts(true) ?? []).filter((a) => a.archived);
@@ -89,8 +93,8 @@ export default function AccountsPage() {
     const status = credit ? cardStatuses?.get(a.id!) : undefined;
     const kind = groupOf(a) === 'debt' ? '' : credit ? t('cards.credit') : t(`accountType.${a.type}`);
     const sub = [kind, a.currency2 ? `${a.currency} + ${a.currency2}` : '', cardNote(status)].filter(Boolean).join(' · ');
-    return (
-      <button key={a.id} className="b-row" {...tourAttr('accounts.row')} onClick={() => (credit && !a.archived ? setViewing(a) : setEditing(a))}>
+    const content = (
+      <>
         <Avatar icon={a.icon} color={a.color} square />
         <div className="b-row__main">
           <div className="b-row__title">{accountName(a)}</div>
@@ -104,7 +108,25 @@ export default function AccountsPage() {
             </small>
           ))}
         </div>
-      </button>
+      </>
+    );
+    // An archived card has no page of its own, so it opens in Edit like any other account.
+    if (!credit || a.archived) {
+      return (
+        <button key={a.id} className="b-row" {...tourAttr('accounts.row')} onClick={() => setEditing(a)}>
+          {content}
+        </button>
+      );
+    }
+    return (
+      <div key={a.id} className="b-row b-row--split">
+        <button className="b-row__tap" {...tourAttr('accounts.row')} onClick={() => setViewing(a)}>
+          {content}
+        </button>
+        <button className="b-iconbtn b-row__go" onClick={() => openCardPage(a.id!)} aria-label={t('cards.details')}>
+          <IonIcon icon={chevronForwardOutline} className="b-flip" />
+        </button>
+      </div>
     );
   };
 

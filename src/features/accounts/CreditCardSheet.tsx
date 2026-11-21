@@ -1,4 +1,4 @@
-import { IonIcon, IonModal, useIonRouter } from '@ionic/react';
+import { IonIcon, IonModal } from '@ionic/react';
 import { addOutline, chevronForwardOutline, closeOutline, createOutline, receiptOutline, swapHorizontalOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useMoney } from '@/core/contexts/SettingsContext';
@@ -8,6 +8,7 @@ import type { CardStatus } from '@/core/utils/creditCard';
 import type { Account } from '@/shared/models';
 import { CycleRows, OwedBlock, StatementRows, useDayMonth } from './card/CardBlocks';
 import { useCardActions } from './card/useCardActions';
+import { useOpenCardPage } from './card/useOpenCardPage';
 
 interface Props {
   account?: Account;
@@ -33,7 +34,7 @@ function CardBody({ account, onClose, onEdit }: Props & { account: Account }) {
 function CardSheetBody({ account, status, onClose, onEdit }: Props & { account: Account; status: CardStatus }) {
   const { t } = useTranslation();
   const money = useMoney();
-  const router = useIonRouter();
+  const openCardPage = useOpenCardPage();
   const { accountName } = useNames();
   const dayMonth = useDayMonth();
   const actions = useCardActions(account, status);
@@ -43,7 +44,7 @@ function CardSheetBody({ account, status, onClose, onEdit }: Props & { account: 
     onClose();
     fn();
   };
-  const openPage = act(() => router.push(`/cards/${account.id}`));
+  const openPage = act(() => openCardPage(account.id!));
 
   return (
     <div className="b-sheet">
