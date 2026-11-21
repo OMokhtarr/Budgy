@@ -1,8 +1,8 @@
 # Budgy on Google Play
 
 > Everything entered in Play Console, kept here so it can be checked and updated. Matches the app as of
-> 2026-11-20: optional Google/Apple sign-in, cloud sync on Supabase, no ads, no analytics, no SMS
-> access in release builds. **When the app changes, go through [When the app changes](#when-the-app-changes)
+> 2026-11-21: optional Google/Apple sign-in, cloud sync on Supabase, no ads, no analytics, and bank texts
+> (`READ_SMS`) in release builds from versionCode 5. **When the app changes, go through [When the app changes](#when-the-app-changes)
 > first.**
 
 ## Release status
@@ -45,7 +45,13 @@ Character counts on 2026-11-07: name 24 / 27, short description 78 / 75. Recount
 ### Full description (English, 4,000 max)
 
 ```
-Budgy makes tracking your money quick: tap a category, type the amount, done.
+Budgy makes tracking your money quick: tap a category, type the amount, done. Or let Budgy read your bank's texts and turn them into transactions for you.
+
+BANK TEXTS, TURNED INTO TRANSACTIONS
+• Budgy reads your bank's texts on your phone, only from the bank senders you choose, and only once you turn it on
+• Each text becomes a transaction to review, with the account and category Budgy learned from you
+• Save several at once, combine texts into one purchase, or mark money that came back
+• The messages themselves never leave your phone
 
 EVERYTHING IN ONE PLACE
 • Categories around a spending donut for the current period, with monthly budgets and subcategories
@@ -75,7 +81,13 @@ YOUR DATA, YOUR CHOICE
 ### Full description (Arabic)
 
 ```
-مع Budgy يصبح تتبّع أموالك سريعًا: اختر الفئة، اكتب المبلغ، وانتهى.
+مع Budgy يصبح تتبّع أموالك سريعًا: اختر الفئة، اكتب المبلغ، وانتهى. أو دع Budgy يقرأ رسائل البنك ويحوّلها إلى معاملات لك.
+
+رسائل البنك تتحوّل إلى معاملات
+• يقرأ Budgy رسائل البنك على هاتفك، من أرقام البنوك التي تختارها فقط، وبعد أن تفعّل الميزة بنفسك
+• تتحوّل كل رسالة إلى معاملة تراجعها، بالحساب والفئة اللذين تعلّمهما Budgy منك
+• احفظ عدة رسائل معًا، أو ادمجها في عملية شراء واحدة، أو سجّل المبالغ المستردة
+• الرسائل نفسها لا تغادر هاتفك أبدًا
 
 كل شيء في مكان واحد
 • فئات حول مخطط دائري لمصروفات الفترة، مع ميزانيات شهرية وفئات فرعية
@@ -161,7 +173,8 @@ Tick only these. Every other type stays unticked.
 - **Not shared:** Supabase is a service provider, which Play doesn't count as sharing. Google and Apple
   only handle the sign-in itself.
 - **Users can choose:** sign-in is optional, and the app works fully without it.
-- **Not collected:** location, contacts, photos and videos, files, messages, health, web browsing, app
+- **Not collected:** location, contacts, photos and videos, files, messages (bank texts are read on the
+  phone only; see [Data safety for bank texts](#data-safety-for-bank-texts)), health, web browsing, app
   performance (crash logs, diagnostics), and device or other IDs.
 - **Purposes never ticked:** Analytics, Advertising or marketing, Personalization, Fraud prevention,
   Developer communications.
@@ -182,7 +195,50 @@ request that data be deleted.
 | Health apps | No |
 | Government apps | No |
 | News apps | No |
-| Sensitive permissions | None in the release build (`READ_SMS` is debug-only, in `android/app/src/debug/AndroidManifest.xml`) |
+| Sensitive permissions | `READ_SMS` (bank texts), in `android/app/src/main/AndroidManifest.xml` since 2026-11-21. Needs the Permissions Declaration Form approved before a release with it is rolled out |
+
+### Permissions Declaration Form: READ_SMS
+
+Play asks for this under App content → Sensitive app permissions after a build with `READ_SMS` is uploaded to
+any track. Policy rechecked 2026-11-21 ("Use of SMS or Call Log permission groups"): **SMS-based money
+management, e.g. apps that track and manage budget** is a listed exception for `READ_SMS`. Budgy only
+requests `READ_SMS` (no `RECEIVE_SMS`, `SEND_SMS` or background reading).
+
+| Field | Answer |
+|---|---|
+| Core functionality | SMS-based money management |
+| Permission | `READ_SMS` |
+| Demo video | Unlisted YouTube link (script below) |
+
+How the app uses the permission:
+
+```
+Budgy is a personal budget and spending tracker. Its Bank texts feature reads the user's bank transaction texts and turns them into transactions the user reviews and saves to their budget. This is how many people in Egypt and the Middle East track card spending, since banks there send a text for every purchase.
+
+The feature is off by default. The user turns it on in Menu → Bank texts, sees a prominent disclosure explaining what is read and kept, and then grants READ_SMS. Budgy reads only the inbox, only texts from the bank senders the user lists, and only when the user taps "Scan inbox" or, if they choose, when they open the app. It never reads in the background, never reads on receipt, and never sends texts.
+
+Message text stays on the phone: a text waiting for review is stored locally and deleted once confirmed or dismissed. It is never uploaded, backed up or shared. Only the resulting transaction (amount, date, merchant) is kept, plus, for signed-in users, the learned sender, last card digits and merchant categories, so other phones can suggest the same account and category.
+```
+
+Why there's no alternative:
+
+```
+The SMS User Consent and SMS Retriever APIs only deliver one incoming verification message and need an app hash or a single-message prompt, so they can't read the bank transaction texts already in the inbox. Banks don't offer an API for this, so reading the inbox is the only way to bring the user's own card transactions into their budget.
+```
+
+Demo video (under a minute, screen recording on a phone or emulator with a few bank texts in the inbox):
+1. Open the menu, then Bank texts. Show the "Read your bank texts" screen and tap Turn on.
+2. Show the disclosure, tap Continue, then allow SMS in Android's permission prompt.
+3. Add a bank sender in the gear settings, then tap Scan inbox.
+4. Show the texts as transactions to review; save one and show it in Transactions.
+5. Turn Bank texts off in the gear settings.
+
+### Data safety for bank texts
+
+No change to the [Data types](#data-types) table. Message text is only processed on the phone and never sent
+anywhere, so Play doesn't count it as collected: **Messages → SMS or MMS stays unticked**. What signed-in
+users sync from bank texts (the bank sender, last card digits and merchant categories in `smsLinks` and
+`merchantRules`) is covered by the ticked **Financial info → Other financial info**.
 
 ## When Budgy Pro turns on
 
@@ -219,7 +275,15 @@ analytics make it untrue:
 • بلا إعلانات ولا تتبّع، ولا تُباع بياناتك أبدًا
 ```
 
-When bank texts ship in release builds, add a line for them to both descriptions too (they're part of Pro).
+Bank texts are part of Pro, so add this line at the end of the bank texts section in both descriptions:
+
+```
+• Bank texts are part of Budgy Pro, with a free trial
+```
+
+```
+• رسائل البنك جزء من Budgy Pro، مع فترة تجريبية مجانية
+```
 
 ### Data safety
 

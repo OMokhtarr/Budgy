@@ -9,8 +9,10 @@
 - [ ] **SMS import** (Android only; `docs/superpowers/specs/2026-11-03-sms-import-design.md`). Works in debug
       builds and was checked on a device (2026-11-20), including several texts at once, money back and combining.
       Before it goes into a release:
-  - Recheck Play's live SMS policy.
-  - Add `READ_SMS` to the main manifest.
+  - [x] Recheck Play's live SMS policy (2026-11-21): "SMS-based money management" is still an exception for
+        `READ_SMS`. Form answers, Data safety reasoning and the video script are in `docs/play-store.md`.
+  - [x] Add `READ_SMS` to the main manifest (2026-11-21). Every build now asks for it, so a release can't go
+        out until the declaration below is approved.
   - Play Permissions Declaration Form and Data safety form.
   - Short demo video.
   - A bank-texts line in both full descriptions (part of Budgy Pro), and a `RELEASE-NOTES.md` section covering
