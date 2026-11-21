@@ -1,6 +1,6 @@
 import { alive, db, softDelete, type BudgyDB } from '@/core/db/db';
 import { statementFor } from '@/core/utils/creditCard';
-import { roundTo } from '@/core/utils/currency';
+import { decimalsOf, roundTo } from '@/core/utils/currency';
 import { newId } from '@/core/utils/id';
 import { parseNumber } from '@/core/utils/number';
 import { dayKey } from '@/core/utils/period';
@@ -29,12 +29,16 @@ export function parseMonths(typed: string): number | undefined {
   return Number.isInteger(n) && n >= MIN_MONTHS && n <= MAX_MONTHS ? n : undefined;
 }
 
-/** `total` in `n` parts rounded to the currency; the last part takes the difference, so they add up exactly. */
+/**
+ * `total` in `n` parts in the currency's smallest unit, adding up exactly: equal parts, and what's left over goes one
+ * unit at a time onto the last ones (1,000 in 3 → 333.33, 333.33, 333.34). No part is ever negative.
+ */
 export function splitAmount(total: number, n: number, currency: string): number[] {
-  const part = roundTo(total / n, currency);
-  const parts = Array.from({ length: n }, () => part);
-  parts[n - 1] = roundTo(total - part * (n - 1), currency);
-  return parts;
+  const scale = 10 ** decimalsOf(currency);
+  const units = Math.round(total * scale);
+  const base = Math.floor(units / n);
+  const extra = units - base * n;
+  return Array.from({ length: n }, (_, k) => roundTo((base + (k >= n - extra ? 1 : 0)) / scale, currency));
 }
 
 /**
@@ -88,27 +92,61 @@ async function addRest(first: Transaction | Omit<Transaction, 'id'>, planId: str
     } as Transaction);
   }
   if (o.autoPayFrom) {
-    const start = dayKey(statementFor(o.credit, new Date(dates[0])).dueOn);
-    const payment: Recurring = {
-      tx: { type: 'transfer', amount: parts[0], currency: first.currency, accountId: o.autoPayFrom, toAccountId: first.accountId },
-      unit: 'month',
-      every: 1,
-      start,
-      next: start,
-      until: dayKey(statementFor(o.credit, new Date(dates[dates.length - 1])).dueOn),
-      auto: true,
-      planId,
-      createdAt: now,
-    };
-    await database.recurring.add(payment);
+    for (const payment of paymentRules(first, planId, parts, dates, o, now)) await database.recurring.add(payment);
   }
 }
 
-/** Saves a new purchase on a credit card as a plan of monthly instalments; returns the plan's id. */
-export async function createPlan(purchase: Omit<Transaction, 'id'>, o: PlanOptions, database: BudgyDB = db): Promise<string> {
+/** `day` of a month, or the month's last day if it's shorter. */
+const dayIn = (year: number, month: number, day: number) => new Date(year, month, Math.min(day, new Date(year, month + 1, 0).getDate()));
+
+/**
+ * The automatic payments of a plan, as monthly rules the app adds by itself on their day. Each instalment is paid in
+ * the month its statement is due, on the earliest due day of the plan, so no payment comes after its due date even
+ * when "days after the statement" moves the due day. Instalments of different amounts (the last one taking the
+ * rounding) get a rule each, so every instalment is paid exactly.
+ */
+function paymentRules(
+  first: Transaction | Omit<Transaction, 'id'>,
+  planId: string,
+  parts: number[],
+  dates: string[],
+  o: PlanOptions,
+  createdAt: string,
+): Recurring[] {
+  const dues = dates.map((d) => statementFor(o.credit, new Date(d)).dueOn);
+  const day = Math.min(...dues.map((d) => d.getDate()));
+  const payDay = (k: number) => dayKey(dayIn(dues[0].getFullYear(), dues[0].getMonth() + k, day));
+  const rules: Recurring[] = [];
+  for (let k = 0; k < parts.length; ) {
+    let j = k;
+    while (j + 1 < parts.length && parts[j + 1] === parts[k]) j++;
+    rules.push({
+      tx: { type: 'transfer', amount: parts[k], currency: first.currency, accountId: o.autoPayFrom!, toAccountId: first.accountId },
+      unit: 'month',
+      every: 1,
+      start: payDay(k),
+      next: payDay(k),
+      until: payDay(j),
+      auto: true,
+      planId,
+      createdAt,
+    });
+    k = j + 1;
+  }
+  return rules;
+}
+
+/**
+ * Saves a new purchase on a credit card as a plan of monthly instalments; returns instalment 1. A purchase from a bank
+ * text is saved once, like `saveTx`: if one with its fingerprint exists (even deleted), that one is returned instead.
+ */
+export async function createPlan(purchase: Omit<Transaction, 'id'>, o: PlanOptions, database: BudgyDB = db): Promise<Transaction> {
   const planId = newId();
   const parts = splitAmount(purchase.amount, o.months, purchase.currency);
   return database.transaction('rw', database.transactions, database.recurring, async () => {
+    const fingerprint = purchase.smsFingerprint;
+    const existing = fingerprint ? await database.transactions.where('smsFingerprint').equals(fingerprint).first() : undefined;
+    if (existing) return existing;
     const now = stamp();
     const first: Omit<Transaction, 'id'> = {
       ...purchase,
@@ -117,9 +155,9 @@ export async function createPlan(purchase: Omit<Transaction, 'id'>, o: PlanOptio
       createdAt: purchase.createdAt ?? now,
       updatedAt: now,
     };
-    await database.transactions.add(first as Transaction);
+    const id = (await database.transactions.add(first as Transaction)) as string;
     await addRest(first, planId, parts, o, database);
-    return planId;
+    return { ...first, id };
   });
 }
 

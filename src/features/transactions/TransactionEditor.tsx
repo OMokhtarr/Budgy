@@ -341,7 +341,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
         if (tx?.id) {
           saved = await saveTx(record, tx.id);
           await convertToPlan(saved, options);
-        } else await createPlan(record, options);
+        } else saved = await createPlan(record, options);
       } else {
         saved = await saveTx(record, tx?.id);
         if (repeat && !linkedRule) await makeRecurring(saved, REPEATS[repeat], auto);

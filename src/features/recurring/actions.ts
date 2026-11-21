@@ -58,6 +58,9 @@ export async function saveRecurring(existing: Recurring | undefined, d: Recurrin
     start: moved ? d.day : existing.start,
     next: moved ? d.day : existing.next,
     ...(d.auto ? { auto: true as const } : {}),
+    // Not edited here, and put() replaces the whole record: an instalment plan's payment keeps its end and its plan.
+    ...(existing?.until ? { until: existing.until } : {}),
+    ...(existing?.planId ? { planId: existing.planId } : {}),
     createdAt: existing?.createdAt ?? now,
     // put() replaces the whole record, so stamp it here, later than the stored stamp so an edit on a phone
     // whose clock is behind isn't reverted by sync.
