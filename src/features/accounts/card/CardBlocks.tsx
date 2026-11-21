@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { currenciesOf } from '@/core/utils/currency';
-import { REMIND_DAYS, type CardAmounts, type CardStatus } from '@/core/utils/creditCard';
+import { nextSoFar, REMIND_DAYS, type CardAmounts, type CardStatus } from '@/core/utils/creditCard';
 import MoneyText from '@/shared/components/MoneyText';
 import type { Account } from '@/shared/models';
 
@@ -115,9 +115,7 @@ export function CycleRows({ account, status }: CardProps) {
   const { t } = useTranslation();
   const dayMonth = useDayMonth();
   const lines = (pick: (x: CardAmounts) => number | undefined) => <AmountLines account={account} status={status} pick={pick} />;
-  // What the next statement would show if nothing else happens: what's owed, less instalments for later ones.
-  // Worth its own line only when it isn't just this cycle's spending.
-  const nextSoFar = (x: CardAmounts) => Math.max(0, x.owed - x.later);
+  // What the next statement holds so far is worth its own line only when it isn't just this cycle's spending.
   const carried = Object.values(status.byCurrency).some((x) => nextSoFar(x) !== x.spent);
   return (
     <div className="b-cc__cycle">

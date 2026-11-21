@@ -97,12 +97,47 @@ export function useCardStatuses(): Map<string, CardStatus> | undefined {
   });
 }
 
+/**
+ * What each credit card page last read: its card (null once deleted or archived) and the card's transactions.
+ * The page starts from it, so it has them on its first frame instead of a moment later, when its own live
+ * queries answer, and slides in whole.
+ */
+const cardPages = new Map<string, { account?: Account | null; txs?: Transaction[] }>();
+const remember = (cardId: string, part: { account?: Account | null; txs?: Transaction[] }) =>
+  cardPages.set(cardId, { ...cardPages.get(cardId), ...part });
+
+async function readCardAccount(cardId: string): Promise<Account | null> {
+  const a = await db.accounts.get(cardId);
+  const account = a && alive(a) && !a.archived ? a : null;
+  remember(cardId, { account });
+  return account;
+}
+
+async function readCardTransactions(cardId: string): Promise<Transaction[]> {
+  const txs = await db.transactions.where('accountId').equals(cardId).or('toAccountId').equals(cardId).filter(alive).toArray();
+  remember(cardId, { txs });
+  return txs;
+}
+
+/** Reads a card and its transactions ahead of opening its page. */
+export async function preloadCardPage(cardId: string): Promise<void> {
+  await Promise.all([readCardAccount(cardId), readCardTransactions(cardId)]);
+}
+
+/** What a card's page would start from. */
+export function cachedCardPage(cardId: string): { account?: Account | null; txs?: Transaction[] } {
+  return { ...cardPages.get(cardId) };
+}
+
+/** A card's page's own account: undefined while loading, null once it's deleted, archived or missing. */
+export function useCardAccount(cardId: string): Account | null | undefined {
+  // Only a card found is a head start: one remembered as gone may be back since, and must not send the page away.
+  return useLiveQuery(() => readCardAccount(cardId), [cardId], cardPages.get(cardId)?.account ?? undefined);
+}
+
 /** One card's live transactions: those on it and transfers to it. */
 export function useCardTransactions(cardId: string): Transaction[] | undefined {
-  return useLiveQuery(
-    () => db.transactions.where('accountId').equals(cardId).or('toAccountId').equals(cardId).filter(alive).toArray(),
-    [cardId],
-  );
+  return useLiveQuery(() => readCardTransactions(cardId), [cardId], cardPages.get(cardId)?.txs);
 }
 
 /**

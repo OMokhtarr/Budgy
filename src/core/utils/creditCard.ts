@@ -242,6 +242,64 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
   return { cycle, byCurrency, state, daysLeft };
 }
 
+/** What the next statement would show if nothing else happens: what's owed, less instalments for later ones. */
+export const nextSoFar = (x: CardAmounts) => Math.max(0, x.owed - x.later);
+
+/** A statement still to come, and what will be on it in each of the card's currencies. */
+export interface UpcomingStatement {
+  statementOn: Date;
+  dueOn: Date;
+  byCurrency: Amounts;
+}
+
+/** The fewest upcoming statements listed, even with nothing charged on them yet. */
+export const MIN_UPCOMING = 3;
+
+/**
+ * The statements to come, from the next one on to the one holding the card's last charge (at least
+ * `MIN_UPCOMING`). The next one shows what it holds so far, unpaid statement included, as `status` does; each
+ * later one only the charges dated in its cycle (mostly instalments), as if the one before is paid in full.
+ * `status` must be the card's status for the same transactions.
+ */
+export function upcomingStatements(card: Account & { credit: CreditCard }, txs: Transaction[], status: CardStatus): UpcomingStatement[] {
+  const id = card.id!;
+  const { credit } = card;
+  const currencies = currenciesOf(card);
+  const first = status.cycle.nextStatementOn;
+  // Every statement counts from the first one's month, so day 31 isn't stuck on the 28th after February.
+  const statementAt = (k: number) => dayIn(first.getFullYear(), first.getMonth() + k, credit.statementDay);
+  const startOfLater = nextDay(first).getTime();
+
+  /** Index of the statement a charge lands on, counted from the first one. */
+  const statementIndex = (at: number) => {
+    let k = 1;
+    while (nextDay(statementAt(k)).getTime() <= at) k++;
+    return k;
+  };
+  const charges: Amounts[] = [];
+  for (const t of txs) {
+    const at = new Date(t.date).getTime();
+    if (at < startOfLater) continue;
+    if (t.type === 'transfer' && t.accountId === id && t.toAccountId === id) continue;
+    for (const [delta, cur] of changeOn(t, id)) {
+      if (delta >= 0) continue;
+      const k = statementIndex(at);
+      const into = (charges[k] ??= {});
+      into[cur] = roundTo((into[cur] ?? 0) - delta, cur);
+    }
+  }
+
+  const count = Math.max(MIN_UPCOMING, charges.length);
+  return Array.from({ length: count }, (_, k) => {
+    const statementOn = statementAt(k);
+    const byCurrency: Amounts = {};
+    for (const cur of currencies) {
+      byCurrency[cur] = k === 0 ? nextSoFar(status.byCurrency[cur]) : charges[k]?.[cur] ?? 0;
+    }
+    return { statementOn, dueOn: dueOf(statementOn, credit), byCurrency };
+  });
+}
+
 /** The statement a charge dated `date` lands on, and when that statement is due. */
 export function statementFor(credit: CreditCard, date: Date): { statementOn: Date; dueOn: Date } {
   const { nextStatementOn, nextDueOn } = cycleOf(credit, date);

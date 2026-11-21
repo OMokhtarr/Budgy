@@ -2074,6 +2074,26 @@ ion-popover.b-popmenu { --width: 230px; }
 /* An empty transaction list: lined up with the rows, and the Earlier row below keeps its divider. */
 .b-cc__empty { padding: 12px 14px; color: var(--b-faint); font-size: 14px; }
 .b-cc__empty + .b-row { border-top: 1px solid var(--b-border); }
+.b-upcoming__note { padding: 10px 14px 12px; font-size: 12.5px; border-top: 1px solid var(--b-border); }
+/* A credit card's row on Accounts: the row opens the card's summary, the arrow beside it its full page. */
+.b-row--split { padding: 0; padding-inline-end: 10px; gap: 4px; }
+.b-row--split > .b-row__tap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  padding-inline-end: 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+.b-row--split:active { background: transparent; }
+.b-row--split > .b-row__tap:active { background: var(--b-surface-2); }
+.b-row__go { flex-shrink: 0; width: 32px; height: 32px; font-size: 16px; color: var(--b-muted); }
 
 .b-cc__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .b-cc__actions .b-btn { flex: 1 1 auto; height: 40px; font-size: 13.5px; }
