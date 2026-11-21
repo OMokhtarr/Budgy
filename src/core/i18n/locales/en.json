@@ -383,6 +383,17 @@
     "feeNote": "Instalment fee · {{name}}",
     "of": "Instalment {{n}} of {{of}}",
     "off": "Pay in full",
+    "blockTitle": "Instalments",
+    "aMonth": "a month",
+    "progress": "{{charged}} of {{of}} · {{amount}} still to come",
+    "includes": "Includes {{amount}} in instalments still to come",
+    "payOff": "Pay off the rest now",
+    "payOffAndFee": "Pay off and add a fee",
+    "payOffConfirm": "Move the {{amount}} still to come onto your next statement? Your bank may charge a fee for settling early.",
+    "delete": "Delete plan",
+    "deleteConfirm_one": "Delete the {{count}} instalment of this plan? Use this for a plan entered by mistake; a cancelled purchase is a refund.",
+    "deleteConfirm_other": "Delete all {{count}} instalments of this plan? Use this for a plan entered by mistake; a cancelled purchase is a refund.",
+    "tag": "{{n}}/{{of}}",
     "done": "Done"
   },
   "cards": {

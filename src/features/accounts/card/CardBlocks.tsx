@@ -56,12 +56,19 @@ export function OwedBlock({ account, status }: CardProps) {
     status.byCurrency[main].owed + others.reduce((s, c) => s + (conv.convert(status.byCurrency[c].owed, c, main) ?? 0), 0);
   const limit = account.credit?.limit;
   const share = limit ? used / limit : 0;
+  // Instalments already owed but charged in later months.
+  const toCome = Object.entries(status.byCurrency).filter(([, x]) => x.toCome > 0);
   return (
     <div className="b-card b-cc">
       <div className="b-cc__label">{t('cards.owedNowTitle')}</div>
       <div className={`b-cc__big b-num ${used > 0 ? 'b-expense' : ''}`}>
         <AmountLines account={account} status={status} pick={(x) => x.owed} />
       </div>
+      {toCome.length > 0 && (
+        <div className="b-muted b-cc__next">
+          {t('instalments.includes', { amount: toCome.map(([c, x]) => money.format(x.toCome, c)).join(' + ') })}
+        </div>
+      )}
       {limit ? (
         <>
           <div className="b-bar" style={{ margin: '12px 0 8px' }}>
@@ -108,12 +115,14 @@ export function CycleRows({ account, status }: CardProps) {
   const { t } = useTranslation();
   const dayMonth = useDayMonth();
   const lines = (pick: (x: CardAmounts) => number | undefined) => <AmountLines account={account} status={status} pick={pick} />;
-  // What's owed now is what the next statement would show; worth its own line only when old debt is in it.
-  const carried = Object.values(status.byCurrency).some((x) => x.owed !== x.spent);
+  // What the next statement would show if nothing else happens: what's owed, less instalments for later ones.
+  // Worth its own line only when it isn't just this cycle's spending.
+  const nextSoFar = (x: CardAmounts) => Math.max(0, x.owed - x.later);
+  const carried = Object.values(status.byCurrency).some((x) => nextSoFar(x) !== x.spent);
   return (
     <div className="b-cc__cycle">
       <CcRow label={t('cards.spentSoFar')}>{lines((x) => x.spent)}</CcRow>
-      {carried && <CcRow label={t('cards.nextSoFar')}>{lines((x) => x.owed)}</CcRow>}
+      {carried && <CcRow label={t('cards.nextSoFar')}>{lines(nextSoFar)}</CcRow>}
       <div className="b-muted b-cc__next">
         {t('cards.nextStatementDue', { date: dayMonth(status.cycle.nextStatementOn), due: dayMonth(status.cycle.nextDueOn) })}
       </div>
