@@ -13,8 +13,8 @@
 | 2 | Google sign-in for Play builds: Android OAuth clients for the **app signing** and **upload** key SHA-1s | Done |
 | 3 | Signed release bundle (`npm run android:aab:release`) | Done |
 | 4 | Keystore and passwords backed up off this machine | Done |
-| 5 | Store listing: text and graphics | Ready below, not entered yet |
-| 6 | App content forms: Data safety and declarations | Ready below, not entered yet |
+| 5 | Store listing: text and graphics | Done, with versionCode 5 (Budgy Pro lines included) |
+| 6 | App content forms: Data safety and declarations | Data safety and App access done with versionCode 5; `READ_SMS` Permissions Declaration Form left |
 | 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | Testers group ready; publish a build to the closed track for it |
 
 Before every upload:
