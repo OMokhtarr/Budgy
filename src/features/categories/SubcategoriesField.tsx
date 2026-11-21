@@ -89,15 +89,17 @@ export default function SubcategoriesField({ subcategories, saved, color, icon, 
             <span>{t('editor.name')}</span>
             <input className="b-input" value={open.name} onChange={(e) => patch({ name: e.target.value })} maxLength={30} autoFocus={!open.name} />
           </label>
-          <IconPicker icon={open.icon} color={color} onIcon={(name) => patch({ icon: name })} />
-          {open.archived && (
-            <IonButton expand="block" fill="clear" color="medium" onClick={restore}>
-              {t('categories.restoreSubcategory')}
+          <div className="b-manage">
+            {open.archived && (
+              <IonButton expand="block" fill="clear" color="medium" onClick={restore}>
+                {t('categories.restoreSubcategory')}
+              </IonButton>
+            )}
+            <IonButton expand="block" fill="clear" color="danger" onClick={() => remove(open.id)}>
+              {t('categories.deleteSubcategory')}
             </IonButton>
-          )}
-          <IonButton expand="block" fill="clear" color="danger" onClick={() => remove(open.id)}>
-            {t('categories.deleteSubcategory')}
-          </IonButton>
+          </div>
+          <IconPicker icon={open.icon} color={color} onIcon={(name) => patch({ icon: name })} />
         </div>
       )}
     </div>
