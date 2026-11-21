@@ -111,24 +111,12 @@ describe('cardStatus', () => {
     expect(s.daysLeft).toBe(-2);
   });
 
-  it('works out the minimum as a percent with a floor, less what was paid', () => {
-    const c = card({ credit: credit({ minPercent: 5, minAmount: 100 }) });
-    expect(cardStatus(c, [spend(10000, day(2026, 11, 10))], today).byCurrency.EGP.minimum).toBe(500);
-    expect(cardStatus(c, [spend(1000, day(2026, 11, 10))], today).byCurrency.EGP.minimum).toBe(100);
-    expect(cardStatus(c, [spend(60, day(2026, 11, 10))], today).byCurrency.EGP.minimum).toBe(60);
-    expect(cardStatus(c, [spend(10000, day(2026, 11, 10)), pay(300, day(2026, 11, 27))], today).byCurrency.EGP.minimum).toBe(200);
-  });
-
-  it('has no minimum when none is set', () => {
-    expect(cardStatus(card(), [spend(1000, day(2026, 11, 10))], today).byCurrency.EGP.minimum).toBeUndefined();
-  });
-
-  it('follows each currency of a two-currency card on its own, the floor in the main one only', () => {
-    const c = card({ currency2: 'USD', credit: credit({ minPercent: 5, minAmount: 100 }) });
+  it('follows each currency of a two-currency card on its own', () => {
+    const c = card({ currency2: 'USD' });
     const usd = tx({ type: 'expense', amount: 40, currency: 'USD', date: day(2026, 11, 10).toISOString() });
     const s = cardStatus(c, [usd], today);
-    expect(s.byCurrency.USD).toMatchObject({ owed: 40, statement: 40, due: 40, minimum: 2 });
-    expect(s.byCurrency.EGP).toMatchObject({ owed: 0, due: 0, minimum: 0 });
+    expect(s.byCurrency.USD).toMatchObject({ owed: 40, statement: 40, due: 40 });
+    expect(s.byCurrency.EGP).toMatchObject({ owed: 0, due: 0 });
   });
 
   it('ignores exchanges inside the card when adding up payments', () => {
@@ -314,12 +302,6 @@ describe('instalments on the card', () => {
 
   it('bills one instalment per statement', () => {
     expect(cardStatus(card(), plan, day(2026, 12, 28)).byCurrency.EGP.due).toBe(1000); // the 25 Dec statement holds only 26 Nov's
-  });
-
-  it('asks the instalments plus the minimum % of the rest', () => {
-    const c = card({ credit: credit({ minPercent: 5 }) });
-    const s = cardStatus(c, [inst(1000, day(2026, 11, 10), 1, 12), spend(2000, day(2026, 11, 11))], today);
-    expect(s.byCurrency.EGP.minimum).toBe(1000 + 100);
   });
 
   it('tracks instalments in a second currency on their own', () => {

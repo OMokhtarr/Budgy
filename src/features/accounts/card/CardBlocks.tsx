@@ -93,7 +93,7 @@ export function OwedBlock({ account, status }: CardProps) {
   );
 }
 
-/** The last statement: its balance, what's been paid since, what's left, the minimum and when it's due. */
+/** The last statement: its balance, what's been paid since, what's left and when it's due. */
 export function StatementRows({ account, status }: CardProps) {
   const { t } = useTranslation();
   const lines = (pick: (x: CardAmounts) => number | undefined) => <AmountLines account={account} status={status} pick={pick} />;
@@ -102,9 +102,6 @@ export function StatementRows({ account, status }: CardProps) {
       <CcRow label={t('cards.statementBalance')}>{lines((x) => x.statement)}</CcRow>
       <CcRow label={t('cards.paidSince')}>{lines((x) => x.paid)}</CcRow>
       <CcRow label={t('cards.leftToPay')} strong>{lines((x) => x.due)}</CcRow>
-      {status.byCurrency[account.currency].minimum != null && (
-        <CcRow label={t('cards.minimumLeft')}>{lines((x) => x.minimum)}</CcRow>
-      )}
       <DueLine status={status} />
     </>
   );

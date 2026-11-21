@@ -148,8 +148,6 @@ export interface CardAmounts {
   toCome: number;
   /** What's left to pay of the statement. */
   due: number;
-  /** What's left to pay of the minimum payment; undefined when the card has no minimum set. */
-  minimum?: number;
 }
 
 export type CardState = 'clear' | 'paid' | 'due' | 'overdue';
@@ -176,15 +174,12 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
   const id = card.id!;
   const balance: Amounts = openingOf(card);
   const atStatement: Amounts = { ...balance };
-  const lastStart = nextDay(cycle.previousStatementOn).getTime();
   const endOfToday = nextDay(startOfDay(today)).getTime();
   const nextEnd = nextDay(cycle.nextStatementOn).getTime();
   const paid: Amounts = {};
   const spent: Amounts = {};
   const later: Amounts = {};
   const toCome: Amounts = {};
-  /** Instalments billed on the last statement: the minimum payment takes them whole. */
-  const billedInstalments: Amounts = {};
   const add = (into: Amounts, cur: string, v: number) => (into[cur] = roundTo((into[cur] ?? 0) + v, cur));
   for (const t of txs) {
     const at = new Date(t.date).getTime();
@@ -192,10 +187,8 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     const exchange = t.type === 'transfer' && t.accountId === id && t.toAccountId === id;
     for (const [delta, cur] of changeOn(t, id)) {
       add(balance, cur, delta);
-      if (!after) {
-        add(atStatement, cur, delta);
-        if (t.instalment && delta < 0 && at >= lastStart) add(billedInstalments, cur, -delta);
-      } else if (exchange) continue;
+      if (!after) add(atStatement, cur, delta);
+      else if (exchange) continue;
       else if (delta > 0) add(paid, cur, delta);
       else {
         if (at < endOfToday) add(spent, cur, -delta);
@@ -205,8 +198,6 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     }
   }
 
-  const { minPercent, minAmount } = card.credit;
-  const hasMinimum = !!minPercent || !!minAmount;
   const byCurrency: Record<string, CardAmounts> = {};
   for (const cur of currenciesOf(card)) {
     const owed = Math.max(0, -(balance[cur] ?? 0));
@@ -222,15 +213,6 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
       toCome: toCome[cur] ?? 0,
       due,
     };
-    if (hasMinimum) {
-      const floor = cur === card.currency ? minAmount ?? 0 : 0;
-      // Instalments billed on the statement are due in full; the minimum % applies to the rest.
-      const inst = Math.min(statement, billedInstalments[cur] ?? 0);
-      const rest = statement - inst;
-      const ofRest = rest > 0 ? Math.max(roundTo((rest * (minPercent ?? 0)) / 100, cur), floor) : 0;
-      const full = statement ? Math.min(statement, roundTo(inst + ofRest, cur)) : 0;
-      amounts.minimum = roundTo(Math.min(due, Math.max(0, full - p)), cur);
-    }
     byCurrency[cur] = amounts;
   }
 

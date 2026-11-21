@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import {
-  IonBackButton, IonButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar,
+  IonBackButton, IonButtons, IonContent, IonFooter, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar,
 } from '@ionic/react';
-import { addOutline, chevronDownOutline, chevronForwardOutline, createOutline, receiptOutline, swapHorizontalOutline } from 'ionicons/icons';
+import { addOutline, chevronDownOutline, chevronForwardOutline, receiptOutline, swapHorizontalOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { Redirect, useLocation, useParams } from 'react-router-dom';
 import { useMoney } from '@/core/contexts/SettingsContext';
@@ -14,7 +14,6 @@ import Avatar from '@/shared/components/Avatar';
 import { useRevealWhen } from '@/shared/splash';
 import MoneyText from '@/shared/components/MoneyText';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
-import AccountEditModal from './AccountEditModal';
 import { CcRow, CycleRows, OwedBlock, StatementRows, useCycleTitle, useDayMonth } from './card/CardBlocks';
 import { useCardActions } from './card/useCardActions';
 import InstalmentsBlock from './card/InstalmentsBlock';
@@ -34,9 +33,7 @@ export default function CreditCardPage() {
   const status = useMemo(() => (card && txs ? cardStatus(card, txs, new Date()) : undefined), [card, txs]);
   // When the app opens straight onto this page, the launch screen goes once there's something to show.
   useRevealWhen(account !== undefined && (!card || !!status));
-  const { t } = useTranslation();
   const { accountName } = useNames();
-  const [editing, setEditing] = useState(false);
   // A card that was deleted, archived or turned back into a debit card has nothing to show here. Ionic keeps
   // this page mounted under other tabs, so it only sends the user away while it's the page on screen.
   if (account !== undefined && !card) return pathname === `/cards/${id}` ? <Redirect to="/accounts" /> : <IonPage />;
@@ -49,18 +46,11 @@ export default function CreditCardPage() {
           <IonButtons slot="start">
             <IonBackButton defaultHref="/accounts" text="" />
           </IonButtons>
+          {/* No Edit here: the card is edited from its summary on Accounts. */}
           <IonTitle className="b-title">{card ? accountName(card) : ''}</IonTitle>
-          {card && (
-            <IonButtons slot="end">
-              <IonButton onClick={() => setEditing(true)} aria-label={t('cards.edit')}>
-                <IonIcon slot="icon-only" icon={createOutline} />
-              </IonButton>
-            </IonButtons>
-          )}
         </IonToolbar>
       </IonHeader>
       {card && status && txs ? <CardPage account={card} status={status} txs={txs} /> : <IonContent />}
-      {card && <AccountEditModal isOpen={editing} account={card} onClose={() => setEditing(false)} />}
     </IonPage>
   );
 }
@@ -70,7 +60,7 @@ function CardPage({ account, status, txs }: { account: Account & { credit: Credi
   const money = useMoney();
   const dayMonth = useDayMonth();
   const cycleTitle = useCycleTitle();
-  const actions = useCardActions(account, status);
+  const actions = useCardActions(account);
   const [showEarlier, setShowEarlier] = useState(false);
   const { thisCycle, lastCycle } = useMemo(() => cardTransactions(account.id!, txs, status.cycle), [account.id, txs, status.cycle]);
   const free = interestFree(account.credit, new Date());
@@ -122,12 +112,6 @@ function CardPage({ account, status, txs }: { account: Account & { credit: Credi
           </div>
 
           <div className="b-cc__actions">
-            {actions.payMinimum && (
-              <button className="b-btn b-btn--muted" onClick={actions.payMinimum}>
-                <IonIcon icon={swapHorizontalOutline} />
-                {t('cards.payMinimum')}
-              </button>
-            )}
             <button className="b-btn b-btn--muted" onClick={actions.addFee}>
               <IonIcon icon={receiptOutline} />
               {t('cards.addFee')}

@@ -17,11 +17,9 @@ import PeriodBar from '@/shared/components/PeriodBar';
 import { usePeriodSwipe } from '@/shared/hooks/useSwipe';
 import Avatar from '@/shared/components/Avatar';
 import Donut from '@/shared/components/Donut';
-import type { Account, Category, Flow, PeriodMode } from '@/shared/models';
-import AccountEditModal from '@/features/accounts/AccountEditModal';
+import type { Category, Flow, PeriodMode } from '@/shared/models';
 import CardReminders from '@/features/accounts/CardReminders';
 import RecurringReminders from '@/features/recurring/RecurringReminders';
-import CreditCardSheet from '@/features/accounts/CreditCardSheet';
 import { useRevealWhen } from '@/shared/splash';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 import { usePageTour } from '@/features/onboarding/usePageTour';
@@ -38,8 +36,6 @@ export default function OverviewPage() {
   const { accountName, categoryName } = useNames();
   const [kind, setKind] = useState<Flow>('expense');
   // A credit card opened from its reminder, and the card being edited from there.
-  const [viewing, setViewing] = useState<Account>();
-  const [editing, setEditing] = useState<Account>();
   const contentRef = usePeriodSwipe();
 
   const txs = useFilteredTransactionsInRange(range);
@@ -131,7 +127,7 @@ export default function OverviewPage() {
       <IonContent ref={contentRef}>
         <div className="b-page">
           <RecurringReminders />
-          <CardReminders onOpen={setViewing} />
+          <CardReminders />
           <div className="b-tiles" {...tourAttr('overview.tiles')}>
             <div className="b-card b-tile">
               <div className="b-tile__label">{t('type.incomes')}</div>
@@ -279,8 +275,6 @@ export default function OverviewPage() {
           )}
         </div>
       </IonContent>
-      <CreditCardSheet account={viewing} onClose={() => setViewing(undefined)} onEdit={setEditing} />
-      <AccountEditModal isOpen={!!editing} account={editing} onClose={() => setEditing(undefined)} />
     </IonPage>
   );
 }

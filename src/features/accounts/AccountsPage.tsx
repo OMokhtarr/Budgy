@@ -18,7 +18,6 @@ import { useSwipe } from '@/shared/hooks/useSwipe';
 import { addIcon } from '@/shared/icons';
 import AccountEditModal from './AccountEditModal';
 import CardReminders from './CardReminders';
-import CreditCardSheet from './CreditCardSheet';
 import { useOpenCardPage } from './card/useOpenCardPage';
 import type { Account, AccountGroup, Amounts } from '@/shared/models';
 import { useRevealWhen } from '@/shared/splash';
@@ -44,8 +43,6 @@ export default function AccountsPage() {
   usePageTour(['accounts'], { ready: !!accounts && !!balances });
   const [tab, setTab] = useState<Tab>('accounts');
   const [editing, setEditing] = useState<Editing | null>(null);
-  /** The credit card whose summary is open. */
-  const [viewing, setViewing] = useState<Account>();
   const cardStatuses = useCardStatuses();
   const locale = useLocale();
 
@@ -118,9 +115,10 @@ export default function AccountsPage() {
         </button>
       );
     }
+    // A credit card opens in Edit like any account, and its arrow opens the card's page.
     return (
       <div key={a.id} className="b-row b-row--split">
-        <button className="b-row__tap" {...tourAttr('accounts.row')} onClick={() => setViewing(a)}>
+        <button className="b-row__tap" {...tourAttr('accounts.row')} onClick={() => setEditing(a)}>
           {content}
         </button>
         <button className="b-iconbtn b-row__go" onClick={() => openCardPage(a.id!)} aria-label={t('cards.details')}>
@@ -235,7 +233,7 @@ export default function AccountsPage() {
         <div className="b-page">
           {tab === 'accounts' && (
             <>
-              <CardReminders onOpen={setViewing} />
+              <CardReminders />
               <div className="b-actions">
                 <button className="b-btn b-btn--muted" {...tourAttr('accounts.transfer')} onClick={() => openEditor({ type: 'transfer' })}>
                   <IonIcon icon={swapHorizontalOutline} />
@@ -322,7 +320,6 @@ export default function AccountsPage() {
         </div>
       </IonContent>
 
-      <CreditCardSheet account={viewing} onClose={() => setViewing(undefined)} onEdit={setEditing} />
       <AccountEditModal
         isOpen={editing != null}
         account={editing && 'id' in editing ? editing : undefined}

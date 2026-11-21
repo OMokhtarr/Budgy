@@ -2075,7 +2075,7 @@ ion-popover.b-popmenu { --width: 230px; }
 .b-cc__empty { padding: 12px 14px; color: var(--b-faint); font-size: 14px; }
 .b-cc__empty + .b-row { border-top: 1px solid var(--b-border); }
 .b-upcoming__note { padding: 10px 14px 12px; font-size: 12.5px; border-top: 1px solid var(--b-border); }
-/* A credit card's row on Accounts: the row opens the card's summary, the arrow beside it its full page. */
+/* A credit card's row on Accounts: the row opens Edit, the arrow beside it the card's page. */
 .b-row--split { padding: 0; padding-inline-end: 10px; gap: 4px; }
 .b-row--split > .b-row__tap {
   display: flex;
