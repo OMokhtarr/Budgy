@@ -31,7 +31,7 @@ import SmsItemCard from './SmsItemCard';
 import SmsSettingsSheet, { PermissionNotes } from './SmsSettingsSheet';
 import TextsSheet from './TextsSheet';
 import { useBatchDuplicatePrompt } from './useBatchDuplicatePrompt';
-import { useSmsAvailability } from './useSmsAvailable';
+import { bankTextsListed, useSmsAvailability } from './useSmsAvailable';
 import { useSmsPermission } from './useSmsPermission';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 import { usePageTour } from '@/features/onboarding/usePageTour';
@@ -59,6 +59,7 @@ export default function SmsReviewPage() {
   const { pathname } = useLocation();
   const router = useIonRouter();
   const available = useSmsAvailability();
+  const listed = bankTextsListed();
   const { smsImport } = useSettings();
   const { accountName, categoryName } = useNames();
   const items = usePendingSms();
@@ -123,16 +124,16 @@ export default function SmsReviewPage() {
     items: categoriesFor('expense').map((c) => ({ ...c, id: BACK + c.id })),
   });
 
-  // Waits for the availability check; and since hidden pages stay mounted in Ionic's stack, only
-  // leaves while this page is the one showing.
   // Texts show once the permission is confirmed (or couldn't be checked): when it was taken away, reading turns
   // off a moment after opening, and the cards would flash before the "Turn on" screen.
   const allowed = available === true && smsImport.enabled && (perm.permission === 'granted' || perm.checkFailed);
   usePageTour(['sms'], { ready: allowed && !!items });
-  const off = available === true && !smsImport.enabled;
+  // While reading is off the page only offers "Turn on": no texts, no scan.
+  const off = listed && !smsImport.enabled;
+  // Hidden pages stay mounted in Ionic's stack, so only leaves while this page is the one showing.
   useEffect(() => {
-    if (available === false && pathname === PATH) router.push('/categories', 'root', 'replace');
-  }, [available, pathname, router]);
+    if (!listed && pathname === PATH) router.push('/categories', 'root', 'replace');
+  }, [listed, pathname, router]);
 
   // Texts on screen are seen: opening the app stops coming here until a scan adds new ones.
   const showingUnseen = allowed && pathname === PATH && !!items?.some((x) => x.unseen);
@@ -403,7 +404,7 @@ export default function SmsReviewPage() {
             </IonButtons>
             <IonTitle className="b-title">{count ? `${t('sms.bankTexts')} (${count})` : t('sms.bankTexts')}</IonTitle>
             <IonButtons slot="end">
-              {available === true && (
+              {listed && (
                 <IonButton onClick={() => setSettingsOpen(true)} aria-label={t('sms.settingsTitle')}>
                   <IonIcon slot="icon-only" icon={settingsOutline} />
                 </IonButton>

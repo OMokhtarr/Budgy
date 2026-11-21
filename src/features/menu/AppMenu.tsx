@@ -11,7 +11,7 @@ import { dayTimeLabel } from '@/core/utils/period';
 import ProfileAvatar from '@/shared/components/ProfileAvatar';
 import { useCloud } from '@/core/cloud/CloudContext';
 import { usePendingCount } from '@/features/sms/hooks';
-import { useSmsAvailable } from '@/features/sms/useSmsAvailable';
+import { bankTextsListed } from '@/features/sms/useSmsAvailable';
 import { useDue } from '@/features/recurring/hooks';
 
 export const MENU_CONTENT_ID = 'main-content';
@@ -21,7 +21,7 @@ export default function AppMenu() {
   const { t } = useTranslation();
   const locale = useLocale();
   const { profileName, lastBackupAt, smsImport } = useSettings();
-  const showBankTexts = useSmsAvailable();
+  const showBankTexts = bankTextsListed();
   const pending = usePendingCount();
   const due = useDue();
   const { user, status, lastSyncedAt } = useCloud();
