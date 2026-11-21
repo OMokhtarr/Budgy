@@ -255,6 +255,8 @@
     "name": "Name",
     "color": "Colour",
     "icon": "Icon",
+    "previousIcons": "Previous icon group",
+    "nextIcons": "Next icon group",
     "sent": "Sent",
     "received": "Received",
     "enterReceived": "Enter the amount received",
