@@ -108,19 +108,24 @@ export function interestFree(credit: CreditCard, today: Date): InterestFree {
 const newestFirst = (a: Transaction, b: Transaction) =>
   a.date === b.date ? b.createdAt.localeCompare(a.createdAt) : b.date.localeCompare(a.date);
 
-/** A card's transactions in this cycle (after the last statement) and in the one before, newest first. */
+/**
+ * A card's transactions in this cycle (after the last statement, up to the next one) and in the one before,
+ * newest first. Instalments for later statements are left out.
+ */
 export function cardTransactions(
   cardId: string,
   txs: Transaction[],
   cycle: CardCycle,
 ): { thisCycle: Transaction[]; lastCycle: Transaction[] } {
   const thisStart = nextDay(cycle.statementOn).getTime();
+  const thisEnd = nextDay(cycle.nextStatementOn).getTime();
   const lastStart = nextDay(cycle.previousStatementOn).getTime();
   const thisCycle: Transaction[] = [];
   const lastCycle: Transaction[] = [];
   for (const t of txs) {
     if (t.accountId !== cardId && t.toAccountId !== cardId) continue;
     const at = new Date(t.date).getTime();
+    if (at >= thisEnd) continue;
     if (at >= thisStart) thisCycle.push(t);
     else if (at >= lastStart) lastCycle.push(t);
   }
@@ -135,8 +140,12 @@ export interface CardAmounts {
   statement: number;
   /** Money that reached the card since then: payments and refunds. */
   paid: number;
-  /** Money that went out of the card since then: purchases and transfers out. */
+  /** Money that went out of the card since then and up to today: purchases and transfers out. */
   spent: number;
+  /** Charges dated after the next statement (instalments for later statements): owed, but not on the next one. */
+  later: number;
+  /** Instalments dated after today: owed already, charged in the months to come. */
+  toCome: number;
   /** What's left to pay of the statement. */
   due: number;
   /** What's left to pay of the minimum payment; undefined when the card has no minimum set. */
@@ -167,17 +176,32 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
   const id = card.id!;
   const balance: Amounts = openingOf(card);
   const atStatement: Amounts = { ...balance };
+  const lastStart = nextDay(cycle.previousStatementOn).getTime();
+  const endOfToday = nextDay(startOfDay(today)).getTime();
+  const nextEnd = nextDay(cycle.nextStatementOn).getTime();
   const paid: Amounts = {};
   const spent: Amounts = {};
+  const later: Amounts = {};
+  const toCome: Amounts = {};
+  /** Instalments billed on the last statement: the minimum payment takes them whole. */
+  const billedInstalments: Amounts = {};
+  const add = (into: Amounts, cur: string, v: number) => (into[cur] = roundTo((into[cur] ?? 0) + v, cur));
   for (const t of txs) {
-    const after = new Date(t.date).getTime() >= cutoff;
+    const at = new Date(t.date).getTime();
+    const after = at >= cutoff;
     const exchange = t.type === 'transfer' && t.accountId === id && t.toAccountId === id;
     for (const [delta, cur] of changeOn(t, id)) {
-      balance[cur] = roundTo((balance[cur] ?? 0) + delta, cur);
-      if (!after) atStatement[cur] = roundTo((atStatement[cur] ?? 0) + delta, cur);
-      else if (exchange) continue;
-      else if (delta > 0) paid[cur] = roundTo((paid[cur] ?? 0) + delta, cur);
-      else spent[cur] = roundTo((spent[cur] ?? 0) - delta, cur);
+      add(balance, cur, delta);
+      if (!after) {
+        add(atStatement, cur, delta);
+        if (t.instalment && delta < 0 && at >= lastStart) add(billedInstalments, cur, -delta);
+      } else if (exchange) continue;
+      else if (delta > 0) add(paid, cur, delta);
+      else {
+        if (at < endOfToday) add(spent, cur, -delta);
+        else if (t.instalment) add(toCome, cur, -delta);
+        if (at >= nextEnd) add(later, cur, -delta);
+      }
     }
   }
 
@@ -189,10 +213,22 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     const statement = Math.max(0, -(atStatement[cur] ?? 0));
     const p = paid[cur] ?? 0;
     const due = roundTo(Math.min(owed, Math.max(0, statement - p)), cur);
-    const amounts: CardAmounts = { owed, statement, paid: p, spent: spent[cur] ?? 0, due };
+    const amounts: CardAmounts = {
+      owed,
+      statement,
+      paid: p,
+      spent: spent[cur] ?? 0,
+      later: later[cur] ?? 0,
+      toCome: toCome[cur] ?? 0,
+      due,
+    };
     if (hasMinimum) {
       const floor = cur === card.currency ? minAmount ?? 0 : 0;
-      const full = statement ? Math.min(statement, Math.max(roundTo((statement * (minPercent ?? 0)) / 100, cur), floor)) : 0;
+      // Instalments billed on the statement are due in full; the minimum % applies to the rest.
+      const inst = Math.min(statement, billedInstalments[cur] ?? 0);
+      const rest = statement - inst;
+      const ofRest = rest > 0 ? Math.max(roundTo((rest * (minPercent ?? 0)) / 100, cur), floor) : 0;
+      const full = statement ? Math.min(statement, roundTo(inst + ofRest, cur)) : 0;
       amounts.minimum = roundTo(Math.min(due, Math.max(0, full - p)), cur);
     }
     byCurrency[cur] = amounts;
@@ -204,6 +240,57 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     ? daysLeft < 0 ? 'overdue' : 'due'
     : all.some((x) => x.statement > 0) ? 'paid' : 'clear';
   return { cycle, byCurrency, state, daysLeft };
+}
+
+/** The statement a charge dated `date` lands on, and when that statement is due. */
+export function statementFor(credit: CreditCard, date: Date): { statementOn: Date; dueOn: Date } {
+  const { nextStatementOn, nextDueOn } = cycleOf(credit, date);
+  return { statementOn: nextStatementOn, dueOn: nextDueOn };
+}
+
+/** One instalment plan on a card, as far as it has got. */
+export interface InstalmentPlan {
+  planId: string;
+  /** Instalment 1, for the plan's name, category and date. */
+  first: Transaction;
+  /** How many instalments in all. */
+  of: number;
+  /** The usual monthly amount (instalment 1's). */
+  monthly: number;
+  currency: string;
+  /** How many are dated up to today. */
+  charged: number;
+  /** What the ones dated after today add up to. */
+  toCome: number;
+}
+
+/** The card's instalment plans that still have instalments to come, oldest first. */
+export function instalmentPlans(cardId: string, txs: Transaction[], today: Date): InstalmentPlan[] {
+  const endOfToday = nextDay(startOfDay(today)).getTime();
+  const plans = new Map<string, Transaction[]>();
+  for (const t of txs) {
+    if (!t.instalment || t.accountId !== cardId) continue;
+    const list = plans.get(t.instalment.planId) ?? [];
+    list.push(t);
+    plans.set(t.instalment.planId, list);
+  }
+  const out: InstalmentPlan[] = [];
+  for (const [planId, list] of plans) {
+    list.sort((a, b) => a.instalment!.n - b.instalment!.n);
+    const first = list[0];
+    const future = list.filter((t) => new Date(t.date).getTime() >= endOfToday);
+    if (!future.length) continue;
+    out.push({
+      planId,
+      first,
+      of: first.instalment!.of,
+      monthly: first.amount,
+      currency: first.currency,
+      charged: list.length - future.length,
+      toCome: roundTo(future.reduce((s, t) => s + t.amount, 0), first.currency),
+    });
+  }
+  return out.sort((a, b) => a.first.date.localeCompare(b.first.date));
 }
 
 /** Whether to remind about a card: overdue, or due within `REMIND_DAYS`. */

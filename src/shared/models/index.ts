@@ -130,6 +130,8 @@ export interface Transaction extends Synced {
   groupId?: string;
   /** The recurring transaction this one was added from. */
   recurringId?: string;
+  /** One instalment of a credit card purchase: the n-th of `of`, all sharing `planId`. Only on expenses. */
+  instalment?: { planId: string; n: number; of: number };
 }
 
 export type RepeatUnit = 'day' | 'week' | 'month' | 'year';
@@ -152,6 +154,10 @@ export interface Recurring extends Synced {
   next: string;
   /** Added by itself when the app opens, instead of waiting for the user to confirm. */
   auto?: true;
+  /** The last day it happens (YYYY-MM-DD, included). Undefined = it never ends. */
+  until?: string;
+  /** Set on the automatic payment of a credit card instalment plan. */
+  planId?: string;
   createdAt: string;
 }
 

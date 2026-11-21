@@ -17,6 +17,7 @@ import type { Account, CreditCard, Transaction } from '@/shared/models';
 import AccountEditModal from './AccountEditModal';
 import { CcRow, CycleRows, OwedBlock, StatementRows, useCycleTitle, useDayMonth } from './card/CardBlocks';
 import { useCardActions } from './card/useCardActions';
+import InstalmentsBlock from './card/InstalmentsBlock';
 
 /** Everything about one credit card: what's owed, the last statement, this cycle, interest-free days and its transactions. */
 export default function CreditCardPage() {
@@ -77,6 +78,8 @@ function CardPage({ account, status, txs }: { account: Account & { credit: Credi
           <div className="b-card b-cc b-cc--flat">
             <CycleRows account={account} status={status} />
           </div>
+
+          <InstalmentsBlock account={account} txs={txs} onAddFee={actions.addFee} />
 
           <div className="b-section-title">{t('cards.interestFreeTitle')}</div>
           <div className="b-card b-cc">

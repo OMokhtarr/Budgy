@@ -387,6 +387,7 @@ export default function TransactionsPage() {
           <div className="b-row__title">
             {categoryName(cat)}{sub ? ` · ${sub}` : ''}
             {back && <span className="b-row__tag">{t('transactions.moneyBack')}</span>}
+            {x.instalment && <span className="b-row__tag">{t('instalments.tag', x.instalment)}</span>}
             {x.groupId && <IonIcon className="b-row__link" icon={linkOutline} aria-label={t('transactions.inGroup')} />}
             {repeatIcon(x)}
           </div>

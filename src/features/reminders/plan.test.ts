@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_REMINDERS, planReminders, reminderId, type ReminderTexts } from './plan';
-import type { CardStatus } from '@/core/utils/creditCard';
+import type { CardAmounts, CardStatus } from '@/core/utils/creditCard';
 import type { Account, Recurring } from '@/shared/models';
 
 const texts: ReminderTexts = {
   recurringTitle: (r) => `R ${r.id}`,
   recurringBody: (r) => (r.auto ? 'auto' : 'ask'),
-  cardTitle: (a) => `C ${a.id}`,
+  cardTitle: (a, amounts) => `C ${a.id} ${Object.entries(amounts).map(([c, n]) => `${c}${n}`).join('+')}`,
   cardBody: (days) => `in ${days}`,
 };
 
@@ -21,7 +21,8 @@ const rent: Recurring = {
 };
 
 const visa = { id: 'visa', name: 'Visa', type: 'card', icon: 'card', color: '#000', currency: 'EGP', initialBalance: 0, order: 0, createdAt: 'x' } as Account;
-const status = (state: CardStatus['state'], dueOn: Date): CardStatus => ({
+const amounts = (x: Partial<CardAmounts> = {}): CardAmounts => ({ owed: 0, statement: 0, paid: 0, spent: 0, later: 0, toCome: 0, due: 0, ...x });
+const status = (state: CardStatus['state'], dueOn: Date, byCurrency: CardStatus['byCurrency'] = {}): CardStatus => ({
   cycle: {
     previousStatementOn: new Date(2026, 9, 25),
     statementOn: new Date(2026, 10, 25),
@@ -29,7 +30,7 @@ const status = (state: CardStatus['state'], dueOn: Date): CardStatus => ({
     nextStatementOn: new Date(2026, 11, 25),
     nextDueOn: new Date(2027, 0, 20),
   },
-  byCurrency: {},
+  byCurrency,
   state,
   daysLeft: 0,
 });
@@ -51,13 +52,40 @@ describe('planReminders', () => {
   });
 
   it('reminds of a card 3 days before its due date and on the day, while something is left to pay', () => {
-    const due = planReminders({ recurring: [], cards: [{ account: visa, status: status('due', new Date(2026, 11, 10)) }], now, time, texts });
-    expect(due.map((p) => [p.at, p.body, p.to])).toEqual([
-      [new Date(2026, 11, 7, 9), 'in 3', '/accounts'],
-      [new Date(2026, 11, 10, 9), 'in 0', '/accounts'],
+    const left = { EGP: amounts({ owed: 800, due: 800 }) };
+    const due = planReminders({ recurring: [], cards: [{ account: visa, status: status('due', new Date(2026, 11, 10), left) }], now, time, texts });
+    expect(due.map((p) => [p.at, p.title, p.body, p.to])).toEqual([
+      [new Date(2026, 11, 7, 9), 'C visa EGP800', 'in 3', '/cards/visa'],
+      [new Date(2026, 11, 10, 9), 'C visa EGP800', 'in 0', '/cards/visa'],
     ]);
     const paid = planReminders({ recurring: [], cards: [{ account: visa, status: status('paid', new Date(2026, 11, 10)) }], now, time, texts });
     expect(paid).toEqual([]);
+  });
+
+  it('reminds ahead of the next statement’s due date, for what will be on it', () => {
+    // Owes 2,800: 800 left on the last statement, 1,500 for later statements' instalments, so 500 goes on the next.
+    const s = status('due', new Date(2026, 11, 10), { EGP: amounts({ owed: 2800, due: 800, later: 1500 }) });
+    const next = planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts }).filter((p) => p.at.getFullYear() === 2027);
+    expect(next.map((p) => [p.at, p.title, p.body, p.to])).toEqual([
+      [new Date(2027, 0, 17, 9), 'C visa EGP500', 'in 3', '/cards/visa'],
+      [new Date(2027, 0, 20, 9), 'C visa EGP500', 'in 0', '/cards/visa'],
+    ]);
+  });
+
+  it('has nothing for the next statement when nothing will be on it', () => {
+    const s = status('paid', new Date(2026, 11, 10), { EGP: amounts({ owed: 1500, later: 1500 }) });
+    expect(planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts })).toEqual([]);
+  });
+
+  it('opens the card when an instalment plan’s automatic payment is due', () => {
+    const payment: Recurring = {
+      ...rent,
+      id: 'pay',
+      tx: { type: 'transfer', amount: 1000, currency: 'EGP', accountId: 'bank', toAccountId: 'visa' },
+      auto: true,
+      planId: 'p',
+    };
+    expect(planReminders({ recurring: [payment], cards: [], now, time, texts })[0].to).toBe('/cards/visa');
   });
 
   it(`keeps the soonest ${MAX_REMINDERS}`, () => {

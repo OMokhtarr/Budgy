@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { IonDatetime, IonIcon, IonModal, useIonActionSheet, useIonAlert, useIonToast } from '@ionic/react';
 import {
-  arrowForwardOutline, backspaceOutline, calendarOutline, checkmarkOutline, flashOutline, playSkipForwardOutline, repeatOutline, trashOutline,
+  albumsOutline, arrowForwardOutline, backspaceOutline, calendarOutline, checkmarkOutline, flashOutline, playSkipForwardOutline, repeatOutline,
+  trashOutline,
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -29,6 +30,9 @@ import { REPEATS, repeatOf, type RepeatName } from '@/core/utils/recurring';
 import { addOccurrence, makeRecurring, saveRecurring, skipOccurrence, stopRecurring } from '@/features/recurring/actions';
 import { useRateFor } from '@/features/recurring/hooks';
 import { useOpenRecurring } from '@/features/recurring/useOpenRecurring';
+import { isCreditCard } from '@/core/utils/creditCard';
+import { convertToPlan, createPlan, type PlanOptions } from '@/features/accounts/card/instalments';
+import InstalmentSheet, { type InstalmentChoice } from './InstalmentSheet';
 
 const LAST_ACCOUNT_KEY = 'budgy-last-account';
 
@@ -117,8 +121,16 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   );
   const [auto, setAuto] = useState(!!editingRule?.auto);
 
+  // ── instalments ──
+  const [plan, setPlan] = useState<InstalmentChoice>();
+  const [planOpen, setPlanOpen] = useState(false);
+
   const account = allAccounts?.find((a) => a.id === accountId);
   const toAccount = allAccounts?.find((a) => a.id === toAccountId);
+  // A credit card purchase can be paid in instalments; not one that repeats, is grouped, or is already one.
+  const canInstal =
+    type === 'expense' && !!account && isCreditCard(account) && !ruleMode && !due && !tx?.instalment && !tx?.groupId && !tx?.recurringId;
+  const instalPlan = canInstal ? plan : undefined;
 
   // Follows the transaction type until an account is chosen on purpose.
   const accountChosen = useRef(tx?.accountId != null || init.accountId != null);
@@ -312,12 +324,24 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
         moneyBack: back,
         groupId: tx?.groupId,
         recurringId: tx?.recurringId,
+        instalment: tx?.instalment,
         createdAt: tx?.createdAt,
       });
       if (ruleMode) {
         await saveRecurring(editingRule, { tx: record, ...REPEATS[repeat ?? 'monthly'], day: date, auto });
       } else if (due) {
         saved = await addOccurrence(due.r, due.day, record, rateFor);
+      } else if (instalPlan && account && isCreditCard(account)) {
+        const options: PlanOptions = {
+          ...instalPlan,
+          feeCategoryId: expenseCats?.find((c) => c.key === 'bills')?.id,
+          feeNote: t('instalments.feeNote', { name: note.trim() || categoryName(category) }),
+          credit: account.credit,
+        };
+        if (tx?.id) {
+          saved = await saveTx(record, tx.id);
+          await convertToPlan(saved, options);
+        } else saved = await createPlan(record, options);
       } else {
         saved = await saveTx(record, tx?.id);
         if (repeat && !linkedRule) await makeRecurring(saved, REPEATS[repeat], auto);
@@ -663,7 +687,19 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
           <button className="b-editor__date" onClick={() => setDateOpen(true)}>
             {ruleMode ? t('recurring.nextOn', { date: dateLabel }) : dateLabel}
           </button>
-          {!due && (
+          {tx?.instalment && (
+            <span className="b-editor__chip is-on">
+              <IonIcon icon={albumsOutline} />
+              {t('instalments.of', tx.instalment)}
+            </span>
+          )}
+          {canInstal && !repeat && (
+            <button className={`b-editor__chip ${instalPlan ? 'is-on' : ''}`} onClick={() => setPlanOpen(true)}>
+              <IonIcon icon={albumsOutline} />
+              {instalPlan ? t('instalments.chipOn', { count: instalPlan.months }) : t('instalments.chip')}
+            </button>
+          )}
+          {!due && !instalPlan && !tx?.instalment && (
             <button className={`b-editor__chip ${repeat || linkedRule ? 'is-on' : ''}`} onClick={pickRepeat}>
               <IonIcon icon={repeatOutline} />
               {linkedRule ? t(`recurring.every.${repeatOf(linkedRule)}`) : repeat ? t(`recurring.every.${repeat}`) : t('recurring.repeat')}
@@ -677,6 +713,22 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
           )}
         </div>
       </div>
+
+      {account && canInstal && (
+        <InstalmentSheet
+          isOpen={planOpen}
+          amount={amount}
+          currency={currency}
+          card={account}
+          accounts={accounts ?? []}
+          value={plan}
+          onDone={(v) => {
+            setPlan(v);
+            setPlanOpen(false);
+          }}
+          onClose={() => setPlanOpen(false)}
+        />
+      )}
 
       <IonModal className="b-date-modal" isOpen={dateOpen} onDidDismiss={() => setDateOpen(false)}>
         <IonDatetime

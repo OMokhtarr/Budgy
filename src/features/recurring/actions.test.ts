@@ -112,4 +112,21 @@ describe('recurring transactions', () => {
     await saveRecurring({ ...r, next: '2026-12-04' }, { tx: rent, unit: 'month', every: 1, day: '2026-12-10', auto: false }, database);
     expect(await database.recurring.get(id)).toMatchObject({ start: '2026-12-10', next: '2026-12-10', unit: 'month' });
   });
+
+  it('keeps the end day and the instalment plan when an automatic payment is edited', async () => {
+    const id = (await database.recurring.add({
+      tx: { type: 'transfer', amount: 1000, currency: 'EGP', accountId: 'bank', toAccountId: 'card' },
+      unit: 'month',
+      every: 1,
+      start: '2027-01-03',
+      next: '2027-01-03',
+      until: '2027-03-03',
+      planId: 'plan-1',
+      auto: true,
+      createdAt: 'x',
+    })) as string;
+    const r = (await database.recurring.get(id))!;
+    await saveRecurring(r, { tx: { ...r.tx, amount: 1200 }, unit: 'month', every: 1, day: '2027-01-03', auto: true }, database);
+    expect(await database.recurring.get(id)).toMatchObject({ until: '2027-03-03', planId: 'plan-1', tx: { amount: 1200 } });
+  });
 });
