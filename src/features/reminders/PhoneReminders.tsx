@@ -76,16 +76,23 @@ export default function PhoneReminders() {
     };
   }, [native]);
 
-  const texts = useMemo((): ReminderTexts => ({
-    // General on purpose: notifications show on the lock screen, so no name or amount.
-    recurringTitle: () => t('reminders.recurringTitle'),
-    recurringBody: (r) => t(r.auto ? 'reminders.recurringAuto' : 'reminders.recurringAsk'),
-    cardTitle: (a, s) => {
-      const amount = Object.entries(s.byCurrency).filter(([, x]) => x.due > 0).map(([c, x]) => money.format(x.due, c)).join(' + ');
-      return `${accountName(a)} · ${amount}`;
-    },
-    cardBody: (days) => (days ? t('reminders.cardSoon', { count: days }) : t('reminders.cardToday')),
-  }), [t, money, accountName]);
+  const texts = useMemo((): ReminderTexts => {
+    const byId = new Map((accounts ?? []).map((a) => [a.id!, a]));
+    return {
+      // General on purpose: notifications show on the lock screen, so no name or amount. An instalment plan's
+      // payment says which card and how much, like the card's own due-date reminder.
+      recurringTitle: (r) =>
+        r.planId
+          ? t('reminders.instalmentTitle', { name: accountName(byId.get(r.tx.toAccountId!)), amount: money.format(r.tx.amount, r.tx.currency) })
+          : t('reminders.recurringTitle'),
+      recurringBody: (r) =>
+        r.planId
+          ? t('reminders.instalmentBody', { from: accountName(byId.get(r.tx.accountId)) })
+          : t(r.auto ? 'reminders.recurringAuto' : 'reminders.recurringAsk'),
+      cardTitle: (a, amounts) => `${accountName(a)} · ${Object.entries(amounts).map(([c, n]) => money.format(n, c)).join(' + ')}`,
+      cardBody: (days) => (days ? t('reminders.cardSoon', { count: days }) : t('reminders.cardToday')),
+    };
+  }, [t, money, accountName, accounts]);
 
   useEffect(() => {
     if (!native) return;

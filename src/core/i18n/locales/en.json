@@ -900,6 +900,8 @@
     "recurringTitle": "A recurring transaction is due",
     "recurringAsk": "Tap to add it.",
     "recurringAuto": "Budgy adds it when you open the app.",
+    "instalmentTitle": "{{name}} · instalment payment {{amount}}",
+    "instalmentBody": "Due today. Budgy adds the payment from {{from}} when you open the app.",
     "cardSoon_one": "Due in {{count}} day",
     "cardSoon_other": "Due in {{count}} days",
     "cardToday": "Due today",

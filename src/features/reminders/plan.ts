@@ -1,6 +1,7 @@
 import { addDays, dayKey, parseDayKey } from '@/core/utils/period';
+import { roundTo } from '@/core/utils/currency';
 import { occurrencesBetween } from '@/core/utils/recurring';
-import type { CardStatus } from '@/core/utils/creditCard';
+import type { CardAmounts, CardStatus } from '@/core/utils/creditCard';
 import type { Account, Recurring } from '@/shared/models';
 
 /** How far ahead reminders are scheduled; opening the app schedules the next ones. */
@@ -23,7 +24,8 @@ export interface PlannedReminder {
 export interface ReminderTexts {
   recurringTitle: (r: Recurring) => string;
   recurringBody: (r: Recurring) => string;
-  cardTitle: (card: Account, status: CardStatus) => string;
+  /** The card and what's due on it, per currency (only amounts above zero). */
+  cardTitle: (card: Account, amounts: Record<string, number>) => string;
   /** Days until the due date: CARD_DAYS_BEFORE, or 0 on the day. */
   cardBody: (days: number) => string;
 }
@@ -59,21 +61,38 @@ export function planReminders({ recurring, cards, now, time, texts }: PlanInput)
     for (const day of occurrencesBetween(r, from, last, MAX_REMINDERS)) {
       const when = at(parseDayKey(day));
       if (when > now) {
-        out.push({ id: reminderId(`r:${r.id}:${day}`), at: when, title: texts.recurringTitle(r), body: texts.recurringBody(r), to: '/recurring' });
+        // An instalment plan's automatic payment belongs to its card.
+        const to = r.planId && r.tx.toAccountId ? `/cards/${r.tx.toAccountId}` : '/recurring';
+        out.push({ id: reminderId(`r:${r.id}:${day}`), at: when, title: texts.recurringTitle(r), body: texts.recurringBody(r), to });
       }
     }
   }
 
   for (const { account, status } of cards) {
-    // Only while some of the statement is left to pay and the due date hasn't passed.
-    if (status.state !== 'due') continue;
-    for (const days of [CARD_DAYS_BEFORE, 0]) {
-      const day = addDays(status.cycle.dueOn, -days);
-      const when = at(day);
-      if (when > now) {
-        out.push({ id: reminderId(`c:${account.id}:${dayKey(day)}`), at: when, title: texts.cardTitle(account, status), body: texts.cardBody(days), to: '/accounts' });
+    const remind = (dueOn: Date, amounts: Record<string, number>) => {
+      for (const days of [CARD_DAYS_BEFORE, 0]) {
+        const day = addDays(dueOn, -days);
+        const when = at(day);
+        if (when > now) {
+          // Keyed by the day, so when the next statement becomes the last one its reminder is replaced, not doubled.
+          out.push({
+            id: reminderId(`c:${account.id}:${dayKey(day)}`),
+            at: when,
+            title: texts.cardTitle(account, amounts),
+            body: texts.cardBody(days),
+            to: `/cards/${account.id}`,
+          });
+        }
       }
-    }
+    };
+    const pick = (f: (x: CardAmounts, currency: string) => number) =>
+      Object.fromEntries(Object.entries(status.byCurrency).map(([c, x]) => [c, f(x, c)] as const).filter(([, n]) => n > 0));
+    // The last statement: only while some of it is left to pay and its due date hasn't passed.
+    if (status.state === 'due') remind(status.cycle.dueOn, pick((x) => x.due));
+    // The next one, set ahead so it comes even if the app isn't opened after the statement: what's owed, less the last
+    // statement's part (paid by its own date) and instalments for later statements.
+    const next = pick((x, c) => roundTo(x.owed - x.due - x.later, c));
+    if (Object.keys(next).length) remind(status.cycle.nextDueOn, next);
   }
 
   return out.sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, MAX_REMINDERS);
