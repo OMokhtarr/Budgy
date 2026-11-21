@@ -49,10 +49,11 @@ const stamp = () => new Date().toISOString();
 async function addRest(first: Transaction | Omit<Transaction, 'id'>, planId: string, parts: number[], o: PlanOptions, database: BudgyDB) {
   const dates = instalmentDates(first.date, o.months);
   const now = stamp();
-  // One instalment per month, copied from the purchase; only the first keeps the bank text it came from.
+  // One instalment per month, copied from the purchase (not its id or sync state); only the first keeps the bank
+  // text it came from.
+  const { id: _id, dirty: _dirty, deletedAt: _deleted, ...base } = first as Transaction;
   const rest = parts.slice(1).map((amount, i): Omit<Transaction, 'id'> => ({
-    ...first,
-    id: undefined,
+    ...base,
     amount,
     date: dates[i + 1],
     smsFingerprint: undefined,
