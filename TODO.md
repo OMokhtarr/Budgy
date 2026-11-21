@@ -6,8 +6,9 @@
       builds and was checked on a device (2026-11-20), including several texts at once, money back and combining.
       `READ_SMS` is in the main manifest, so build 5 (`RELEASE-NOTES.md`) can't roll out until the declaration
       below is approved. Form answers, Data safety reasoning and the video script are in `docs/play-store.md`.
-  - [ ] Record the short demo video (unlisted YouTube link).
-  - [ ] Fill in the Play Permissions Declaration Form.
+  - [ ] Upload build 5 to a testing track, and the demo video (`store/bank-texts-demo.mp4` on the owner's PC,
+        not in git) to YouTube as unlisted.
+  - [ ] Enter the new store descriptions and fill in the Play Permissions Declaration Form.
 
 ---
 

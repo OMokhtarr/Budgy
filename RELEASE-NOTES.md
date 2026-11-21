@@ -10,11 +10,13 @@ Before adding a section, raise `versionCode` (and `versionName` if it's a new ve
 
 ---
 
-## Next: bank texts (versionCode 5, draft)
+## 1.0 (versionCode 5) — 2026-11-21
 
-**Draft, not for a build yet.** The first release with `READ_SMS` in the main manifest. Raise `versionCode` to 5
-first and set the release name to `5 (1.0)`. It can only roll out once Play approves the Permissions Declaration
-Form (`TODO.md` → SMS import). If it goes out with `VITE_PRO_GATE=on`, add the Budgy Pro lines from the next section.
+**Release name:** `5 (1.0)`
+
+Bank texts, the first release with `READ_SMS` in the main manifest. It can only roll out once Play approves the
+Permissions Declaration Form (`TODO.md` → SMS import). Built with the same `.env.local` as build 4
+(`VITE_PRO_GATE=test`), so the notes don't mention Budgy Pro.
 
 ```
 <en-US>
