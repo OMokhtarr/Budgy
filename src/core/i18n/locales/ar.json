@@ -428,6 +428,27 @@
     },
     "amount": "المبلغ ({{currency}})"
   },
+  "instalments": {
+    "chip": "تقسيط",
+    "chipOn_zero": "{{count}} قسط",
+    "chipOn_one": "قسط واحد",
+    "chipOn_two": "قسطان",
+    "chipOn_few": "{{count}} أقساط",
+    "chipOn_many": "{{count}} قسطاً",
+    "chipOn_other": "{{count}} قسط",
+    "title": "الدفع بالتقسيط",
+    "months": "عدد الأشهر",
+    "monthsRange": "عدد صحيح من الأشهر، من {{min}} إلى {{max}}.",
+    "perMonth": "= {{amount}} شهرياً",
+    "fee": "رسوم لمرة واحدة ({{currency}}، اختياري)",
+    "interestHint": "إذا كان البنك يضيف فوائد، أدخل الإجمالي الذي ستدفعه كمبلغ.",
+    "autoPay": "الدفع تلقائياً من",
+    "autoPayHint": "يضيف دفعة كل شهر إلى البطاقة في موعد استحقاقها، من هذا الحساب.",
+    "feeNote": "رسوم التقسيط · {{name}}",
+    "of": "القسط {{n}} من {{of}}",
+    "off": "الدفع كاملاً",
+    "done": "تم"
+  },
   "cards": {
     "kind": "نوع البطاقة",
     "debit": "بطاقة خصم",

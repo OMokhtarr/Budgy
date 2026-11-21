@@ -2,6 +2,7 @@ import { alive, db, softDelete, type BudgyDB } from '@/core/db/db';
 import { statementFor } from '@/core/utils/creditCard';
 import { roundTo } from '@/core/utils/currency';
 import { newId } from '@/core/utils/id';
+import { parseNumber } from '@/core/utils/number';
 import { dayKey } from '@/core/utils/period';
 import type { CreditCard, Recurring, Transaction } from '@/shared/models';
 
@@ -17,6 +18,15 @@ export interface PlanOptions {
   /** Pay each instalment automatically from this account, on each statement's due date. */
   autoPayFrom?: string;
   credit: CreditCard;
+}
+
+export const MIN_MONTHS = 2;
+export const MAX_MONTHS = 60;
+
+/** Typed months: a whole number from MIN_MONTHS to MAX_MONTHS, in any digits the keyboard types. */
+export function parseMonths(typed: string): number | undefined {
+  const n = parseNumber(typed);
+  return Number.isInteger(n) && n >= MIN_MONTHS && n <= MAX_MONTHS ? n : undefined;
 }
 
 /** `total` in `n` parts rounded to the currency; the last part takes the difference, so they add up exactly. */

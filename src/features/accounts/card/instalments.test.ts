@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { alive, BudgyDB } from '@/core/db/db';
 import { saveTx } from '@/features/transactions/txRecord';
 import type { CreditCard, Transaction } from '@/shared/models';
-import { convertToPlan, createPlan, deletePlan, instalmentDates, payOffPlan, splitAmount } from './instalments';
+import { convertToPlan, createPlan, deletePlan, instalmentDates, parseMonths, payOffPlan, splitAmount } from './instalments';
 
 const database = new BudgyDB('t-instalments');
 const credit: CreditCard = { statementDay: 25, dueDay: 20 };
@@ -25,6 +25,12 @@ describe('instalments', () => {
   beforeEach(async () => {
     await database.transactions.clear();
     await database.recurring.clear();
+  });
+
+  it('parseMonths takes whole numbers from 2 to 60, in any digits', () => {
+    expect(parseMonths('12')).toBe(12);
+    expect(parseMonths('٦')).toBe(6);
+    for (const bad of ['', '1', '61', '2.5', 'x']) expect(parseMonths(bad)).toBeUndefined();
   });
 
   it('splits so the parts add up', () => {

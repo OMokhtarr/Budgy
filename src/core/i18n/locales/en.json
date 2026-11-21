@@ -368,6 +368,23 @@
     },
     "amount": "Amount ({{currency}})"
   },
+  "instalments": {
+    "chip": "Instalments",
+    "chipOn_one": "{{count}} instalment",
+    "chipOn_other": "{{count}} instalments",
+    "title": "Pay in instalments",
+    "months": "Months",
+    "monthsRange": "A whole number of months, from {{min}} to {{max}}.",
+    "perMonth": "= {{amount}} a month",
+    "fee": "One-time fee ({{currency}}, optional)",
+    "interestHint": "If your bank adds interest, enter the total you'll pay as the amount.",
+    "autoPay": "Pay automatically from",
+    "autoPayHint": "Adds each month's payment to the card on its due date, from this account.",
+    "feeNote": "Instalment fee · {{name}}",
+    "of": "Instalment {{n}} of {{of}}",
+    "off": "Pay in full",
+    "done": "Done"
+  },
   "cards": {
     "kind": "Card type",
     "debit": "Debit card",
