@@ -2,7 +2,7 @@
 
 > Everything entered in Play Console, kept here so it can be checked and updated. Matches the app as of
 > 2026-11-21: optional Google/Apple sign-in, cloud sync on Supabase, no ads, no analytics, and bank texts
-> (`READ_SMS`) in release builds from versionCode 5. **When the app changes, go through [When the app changes](#when-the-app-changes)
+> (`READ_SMS`) in release builds from versionCode 6 (build 5 was never released). **When the app changes, go through [When the app changes](#when-the-app-changes)
 > first.**
 
 ## Release status

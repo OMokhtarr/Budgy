@@ -43,6 +43,9 @@
     <!-- Bank texts (plugins/sms-inbox): reads the inbox only when the user turns it on. Needs Play's
          Permissions Declaration Form approved before a release with it can go out. -->
     <uses-permission android:name="android.permission.READ_SMS" />
+    <!-- READ_SMS makes Play require a phone radio, which hid Budgy from Wi-Fi tablets, Chromebooks, TVs and cars
+         (4,508 devices on build 5). Budgy works without one; bank texts just finds no texts there. -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <!-- Reminders (@capacitor/local-notifications) are inexact: a few minutes late is fine, and Play restricts exact alarms. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
 </manifest>

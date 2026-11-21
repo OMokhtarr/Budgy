@@ -4,11 +4,13 @@
 
 - [ ] **SMS import** (Android only; `docs/superpowers/specs/2026-11-03-sms-import-design.md`). Works in debug
       builds and was checked on a device (2026-11-20), including several texts at once, money back and combining.
-      `READ_SMS` is in the main manifest, so build 5 (`RELEASE-NOTES.md`) can't roll out until the declaration
+      `READ_SMS` is in the main manifest, so build 6 (`RELEASE-NOTES.md`) can't roll out until the declaration
       below is approved. Form answers, Data safety reasoning and the video script are in `docs/play-store.md`.
-  - [ ] Upload build 5 to a testing track, and the demo video (`store/bank-texts-demo.mp4` on the owner's PC,
-        not in git) to YouTube as unlisted.
-  - [ ] Enter the new store descriptions and fill in the Play Permissions Declaration Form.
+      The demo video is on Google Drive (link in the declaration form).
+  - [ ] In the Closed testing draft, replace build 5 with build 6 and rename the release `6 (1.0)`.
+  - [ ] Save the Permissions Declaration Form (filled in 2026-11-21; tick the confirmations), then send the
+        release for review.
+  - [ ] Enter the new store descriptions.
 
 ---
 
