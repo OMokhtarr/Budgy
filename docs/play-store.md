@@ -13,8 +13,8 @@
 | 2 | Google sign-in for Play builds: Android OAuth clients for the **app signing** and **upload** key SHA-1s | Done |
 | 3 | Signed release bundle (`npm run android:aab:release`) | Done |
 | 4 | Keystore and passwords backed up off this machine | Done |
-| 5 | Store listing: text and graphics | Done, with versionCode 5 (Budgy Pro lines included) |
-| 6 | App content forms: Data safety and declarations | Data safety and App access done with versionCode 5; `READ_SMS` Permissions Declaration Form left |
+| 5 | Store listing: text and graphics | Both full descriptions as below (with bank texts, without the Budgy Pro lines) saved 2026-11-21 with build 6, waiting to be sent for review. The AI asset declaration labels the assets as made or edited with AI |
+| 6 | App content forms: Data safety and declarations | Data safety and App access done; `READ_SMS` Permissions Declaration Form saved 2026-11-21. App-level trader status declaration left (blocks sending for review); its Terms of Service link is in [Links](#links) |
 | 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | Testers group ready; publish a build to the closed track for it |
 
 Before every upload:
@@ -29,6 +29,7 @@ The bundle is written to `android/app/build/outputs/bundle/release/app-release.a
 |---|---|
 | Privacy policy | https://omokhtarr.github.io/Budgy/privacy.html |
 | Account deletion | https://omokhtarr.github.io/Budgy/delete-account.html |
+| Terms of Service | https://omokhtarr.github.io/Budgy/terms.html (source: `docs/terms-of-service.md`; used in the app-level trader status declaration) |
 | Contact email | or.mokhtar@gmail.com |
 
 ## Store listing
