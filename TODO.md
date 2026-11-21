@@ -13,10 +13,12 @@
         `READ_SMS`. Form answers, Data safety reasoning and the video script are in `docs/play-store.md`.
   - [x] Add `READ_SMS` to the main manifest (2026-11-21). Every build now asks for it, so a release can't go
         out until the declaration below is approved.
-  - Play Permissions Declaration Form and Data safety form.
-  - Short demo video.
-  - A bank-texts line in both full descriptions (part of Budgy Pro), and a `RELEASE-NOTES.md` section covering
-    money back, several texts at once and combining.
+  - [x] Short demo video (2026-11-21): `store/bank-texts-demo.mp4` on the owner's PC, not in git. Upload it to
+        YouTube as unlisted for the form.
+  - [x] Bank texts in both full descriptions and in build 5's `RELEASE-NOTES.md` section.
+  - [ ] Upload build 5 (`versionCode` 5, the first with `READ_SMS`) to a testing track, enter the new
+        descriptions, then submit the Permissions Declaration Form (answers in `docs/play-store.md`). Data
+        safety needs no change (reasons there too).
 
 ---
 
