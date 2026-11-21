@@ -489,17 +489,17 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
               <RateInput currency={c} />
             </div>
           ))}
-          <IconColorPicker icon={icon} color={color} onIcon={setIcon} onColor={setColor} />
           {account && (
-            <>
-              <IonButton expand="block" fill="clear" color="medium" onClick={() => setArchived(!account.archived)} style={{ marginTop: 12 }}>
+            <div className="b-manage">
+              <IonButton expand="block" fill="clear" color="medium" onClick={() => setArchived(!account.archived)}>
                 {account.archived ? t('accounts.restore') : t('accounts.archive')}
               </IonButton>
               <IonButton expand="block" fill="clear" color="danger" onClick={remove}>
                 {t('accounts.delete')}
               </IonButton>
-            </>
+            </div>
           )}
+          <IconColorPicker icon={icon} color={color} onIcon={setIcon} onColor={setColor} />
         </div>
       </IonContent>
     </IonModal>

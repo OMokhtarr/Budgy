@@ -159,17 +159,17 @@ export default function CategoryEditModal({ isOpen, category, kind, onClose }: P
             </label>
           )}
           <SubcategoriesField subcategories={subcategories} saved={category?.subcategories} color={color} icon={icon} onChange={setSubcategories} />
-          <IconColorPicker icon={icon} color={color} onIcon={setIcon} onColor={setColor} />
           {category && (
-            <>
-              <IonButton expand="block" fill="clear" color="medium" onClick={() => setArchived(!category.archived)} style={{ marginTop: 12 }}>
+            <div className="b-manage">
+              <IonButton expand="block" fill="clear" color="medium" onClick={() => setArchived(!category.archived)}>
                 {category.archived ? t('categories.restore') : t('categories.archive')}
               </IonButton>
               <IonButton expand="block" fill="clear" color="danger" onClick={remove}>
                 {t('categories.delete')}
               </IonButton>
-            </>
+            </div>
           )}
+          <IconColorPicker icon={icon} color={color} onIcon={setIcon} onColor={setColor} />
         </div>
       </IonContent>
     </IonModal>
