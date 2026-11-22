@@ -1,8 +1,8 @@
 import '@/test/setup-db';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
-import type { Transaction } from '@/shared/models';
-import { findManualDuplicate } from './duplicate';
+import type { Account, Transaction } from '@/shared/models';
+import { findDuplicate, findInstalmentMatch, findManualDuplicate, instalmentMatchMessage } from './duplicate';
 
 const database = new BudgyDB('t-duplicate');
 
@@ -38,5 +38,89 @@ describe('findManualDuplicate', () => {
     expect(await findManualDuplicate(text({ date: at(0, 10, 3) }), database)).toBeUndefined();
     await add('early', { date: at(0, 5, 3) });
     expect((await findManualDuplicate(text({ date: at(0, 10, 3) }), database))?.id).toBe('early');
+  });
+});
+
+// A card whose statement is on the 25th: its cycle runs 26 Oct to 25 Nov, the statement day included.
+describe('findInstalmentMatch', () => {
+  const nov = (d: number) => new Date(2026, 10, d, 12).toISOString();
+  const charge = { type: 'expense' as const, amount: 1000, currency: 'EGP', accountId: 'card', date: nov(25) };
+  const instalment = (id: string, date: string, over: Partial<Transaction> = {}) =>
+    database.transactions.add({
+      ...charge, id, date, categoryId: 'phone', note: 'Phone', instalment: { planId: 'p', n: 4, of: 12 }, createdAt: 'x', ...over,
+    } as Transaction);
+
+  beforeEach(async () => {
+    await database.transactions.clear();
+    await database.accounts.clear();
+    await database.accounts.add({
+      id: 'card', name: 'Card', type: 'card', icon: 'card', color: '#000', currency: 'EGP', initialBalance: 0, order: 0,
+      credit: { statementDay: 25, dueDay: 20 }, createdAt: 'x',
+    } as Account);
+  });
+
+  it('matches an instalment in the same statement cycle', async () => {
+    await instalment('i4', nov(3));
+    expect(await findDuplicate(charge, database)).toMatchObject({ kind: 'instalment', tx: { id: 'i4' } });
+  });
+
+  it('not one in another cycle', async () => {
+    await instalment('next', nov(27));
+    expect(await findInstalmentMatch(charge, database)).toBeUndefined();
+  });
+
+  it('not one already linked to a text, nor a deleted one', async () => {
+    await instalment('linked', nov(3), { smsFingerprint: 'fp', instalment: { planId: 'p', n: 4, of: 12, sms: 'fp' } });
+    await instalment('deleted', nov(4), { deletedAt: 'x' });
+    expect(await findInstalmentMatch(charge, database)).toBeUndefined();
+  });
+
+  it('instalment 1 of a full-price plan from a purchase text can still get its monthly text', async () => {
+    await instalment('first', nov(3), { smsFingerprint: 'fp-buy', instalment: { planId: 'p', n: 1, of: 12 } });
+    expect((await findInstalmentMatch(charge, database))?.id).toBe('first');
+  });
+
+  it('not a different amount, currency or account', async () => {
+    await instalment('amount', nov(3), { amount: 999 });
+    await instalment('currency', nov(3), { currency: 'USD' });
+    await instalment('account', nov(3), { accountId: 'other' });
+    expect(await findInstalmentMatch(charge, database)).toBeUndefined();
+  });
+
+  it('the one dated nearest the text wins', async () => {
+    await instalment('early', nov(1));
+    await instalment('near', nov(20));
+    expect((await findInstalmentMatch(charge, database))?.id).toBe('near');
+  });
+
+  it('an instalment dated the same day as the text is still an instalment match', async () => {
+    await instalment('same-day', nov(25));
+    expect(await findDuplicate(charge, database)).toMatchObject({ kind: 'instalment', tx: { id: 'same-day' } });
+  });
+
+  it('a hand-entered same-day match comes first', async () => {
+    await instalment('i4', nov(3));
+    await database.transactions.add({ ...charge, id: 'manual', categoryId: 'c', createdAt: 'x' } as Transaction);
+    expect(await findDuplicate(charge, database)).toMatchObject({ kind: 'manual', tx: { id: 'manual' } });
+  });
+
+  it('income is never matched to an instalment', async () => {
+    await instalment('i4', nov(3));
+    expect(await findInstalmentMatch({ ...charge, type: 'income' }, database)).toBeUndefined();
+  });
+});
+
+describe('instalmentMatchMessage', () => {
+  const t = (key: string, v?: Record<string, unknown>) => `${key}:${JSON.stringify(v ?? {})}`;
+  const row = (note?: string) => ({ note, instalment: { planId: 'p', n: 4, of: 12 } }) as Transaction;
+
+  it('names the plan by its note, else its category', () => {
+    expect(instalmentMatchMessage(t, row(' Phone '), 'Shopping')).toBe('sms.instalmentMatchBody:{"name":"Phone","n":4,"of":12}');
+    expect(instalmentMatchMessage(t, row(), 'Shopping')).toBe('sms.instalmentMatchBody:{"name":"Shopping","n":4,"of":12}');
+  });
+
+  it('leaves the name out when there is none', () => {
+    expect(instalmentMatchMessage(t, row(''), undefined)).toBe('sms.instalmentMatchBodyNoName:{"n":4,"of":12}');
+    expect(instalmentMatchMessage(t, row(), '')).toBe('sms.instalmentMatchBodyNoName:{"n":4,"of":12}');
   });
 });

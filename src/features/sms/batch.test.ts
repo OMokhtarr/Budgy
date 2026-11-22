@@ -85,12 +85,62 @@ describe('importMany', () => {
   });
 });
 
+describe('importMany with a plan', () => {
+  it('saves a text that has a plan as its instalments, the others as they are', async () => {
+    const a = item();
+    const b = item({ fingerprint: 'b', amount: 90 });
+    const credit = { statementDay: 25, dueDay: 20 };
+    const r = await importMany(
+      [{ item: a, draft: draft(a), plan: { months: 3, feeNote: '', credit } }, { item: b, draft: draft(b) }],
+      database,
+    );
+    expect(r).toEqual({ saved: 2, failed: 0 });
+    const txs = (await database.transactions.toArray()).filter(alive);
+    expect(txs.filter((t) => t.instalment).map((t) => t.amount)).toEqual([150, 150, 150]);
+    expect(txs.filter((t) => !t.instalment).map((t) => t.amount)).toEqual([90]);
+    expect(await database.smsPending.count()).toBe(0);
+  });
+});
+
 describe('duplicatesOf', () => {
   it('returns the texts that match a hand-entered transaction on the same day', async () => {
     const a = item();
     const b = item({ fingerprint: 'b', amount: 90 });
     await database.transactions.add({ type: 'expense', amount: 450, currency: 'EGP', accountId: 'a1', categoryId: 'c1', date: '2026-11-06T15:00:00.000Z', createdAt: 'x' });
     const found = await duplicatesOf([{ fingerprint: 'a', draft: draft(a) }, { fingerprint: 'b', draft: draft(b) }], database);
-    expect(found).toEqual(new Set(['a']));
+    expect([...found.keys()]).toEqual(['a']);
+    expect(found.get('a')?.kind).toBe('manual');
+  });
+
+  it('includes texts that match an instalment already recorded', async () => {
+    await database.accounts.put({
+      id: 'card', name: 'Card', type: 'card', icon: 'card', color: '#000', currency: 'EGP', initialBalance: 0, order: 0,
+      credit: { statementDay: 25, dueDay: 20 }, createdAt: 'x',
+    });
+    await database.transactions.add({
+      type: 'expense', amount: 450, currency: 'EGP', accountId: 'card', categoryId: 'c1', date: '2026-10-30T10:00:00.000Z',
+      instalment: { planId: 'p', n: 2, of: 6 }, createdAt: 'x',
+    });
+    const a = item();
+    const found = await duplicatesOf([{ fingerprint: 'a', draft: draft(a, { accountId: 'card' }) }], database);
+    expect(found.get('a')?.kind).toBe('instalment');
+  });
+
+  it('matches one instalment to one text only', async () => {
+    await database.accounts.put({
+      id: 'card', name: 'Card', type: 'card', icon: 'card', color: '#000', currency: 'EGP', initialBalance: 0, order: 0,
+      credit: { statementDay: 25, dueDay: 20 }, createdAt: 'x',
+    });
+    await database.transactions.add({
+      type: 'expense', amount: 450, currency: 'EGP', accountId: 'card', categoryId: 'c1', date: '2026-10-30T10:00:00.000Z',
+      instalment: { planId: 'p', n: 2, of: 6 }, createdAt: 'x',
+    });
+    const a = item();
+    const b = item({ fingerprint: 'b', date: '2026-11-07T09:15:00.000Z' });
+    const found = await duplicatesOf(
+      [{ fingerprint: 'a', draft: draft(a, { accountId: 'card' }) }, { fingerprint: 'b', draft: draft(b, { accountId: 'card' }) }],
+      database,
+    );
+    expect([...found.keys()]).toEqual(['a']);
   });
 });

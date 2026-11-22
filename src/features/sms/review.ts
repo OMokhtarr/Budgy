@@ -1,8 +1,10 @@
 import type { Converter } from '@/core/contexts/SettingsContext';
 import { alive, db, type BudgyDB } from '@/core/db/db';
 import { categoryFits } from '@/core/db/hooks';
+import { isCreditCard } from '@/core/utils/creditCard';
 import { currenciesOf, groupOf } from '@/core/utils/currency';
 import { rateToSave } from '@/core/utils/txRate';
+import type { InstalmentChoice } from '@/features/accounts/card/instalments';
 import type { TxDraft } from '@/features/transactions/txRecord';
 import type { Account, Category, Flow, SmsPending } from '@/shared/models';
 import { flowOf, type Suggestion } from './learning';
@@ -14,12 +16,23 @@ export interface CardPick {
   personId?: string;
   /** With an expense category on a text of money in: money back that lowers that category's spending. */
   moneyBack?: boolean;
+  /** Paid in instalments: kept while the account stays the same (see `withPick`), used only on a credit card. */
+  instalments?: InstalmentChoice;
 }
 
 /** What a card saves: the suggestion with the user's picks on top, or an account and a person. */
 export interface CardChoice extends Suggestion {
   personId?: string;
   moneyBack?: boolean;
+  instalments?: InstalmentChoice;
+}
+
+/** A card's picks after a change: a plan belongs to the account it was made on, so another account or a person drops it. */
+export function withPick(old: CardPick | undefined, patch: CardPick): CardPick {
+  const next = { ...old, ...patch };
+  const otherAccount = 'accountId' in patch && patch.accountId !== old?.accountId;
+  if (!('instalments' in patch) && (otherAccount || patch.personId)) delete next.instalments;
+  return next;
 }
 
 /** A debt account that can still be picked as the person a text lends to or is paid back by. */
@@ -41,6 +54,7 @@ export function usablePick(pick: CardPick | undefined, flow: Flow, accounts: Acc
     if (moneyBack) out.moneyBack = true;
   }
   if (pick?.personId && accounts.some((a) => a.id === pick.personId && isPerson(a))) out.personId = pick.personId;
+  if (pick?.instalments && !out.personId) out.instalments = pick.instalments;
   return out;
 }
 
@@ -51,11 +65,13 @@ export function usablePick(pick: CardPick | undefined, flow: Flow, accounts: Acc
  */
 export function choiceOf(s: Suggestion, pick: CardPick = {}): CardChoice {
   const accountId = pick.accountId ?? s.accountId;
+  const plan = pick.instalments ? { instalments: pick.instalments } : {};
   if (pick.personId) return { accountId, personId: pick.personId };
-  if (pick.moneyBack && pick.categoryId) return { accountId, categoryId: pick.categoryId, moneyBack: true };
+  if (pick.moneyBack && pick.categoryId) return { accountId, categoryId: pick.categoryId, moneyBack: true, ...plan };
   const ownCategory = pick.categoryId == null || pick.categoryId === s.categoryId;
   return {
     accountId,
+    ...plan,
     ...(ownCategory ? { categoryId: s.categoryId, subcategoryId: s.subcategoryId } : { categoryId: pick.categoryId }),
   };
 }
@@ -93,6 +109,19 @@ export function cardDraft(item: SmsPending, choice: CardChoice, conv: Pick<Conve
     subcategoryId: choice.subcategoryId,
     rate: rateToSave({ saved: conv.rate(currency), currency, base: conv.base }),
   };
+}
+
+/** Whether a text's card offers Instalments: money out, in a category (not lent to a person), on a credit card. */
+export function canInstalText(item: SmsPending, choice: CardChoice, account: Account | undefined): boolean {
+  return (
+    item.status === 'understood' &&
+    flowOf(item) === 'expense' &&
+    !choice.personId &&
+    !!choice.categoryId &&
+    !!account &&
+    account.id === choice.accountId &&
+    isCreditCard(account)
+  );
 }
 
 /** "+ New person" on a card: a debt account with just a name, in the text's currency, nothing owed yet. Returns its id. */

@@ -4,6 +4,7 @@ import { idFromKey } from '@/core/utils/id';
 import { stampAfter } from '@/core/utils/stamp';
 import { saveTx } from '@/features/transactions/txRecord';
 import type { Account, Category, Flow, MerchantRule, SmsLink, SmsPending, SmsSeen, Transaction } from '@/shared/models';
+import type { Duplicate } from './duplicate';
 
 /** Case-folded sender address; links and lookups use it. */
 export function addressKey(address: string): string {
@@ -123,6 +124,32 @@ export async function importText(item: SmsPending, record: Omit<Transaction, 'id
     const tx = await saveTx(record, undefined, database);
     await learn(database, item, tx, ids);
     return tx;
+  });
+}
+
+/**
+ * Skipped because it's already saved. A text that matches a planned instalment becomes that month's text: the
+ * instalment is marked with it (so no later text matches it again) and takes its fingerprint, unless it already has a
+ * purchase text's (instalment 1 of a plan bought by text), when the text is remembered as seen instead. The sender's
+ * card is learned, but not a merchant rule: a bank's instalment wording would give every later text this plan's
+ * category. Anything else is remembered as a duplicate.
+ */
+export async function skipDuplicate(item: SmsPending, match: Duplicate | undefined, database: BudgyDB = db): Promise<void> {
+  if (match?.kind !== 'instalment') return resolveSkipped(item, 'duplicate', database);
+  const { linkId } = await lessonIdsOf(item, match.tx);
+  const tables = [database.transactions, database.smsLinks, database.merchantRules, database.smsPending, database.smsSeen];
+  await database.transaction('rw', tables, async () => {
+    // Another text may have claimed it since the match was found (or it was deleted): then this one is just a duplicate.
+    const now = await database.transactions.get(match.tx.id!);
+    if (!now || !alive(now) || !now.instalment || now.instalment.sms) return resolveSkipped(item, 'duplicate', database);
+    const linked: Transaction = {
+      ...now,
+      instalment: { ...now.instalment, sms: item.fingerprint },
+      smsFingerprint: now.smsFingerprint ?? item.fingerprint,
+    };
+    await database.transactions.update(now.id!, { instalment: linked.instalment, smsFingerprint: linked.smsFingerprint });
+    if (now.smsFingerprint) await database.smsSeen.put({ fingerprint: item.fingerprint, outcome: 'duplicate', at: new Date().toISOString() });
+    await learn(database, item, linked, { linkId });
   });
 }
 

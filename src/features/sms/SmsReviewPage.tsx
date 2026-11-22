@@ -21,10 +21,11 @@ import { actionsFor, duplicatesOf, importMany } from './batch';
 import { useLearned, usePendingSms } from './hooks';
 import CombineSheet from './CombineSheet';
 import { combineFlow, combineTexts, defaultNote, takeOff, type TextPart } from './grouping';
-import { flowOf, resolveSkipped, suggestFor } from './learning';
+import { flowOf, skipDuplicate, suggestFor } from './learning';
 import PickerSheet, { type PickerItem, type PickerSection } from './PickerSheet';
 import PurchasePickerSheet from './PurchasePickerSheet';
-import { addPerson, cardDraft, choiceOf, isPerson, usablePick, type CardChoice, type CardPick } from './review';
+import { addPerson, canInstalText, cardDraft, choiceOf, isPerson, usablePick, withPick, type CardChoice, type CardPick } from './review';
+import { toPlanOptions, type PlanOptions } from '@/features/accounts/card/instalments';
 import { markPendingSeen } from './scan';
 import ScanSheet from './ScanSheet';
 import SmsItemCard from './SmsItemCard';
@@ -181,7 +182,7 @@ export default function SmsReviewPage() {
     setPicking({ item, kind });
     setPickerOpen(true);
   };
-  const setPick = (fp: string, patch: CardPick) => setPicks((p) => ({ ...p, [fp]: { ...p[fp], ...patch } }));
+  const setPick = (fp: string, patch: CardPick) => setPicks((p) => ({ ...p, [fp]: withPick(p[fp], patch) }));
 
   /**
    * "Same category": every selected text gets the category and the complete ones are saved together, after one
@@ -190,12 +191,20 @@ export default function SmsReviewPage() {
   const applyCategory = async (categoryId: string, moneyBack: boolean) => {
     const patch: CardPick = { categoryId, personId: undefined, moneyBack: moneyBack || undefined };
     const batch = chosen;
-    setPicks((p) => Object.fromEntries([...Object.entries(p), ...batch.map((x) => [x.fingerprint, { ...p[x.fingerprint], ...patch }])]));
-    const complete: { item: SmsPending; draft: TxDraft }[] = [];
+    setPicks((p) => Object.fromEntries([...Object.entries(p), ...batch.map((x) => [x.fingerprint, withPick(p[x.fingerprint], patch)])]));
+    const complete: { item: SmsPending; draft: TxDraft; plan?: PlanOptions }[] = [];
     const incomplete: string[] = [];
     for (const item of batch) {
-      const draft = cardDraft(item, choiceFor(item, patch), conv);
-      if (draft) complete.push({ item, draft });
+      const choice = choiceFor(item, patch);
+      const draft = cardDraft(item, choice, conv);
+      // A text whose card was set to instalments is saved as its plan, as its own Confirm would.
+      const card = accounts?.find((a) => a.id === choice.accountId);
+      const category = categories?.find((c) => c.id === choice.categoryId);
+      const plan =
+        choice.instalments && card && canInstalText(item, choice, card)
+          ? toPlanOptions(choice.instalments, card, categories ?? [], t('instalments.feeNote', { name: item.merchant || categoryName(category) }))
+          : undefined;
+      if (draft) complete.push({ item, draft, plan });
       else incomplete.push(item.fingerprint);
     }
 
@@ -207,7 +216,7 @@ export default function SmsReviewPage() {
         const answer = await askDuplicates(dupes.size);
         if (answer === 'cancel') return;
         if (answer === 'skip') {
-          await Promise.all(complete.filter(({ item }) => dupes.has(item.fingerprint)).map(({ item }) => resolveSkipped(item, 'duplicate')));
+          await Promise.all(complete.filter(({ item }) => dupes.has(item.fingerprint)).map(({ item }) => skipDuplicate(item, dupes.get(item.fingerprint))));
           toSave = complete.filter(({ item }) => !dupes.has(item.fingerprint));
         }
       }
@@ -466,6 +475,9 @@ export default function SmsReviewPage() {
                     account={accounts?.find((a) => a.id === choice.accountId)}
                     category={categories?.find((c) => c.id === choice.categoryId)}
                     person={choice.personId ? accounts?.find((a) => a.id === choice.personId) : undefined}
+                    accounts={accounts ?? []}
+                    categories={categories ?? []}
+                    onPlan={(plan) => setPick(item.fingerprint, { instalments: plan })}
                     onPickAccount={() => openPicker(item, 'account')}
                     onPickCategory={() => openPicker(item, 'category')}
                     selecting={selecting}

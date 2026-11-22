@@ -329,6 +329,12 @@ it('instalmentPlans lists running plans with what is charged and still to come',
   expect(instalmentPlans('card', txs, day(2027, 2, 1))).toEqual([]);
 });
 
+it('instalmentPlans counts instalments before the first entry as charged', () => {
+  const txs = [3, 4, 5].map((n, k) => inst(1000, day(2026, 11 + k, 26), n, 5)); // 26 Nov, 26 Dec, 26 Jan
+  const [p] = instalmentPlans('card', txs, day(2026, 11, 28));
+  expect(p).toMatchObject({ of: 5, charged: 3, toCome: 2000 });
+});
+
 it('cardTransactions leaves out charges after the next statement', () => {
   const r = cardTransactions('card', [inst(1, day(2026, 11, 27), 1, 2), inst(2, day(2027, 1, 2), 2, 2)], cycleOf(credit(), day(2026, 11, 28)));
   expect(r.thisCycle.map((t) => t.amount)).toEqual([1]);

@@ -1,8 +1,9 @@
 import { db, type BudgyDB } from '@/core/db/db';
 import { buildTxRecord, type TxDraft } from '@/features/transactions/txRecord';
 import type { SmsPending } from '@/shared/models';
-import { findManualDuplicate } from './duplicate';
-import { importText } from './learning';
+import { findDuplicate, type Duplicate } from './duplicate';
+import { createPlan, type PlanOptions } from '@/features/accounts/card/instalments';
+import { importText, resolveImported } from './learning';
 
 /** Which of the selection bar's actions fit the selected texts. */
 export interface BatchActions {
@@ -24,22 +25,34 @@ export function actionsFor(items: SmsPending[]): BatchActions {
   return { sameCategory: allIn || allOut, combine: items.length > 1, takeOff: allIn };
 }
 
-/** The fingerprints of the drafts that look like a transaction already added by hand. */
-export async function duplicatesOf(drafts: { fingerprint: string; draft: TxDraft }[], database: BudgyDB = db): Promise<Set<string>> {
-  const found = new Set<string>();
+/** The drafts that look already saved (added by hand, or a planned instalment), by fingerprint, with what they match. */
+export async function duplicatesOf(drafts: { fingerprint: string; draft: TxDraft }[], database: BudgyDB = db): Promise<Map<string, Duplicate>> {
+  const found = new Map<string, Duplicate>();
+  // One instalment is one month's charge: once a text claims it, the next text can't.
+  const taken = new Set<string>();
   for (const { fingerprint, draft } of drafts) {
-    if (await findManualDuplicate(draft, database)) found.add(fingerprint);
+    const match = await findDuplicate(draft, database, taken);
+    if (!match) continue;
+    found.set(fingerprint, match);
+    if (match.kind === 'instalment') taken.add(match.tx.id!);
   }
   return found;
 }
 
-/** Saves each text's transaction on its own (as its card's Confirm would); one that fails doesn't stop the rest. */
-export async function importMany(entries: { item: SmsPending; draft: TxDraft }[], database: BudgyDB = db): Promise<{ saved: number; failed: number }> {
+/**
+ * Saves each text's transaction on its own (as its card's Confirm would), as instalments when it has a plan; one that
+ * fails doesn't stop the rest.
+ */
+export async function importMany(
+  entries: { item: SmsPending; draft: TxDraft; plan?: PlanOptions }[],
+  database: BudgyDB = db,
+): Promise<{ saved: number; failed: number }> {
   let saved = 0;
   let failed = 0;
-  for (const { item, draft } of entries) {
+  for (const { item, draft, plan } of entries) {
     try {
-      await importText(item, buildTxRecord(draft), database);
+      if (plan) await resolveImported(item, await createPlan(buildTxRecord(draft), plan, database), database);
+      else await importText(item, buildTxRecord(draft), database);
       saved++;
     } catch {
       failed++;

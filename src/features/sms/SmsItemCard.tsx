@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { IonIcon, useIonToast } from '@ionic/react';
-import { checkmarkCircle, ellipseOutline } from 'ionicons/icons';
+import { albumsOutline, checkmarkCircle, ellipseOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
@@ -9,11 +9,13 @@ import { useNames } from '@/core/db/hooks';
 import { currenciesOf } from '@/core/utils/currency';
 import { dayTimeLabel } from '@/core/utils/period';
 import { buildTxRecord } from '@/features/transactions/txRecord';
+import { createPlan, toPlanOptions } from '@/features/accounts/card/instalments';
+import InstalmentSheet, { instalmentChipLabel, type InstalmentChoice } from '@/features/transactions/InstalmentSheet';
 import { useLongPress } from '@/shared/hooks/useLongPress';
 import { iconFor } from '@/shared/icons';
 import type { Account, Category, SmsPending } from '@/shared/models';
-import { flowOf, importText, resolveImported, resolveSkipped } from './learning';
-import { cardDraft, type CardChoice } from './review';
+import { flowOf, importText, resolveImported, resolveSkipped, skipDuplicate } from './learning';
+import { canInstalText, cardDraft, type CardChoice } from './review';
 import { useDuplicatePrompt } from './useDuplicatePrompt';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 
@@ -25,6 +27,11 @@ interface Props {
   category?: Category;
   /** The debt account picked in the category's place: the text is money lent to them, or paid back by them. */
   person?: Account;
+  /** Every account (the instalments sheet offers the ones that can pay the card) and category (the fee goes to Bills). */
+  accounts: Account[];
+  categories: Category[];
+  /** The instalments chosen in the sheet, or undefined for "Pay in full". */
+  onPlan(plan: InstalmentChoice | undefined): void;
   onPickAccount(): void;
   onPickCategory(): void;
   /** While several texts are being picked, a tap toggles the card instead of opening the editor. */
@@ -41,7 +48,8 @@ const only = (fn: () => void) => (e: MouseEvent) => {
 };
 
 /** One bank text on the review screen: confirm or dismiss it here, or tap it to open the editor pre-filled. */
-export default function SmsItemCard({ item, choice, account, category, person, onPickAccount, onPickCategory, selecting, selected, onSelect }: Props) {
+export default function SmsItemCard(props: Props) {
+  const { item, choice, account, category, person, accounts, categories, onPlan, onPickAccount, onPickCategory, selecting, selected, onSelect } = props;
   const { t } = useTranslation();
   const locale = useLocale();
   const money = useMoney();
@@ -50,6 +58,10 @@ export default function SmsItemCard({ item, choice, account, category, person, o
   const askDuplicate = useDuplicatePrompt();
   const { accountName, categoryName } = useNames();
   const [busy, setBusy] = useState(false);
+  // Instalments, offered while the text is money out on a credit card; the page drops them when another account is picked.
+  const [planOpen, setPlanOpen] = useState(false);
+  const canInstal = canInstalText(item, choice, account);
+  const instal = canInstal ? choice.instalments : undefined;
   const [presentToast] = useIonToast();
   const failed = () => void presentToast({ message: t('sms.actionFailed'), duration: 3000, position: 'top', color: 'danger' });
 
@@ -80,9 +92,15 @@ export default function SmsItemCard({ item, choice, account, category, person, o
 
   const confirm = run(async () => {
     if (!draft) return;
-    const answer = await askDuplicate(draft);
+    const { choice: answer, match } = await askDuplicate(draft);
     if (answer === 'cancel') return;
-    if (answer === 'skip') return resolveSkipped(item, 'duplicate');
+    if (answer === 'skip') return skipDuplicate(item, match);
+    if (instal && account) {
+      const feeNote = t('instalments.feeNote', { name: item.merchant || categoryName(category) });
+      // Saved once even if learning fails and Confirm is tapped again: the plan keeps the text's fingerprint.
+      const saved = await createPlan(buildTxRecord(draft), toPlanOptions(instal, account, categories, feeNote));
+      return resolveImported(item, saved);
+    }
     await importText(item, buildTxRecord(draft));
   });
 
@@ -104,6 +122,7 @@ export default function SmsItemCard({ item, choice, account, category, person, o
       date: item.date,
       note: item.merchant,
       smsFingerprint: item.fingerprint,
+      instalments: person ? undefined : instal,
       header: (
         <div className="b-smshead">
           <div className="b-smscard__top">
@@ -115,7 +134,7 @@ export default function SmsItemCard({ item, choice, account, category, person, o
       ),
       // The transaction is saved by then; trying again from the card won't save it twice.
       onSaved: (tx) => void resolveImported(item, tx).catch(failed),
-      onSkipped: () => void resolveSkipped(item, 'duplicate').catch(failed),
+      onSkipped: (match) => void skipDuplicate(item, match).catch(failed),
     });
   };
 
@@ -139,71 +158,101 @@ export default function SmsItemCard({ item, choice, account, category, person, o
   const incoming = item.direction === 'in';
 
   return (
-    <div className={`b-card b-smscard ${busy ? 'is-busy' : ''} ${selected ? 'is-selected' : ''}`} {...tourAttr('sms.card')} {...press}>
-      {/* The tappable summary; the click reaches the card's handler. */}
-      <button type="button" className="b-smscard__main">
-        <span className="b-smscard__top">
-          <span>
-            {selecting && onSelect && <IonIcon className="b-smscard__check" icon={selected ? checkmarkCircle : ellipseOutline} />}
-            {sender}
+    <>
+      <div className={`b-card b-smscard ${busy ? 'is-busy' : ''} ${selected ? 'is-selected' : ''}`} {...tourAttr('sms.card')} {...press}>
+        {/* The tappable summary; the click reaches the card's handler. */}
+        <button type="button" className="b-smscard__main">
+          <span className="b-smscard__top">
+            <span>
+              {selecting && onSelect && <IonIcon className="b-smscard__check" icon={selected ? checkmarkCircle : ellipseOutline} />}
+              {sender}
+            </span>
+            <span>{when}</span>
           </span>
-          <span>{when}</span>
-        </span>
-        {understood && item.amount != null && item.currency && (
-          <span className={`b-smscard__amt b-num ${incoming ? 'b-income' : 'b-expense'}`} dir="ltr">
-            {incoming ? '+' : '−'} {money.plain(item.amount, item.currency)} {item.currency}
-          </span>
+          {understood && item.amount != null && item.currency && (
+            <span className={`b-smscard__amt b-num ${incoming ? 'b-income' : 'b-expense'}`} dir="ltr">
+              {incoming ? '+' : '−'} {money.plain(item.amount, item.currency)} {item.currency}
+            </span>
+          )}
+          {understood && item.merchant && <span className="b-smscard__merchant">{item.merchant}</span>}
+        </button>
+
+        {selecting ? null : understood ? (
+          <>
+            <div className="b-smscard__chips">
+              {chip(t('sms.pickAccount'), account && { name: accountName(account), icon: account.icon, color: account.color }, onPickAccount)}
+              {person
+                ? chip(t('sms.pickCategory'), { name: accountName(person), icon: person.icon, color: person.color }, onPickCategory)
+                : chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
+              {canInstal && (
+                <button
+                  className={`b-smschip ${instal ? 'is-set' : 'is-empty'}`}
+                  style={instal ? ({ '--c': 'var(--ion-color-primary)' } as CSSProperties) : undefined}
+                  onClick={only(() => setPlanOpen(true))}
+                  disabled={busy}
+                >
+                  <IonIcon icon={albumsOutline} />
+                  {instal ? instalmentChipLabel(t, instal) : t('instalments.chip')}
+                </button>
+              )}
+            </div>
+            {choice.moneyBack && category && !person && (
+              <p className="b-smscard__note">{t('sms.moneyBackNote', { category: categoryName(category) })}</p>
+            )}
+            {person && (
+              <p className="b-smscard__note">
+                {personNotHeld
+                  ? t('sms.personCurrency', { name: accountName(person), currency: item.currency, held: personHeld.join(' / ') })
+                  : t(lent ? 'sms.lentNote' : 'sms.paidBackNote', { name: accountName(person) })}
+              </p>
+            )}
+            {notHeld && (
+              <p className="b-smscard__note">
+                {t('sms.savedInCurrency', { currency: item.currency, account: accountName(account), held: held.join(' / ') })}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="b-smscard__warn">{t('sms.couldntRead')}</div>
+            <p className="b-smscard__raw" dir="auto">{item.body}</p>
+          </>
         )}
-        {understood && item.merchant && <span className="b-smscard__merchant">{item.merchant}</span>}
-      </button>
 
-      {selecting ? null : understood ? (
-        <>
-          <div className="b-smscard__chips">
-            {chip(t('sms.pickAccount'), account && { name: accountName(account), icon: account.icon, color: account.color }, onPickAccount)}
-            {person
-              ? chip(t('sms.pickCategory'), { name: accountName(person), icon: person.icon, color: person.color }, onPickCategory)
-              : chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
+        {!selecting && (
+          <div className="b-smscard__btns">
+            <button className="b-btn b-btn--muted" onClick={only(() => void dismiss())} disabled={busy}>
+              {t('sms.dismiss')}
+            </button>
+            {understood ? (
+              <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(confirm))} disabled={busy || !draft}>
+                {t('sms.confirm')}
+              </button>
+            ) : (
+              <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(edit))} disabled={busy}>
+                {t('sms.fillIn')}
+              </button>
+            )}
           </div>
-          {choice.moneyBack && category && !person && (
-            <p className="b-smscard__note">{t('sms.moneyBackNote', { category: categoryName(category) })}</p>
-          )}
-          {person && (
-            <p className="b-smscard__note">
-              {personNotHeld
-                ? t('sms.personCurrency', { name: accountName(person), currency: item.currency, held: personHeld.join(' / ') })
-                : t(lent ? 'sms.lentNote' : 'sms.paidBackNote', { name: accountName(person) })}
-            </p>
-          )}
-          {notHeld && (
-            <p className="b-smscard__note">
-              {t('sms.savedInCurrency', { currency: item.currency, account: accountName(account), held: held.join(' / ') })}
-            </p>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="b-smscard__warn">{t('sms.couldntRead')}</div>
-          <p className="b-smscard__raw" dir="auto">{item.body}</p>
-        </>
-      )}
+        )}
+      </div>
 
-      {!selecting && (
-        <div className="b-smscard__btns">
-          <button className="b-btn b-btn--muted" onClick={only(() => void dismiss())} disabled={busy}>
-            {t('sms.dismiss')}
-          </button>
-          {understood ? (
-            <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(confirm))} disabled={busy || !draft}>
-              {t('sms.confirm')}
-            </button>
-          ) : (
-            <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(edit))} disabled={busy}>
-              {t('sms.fillIn')}
-            </button>
-          )}
-        </div>
+      {/* Outside the card: the sheet is portalled, but React still bubbles its taps to the card's press handler. */}
+      {canInstal && account && item.amount != null && item.currency && (
+        <InstalmentSheet
+          isOpen={planOpen}
+          amount={item.amount}
+          currency={item.currency}
+          card={account}
+          accounts={accounts}
+          value={choice.instalments}
+          onDone={(v) => {
+            onPlan(v);
+            setPlanOpen(false);
+          }}
+          onClose={() => setPlanOpen(false)}
+        />
       )}
-    </div>
+    </>
   );
 }

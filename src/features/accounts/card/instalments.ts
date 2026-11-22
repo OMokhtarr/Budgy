@@ -4,11 +4,25 @@ import { decimalsOf, roundTo } from '@/core/utils/currency';
 import { newId } from '@/core/utils/id';
 import { parseNumber } from '@/core/utils/number';
 import { dayKey } from '@/core/utils/period';
-import type { CreditCard, Recurring, Transaction } from '@/shared/models';
+import type { Account, Category, CreditCard, Recurring, Transaction } from '@/shared/models';
+
+/** What the sheet chose: how many months, which instalment the amount is (if one), a fee, and who pays each month. */
+export interface InstalmentChoice {
+  months: number;
+  /** Set when the amount is one monthly instalment: which one it is (1..months). Unset: the amount is the full price. */
+  first?: number;
+  fee?: number;
+  autoPayFrom?: string;
+}
 
 /** How a purchase is split, as chosen in the editor. */
 export interface PlanOptions {
   months: number;
+  /**
+   * The purchase is this instalment (of `months`), at its own amount: a plan that started before Budgy, or a bank text
+   * for one monthly instalment. The ones before it aren't added. Unset: the purchase is the full price, split.
+   */
+  first?: number;
   /** One-time fee the bank charges for the plan, in the purchase's currency. */
   fee?: number;
   /** Where the fee goes (Bills). */
@@ -27,6 +41,62 @@ export const MAX_MONTHS = 60;
 export function parseMonths(typed: string): number | undefined {
   const n = parseNumber(typed);
   return Number.isInteger(n) && n >= MIN_MONTHS && n <= MAX_MONTHS ? n : undefined;
+}
+
+/** Typed "which instalment": a whole number from 1 to `months`; undefined while `months` isn't valid. */
+export function parseFirst(typed: string, months: number | undefined): number | undefined {
+  const n = parseNumber(typed);
+  return months != null && Number.isInteger(n) && n >= 1 && n <= months ? n : undefined;
+}
+
+/**
+ * The amounts of the entries a plan adds: the full price split in `months`, or, from instalment `first` on, the amount
+ * itself once for each instalment left (`first` to `months`).
+ */
+export function planParts(amount: number, months: number, currency: string, first?: number): number[] {
+  return first == null ? splitAmount(amount, months, currency) : Array.from({ length: months - first + 1 }, () => amount);
+}
+
+/** What the sheet's fields come to: the numbers once they're valid, whether the fee applies, and the hint to show. */
+export interface InstalmentForm {
+  months?: number;
+  first?: number;
+  valid: boolean;
+  /** Show the fee field: not for a plan that started before instalment 1 (kept while n is being retyped). */
+  withFee: boolean;
+  /** Save the typed fee: only for the full price or instalment 1. */
+  sendFee: boolean;
+  hint: { key: 'monthsRange' | 'whichRange' | 'perMonth' | 'totalLeft'; values: Record<string, number> };
+}
+
+export function instalmentForm(i: { oneInstalment: boolean; months: string; first: string; amount: number; currency: string }): InstalmentForm {
+  const months = parseMonths(i.months);
+  const first = i.oneInstalment ? parseFirst(i.first, months) : undefined;
+  const typedFirst = parseNumber(i.first);
+  const withFee = !i.oneInstalment || i.first.trim() === '' || typedFirst === 1;
+  const sendFee = !i.oneInstalment || first === 1;
+  const range = { key: 'monthsRange' as const, values: { min: MIN_MONTHS, max: MAX_MONTHS } };
+  if (!months) return { valid: false, withFee, sendFee, hint: range };
+  if (i.oneInstalment) {
+    const valid = first != null;
+    if (!valid || !(i.amount > 0)) return { months, first, valid, withFee, sendFee, hint: { key: 'whichRange', values: { max: months } } };
+    const total = roundTo(i.amount * months, i.currency);
+    const left = roundTo(i.amount * (months - first), i.currency);
+    return { months, first, valid, withFee, sendFee, hint: { key: 'totalLeft', values: { total, left } } };
+  }
+  if (!(i.amount > 0)) return { months, valid: true, withFee, sendFee, hint: range };
+  return { months, valid: true, withFee, sendFee, hint: { key: 'perMonth', values: { amount: planParts(i.amount, months, i.currency)[0] } } };
+}
+
+/** The editor's or a bank text's choice as the options a plan is saved with: the fee goes to Bills. */
+export function toPlanOptions(
+  choice: InstalmentChoice,
+  card: Account,
+  categories: Category[],
+  feeNote: string,
+): PlanOptions {
+  const bills = categories.find((c) => c.key === 'bills' && !c.archived && !c.deletedAt);
+  return { ...choice, feeCategoryId: bills?.id, feeNote, credit: card.credit! };
 }
 
 /**
@@ -59,9 +129,10 @@ export function instalmentDates(firstIso: string, n: number): string[] {
 
 const stamp = () => new Date().toISOString();
 
-/** Instalments 2..N, the fee, and the automatic payment of a plan whose instalment 1 is `first`. */
+/** The instalments after `first`, the fee, and the automatic payment of a plan whose first entry is `first`. */
 async function addRest(first: Transaction | Omit<Transaction, 'id'>, planId: string, parts: number[], o: PlanOptions, database: BudgyDB) {
-  const dates = instalmentDates(first.date, o.months);
+  const start = o.first ?? 1;
+  const dates = instalmentDates(first.date, parts.length);
   const now = stamp();
   // One instalment per month, copied from the purchase (not its id or sync state); only the first keeps the bank
   // text it came from.
@@ -71,12 +142,13 @@ async function addRest(first: Transaction | Omit<Transaction, 'id'>, planId: str
     amount,
     date: dates[i + 1],
     smsFingerprint: undefined,
-    instalment: { planId, n: i + 2, of: o.months },
+    instalment: { planId, n: start + i + 1, of: o.months },
     createdAt: now,
     updatedAt: now,
   }));
   if (rest.length) await database.transactions.bulkAdd(rest as Transaction[]);
-  if (o.fee && o.fee > 0) {
+  // A plan that started before instalment 1 had its fee charged back then.
+  if (o.fee && o.fee > 0 && start === 1) {
     await database.transactions.add({
       type: 'expense',
       amount: roundTo(o.fee, first.currency),
@@ -137,12 +209,24 @@ function paymentRules(
 }
 
 /**
+ * A plan's first entry. When the purchase is one monthly instalment from a bank text, that text is this month's charge,
+ * so it's linked (no other text matches it). A full-price purchase text isn't a monthly one: its instalment 1 stays
+ * open for the bank's monthly text.
+ */
+const firstInstalment = (planId: string, o: PlanOptions, fingerprint: string | undefined): Transaction['instalment'] => ({
+  planId,
+  n: o.first ?? 1,
+  of: o.months,
+  ...(o.first != null && fingerprint ? { sms: fingerprint } : {}),
+});
+
+/**
  * Saves a new purchase on a credit card as a plan of monthly instalments; returns instalment 1. A purchase from a bank
  * text is saved once, like `saveTx`: if one with its fingerprint exists (even deleted), that one is returned instead.
  */
 export async function createPlan(purchase: Omit<Transaction, 'id'>, o: PlanOptions, database: BudgyDB = db): Promise<Transaction> {
   const planId = newId();
-  const parts = splitAmount(purchase.amount, o.months, purchase.currency);
+  const parts = planParts(purchase.amount, o.months, purchase.currency, o.first);
   return database.transaction('rw', database.transactions, database.recurring, async () => {
     const fingerprint = purchase.smsFingerprint;
     const existing = fingerprint ? await database.transactions.where('smsFingerprint').equals(fingerprint).first() : undefined;
@@ -151,7 +235,7 @@ export async function createPlan(purchase: Omit<Transaction, 'id'>, o: PlanOptio
     const first: Omit<Transaction, 'id'> = {
       ...purchase,
       amount: parts[0],
-      instalment: { planId, n: 1, of: o.months },
+      instalment: firstInstalment(planId, o, purchase.smsFingerprint),
       createdAt: purchase.createdAt ?? now,
       updatedAt: now,
     };
@@ -161,12 +245,12 @@ export async function createPlan(purchase: Omit<Transaction, 'id'>, o: PlanOptio
   });
 }
 
-/** Turns a saved purchase into a plan: it becomes instalment 1 (same id and date), and the rest are added. */
+/** Turns a saved purchase into a plan: it becomes its first instalment (same id and date), and the rest are added. */
 export async function convertToPlan(tx: Transaction, o: PlanOptions, database: BudgyDB = db): Promise<string> {
   const planId = newId();
-  const parts = splitAmount(tx.amount, o.months, tx.currency);
+  const parts = planParts(tx.amount, o.months, tx.currency, o.first);
   return database.transaction('rw', database.transactions, database.recurring, async () => {
-    const first: Transaction = { ...tx, amount: parts[0], instalment: { planId, n: 1, of: o.months }, updatedAt: stamp() };
+    const first: Transaction = { ...tx, amount: parts[0], instalment: firstInstalment(planId, o, tx.smsFingerprint), updatedAt: stamp() };
     await database.transactions.put(first);
     await addRest(first, planId, parts, o, database);
     return planId;

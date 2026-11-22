@@ -2,8 +2,11 @@ import '@/test/setup-db';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { alive, BudgyDB } from '@/core/db/db';
 import { saveTx } from '@/features/transactions/txRecord';
-import type { CreditCard, Transaction } from '@/shared/models';
-import { convertToPlan, createPlan, deletePlan, instalmentDates, parseMonths, payOffPlan, splitAmount } from './instalments';
+import type { Account, Category, CreditCard, Transaction } from '@/shared/models';
+import {
+  convertToPlan, createPlan, deletePlan, instalmentDates, instalmentForm, parseFirst, parseMonths, payOffPlan, planParts, splitAmount,
+  toPlanOptions,
+} from './instalments';
 
 const database = new BudgyDB('t-instalments');
 const credit: CreditCard = { statementDay: 25, dueDay: 20 };
@@ -110,6 +113,107 @@ describe('instalments', () => {
     const first = await database.transactions.get(saved.id!);
     expect(first).toMatchObject({ amount: 500, date: purchase.date, instalment: { n: 1, of: 2 } });
     expect((await live()).length).toBe(2);
+  });
+
+  it('planParts repeats the amount from instalment n', () => {
+    const parts = planParts(1000, 12, 'EGP', 3);
+    expect(parts).toHaveLength(10);
+    expect(parts.every((p) => p === 1000)).toBe(true);
+    expect(planParts(1000, 3, 'EGP')).toEqual([333.33, 333.33, 333.34]);
+  });
+
+  it('parseFirst takes 1..months, in any digits', () => {
+    expect(parseFirst('3', 12)).toBe(3);
+    expect(parseFirst('٣', 12)).toBe(3);
+    expect(parseFirst('12', 12)).toBe(12);
+    for (const bad of ['', '0', '13', '2.5']) expect(parseFirst(bad, 12)).toBeUndefined();
+    expect(parseFirst('3', undefined)).toBeUndefined();
+  });
+
+  it('createPlan from instalment 3 of 12 adds 3..12 at the amount', async () => {
+    await createPlan(purchase, { months: 12, first: 3, feeNote: '', credit }, database);
+    const txs = await live();
+    expect(txs).toHaveLength(10);
+    expect(txs.every((t) => t.amount === 1000 && t.instalment?.of === 12)).toBe(true);
+    expect(txs.map((t) => t.instalment?.n)).toEqual([3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    expect(txs[0].date).toBe(purchase.date);
+    expect(ymd(new Date(txs[1].date))).toEqual([2026, 2, 28]);
+  });
+
+  it('a plan from a text of one monthly instalment is that month’s text', async () => {
+    const first = await createPlan({ ...purchase, smsFingerprint: 'fp-3' }, { months: 12, first: 3, feeNote: '', credit }, database);
+    expect(first.instalment).toMatchObject({ n: 3, sms: 'fp-3' });
+    expect((await live()).filter((t) => t.instalment?.sms).length).toBe(1);
+  });
+
+  it('a full-price plan from a text leaves instalment 1 open for its monthly text', async () => {
+    const first = await createPlan({ ...purchase, smsFingerprint: 'fp-buy' }, { months: 3, feeNote: '', credit }, database);
+    expect(first.instalment?.sms).toBeUndefined();
+  });
+
+  it('createPlan on the last instalment saves just that one', async () => {
+    await createPlan(purchase, { months: 12, first: 12, autoPayFrom: 'bank', feeNote: '', credit }, database);
+    const txs = await live();
+    expect(txs.map((t) => t.instalment?.n)).toEqual([12]);
+    expect((await database.recurring.toArray()).length).toBe(1);
+  });
+
+  it('adds no fee to a plan that started before instalment 1', async () => {
+    await createPlan(purchase, { months: 12, first: 3, fee: 50, feeCategoryId: 'bills', feeNote: 'fee', credit }, database);
+    expect((await live()).filter((t) => !t.instalment)).toEqual([]);
+  });
+
+  it('pays automatically only the instalments added', async () => {
+    await createPlan(purchase, { months: 12, first: 3, autoPayFrom: 'bank', feeNote: '', credit }, database);
+    const monthOf = (k: string) => Number(k.slice(0, 4)) * 12 + Number(k.slice(5, 7));
+    const rules = await database.recurring.toArray();
+    expect(rules.every((r) => r.tx.amount === 1000)).toBe(true);
+    expect(rules.reduce((s, r) => s + monthOf(r.until!) - monthOf(r.start) + 1, 0)).toBe(10);
+  });
+
+  it('convertToPlan from instalment 3 keeps its amount', async () => {
+    const saved = await saveTx(purchase, undefined, database);
+    await convertToPlan(saved, { months: 12, first: 3, feeNote: '', credit }, database);
+    expect(await database.transactions.get(saved.id!)).toMatchObject({ amount: 1000, date: purchase.date, instalment: { n: 3, of: 12 } });
+    expect((await live()).length).toBe(10);
+  });
+
+  describe('instalmentForm', () => {
+    const form = (over: Partial<Parameters<typeof instalmentForm>[0]> = {}) =>
+      instalmentForm({ oneInstalment: false, months: '12', first: '1', amount: 1200, currency: 'EGP', ...over });
+
+    it('full price: valid with months, a monthly hint and the fee', () => {
+      expect(form()).toMatchObject({ valid: true, months: 12, withFee: true, sendFee: true, hint: { key: 'perMonth', values: { amount: 100 } } });
+      expect(form().first).toBeUndefined();
+    });
+
+    it('says the months range while months are wrong, and with no amount yet', () => {
+      expect(form({ months: '1' })).toMatchObject({ valid: false, hint: { key: 'monthsRange', values: { min: 2, max: 60 } } });
+      expect(form({ amount: 0 })).toMatchObject({ valid: true, hint: { key: 'monthsRange' } });
+    });
+
+    it('one instalment: total and what is left, the fee only for the first', () => {
+      expect(form({ oneInstalment: true, first: '3' })).toMatchObject({
+        valid: true, first: 3, withFee: false, sendFee: false, hint: { key: 'totalLeft', values: { total: 14400, left: 10800 } },
+      });
+      expect(form({ oneInstalment: true, first: '1' })).toMatchObject({ withFee: true, sendFee: true });
+    });
+
+    it('one instalment: says which numbers fit while n is wrong, and keeps the fee field while n is being retyped', () => {
+      expect(form({ oneInstalment: true, first: '13' })).toMatchObject({ valid: false, withFee: false, hint: { key: 'whichRange', values: { max: 12 } } });
+      expect(form({ oneInstalment: true, first: '' })).toMatchObject({ valid: false, withFee: true, sendFee: false, hint: { key: 'whichRange' } });
+    });
+  });
+
+  it('toPlanOptions picks Bills and the card’s settings', () => {
+    const card = { id: 'card', credit } as Account;
+    const cats = [
+      { id: 'f', key: 'food', kind: 'expense' },
+      { id: 'b', key: 'bills', kind: 'expense' },
+    ] as Category[];
+    expect(toPlanOptions({ months: 6, first: 2, autoPayFrom: 'bank' }, card, cats, 'note')).toEqual({
+      months: 6, first: 2, autoPayFrom: 'bank', feeCategoryId: 'b', feeNote: 'note', credit,
+    });
   });
 
   it('payOffPlan moves what is still to come to now and stops the payment', async () => {
