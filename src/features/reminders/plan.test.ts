@@ -3,10 +3,11 @@ import { MAX_REMINDERS, planReminders, reminderId, type ReminderTexts } from './
 import type { CardAmounts, CardStatus } from '@/core/utils/creditCard';
 import type { Account, Recurring } from '@/shared/models';
 
+const join = (amounts: Record<string, number>) => Object.entries(amounts).map(([c, n]) => `${c}${n}`).join('+');
 const texts: ReminderTexts = {
   recurringTitle: (r) => `R ${r.id}`,
   recurringBody: (r) => (r.auto ? 'auto' : 'ask'),
-  cardTitle: (a, amounts) => `C ${a.id} ${Object.entries(amounts).map(([c, n]) => `${c}${n}`).join('+')}`,
+  cardTitle: (a, amounts, minimum) => `C ${a.id} ${join(amounts)}${minimum ? ` min ${join(minimum)}` : ''}`,
   cardBody: (days) => `in ${days}`,
 };
 
@@ -70,6 +71,35 @@ describe('planReminders', () => {
       [new Date(2027, 0, 17, 9), 'C visa EGP500', 'in 3', '/cards/visa'],
       [new Date(2027, 0, 20, 9), 'C visa EGP500', 'in 0', '/cards/visa'],
     ]);
+  });
+
+  it('mentions the minimum while it is below what’s due', () => {
+    const s = status('due', new Date(2026, 11, 10), { EGP: amounts({ owed: 12000, due: 12000, minimum: 1350 }) });
+    const titles = planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts }).map((p) => p.title);
+    expect(titles).toEqual(['C visa EGP12000 min EGP1350', 'C visa EGP12000 min EGP1350']);
+  });
+
+  it('leaves the minimum out when it equals what’s due, or is 0, or the card has none', () => {
+    for (const minimum of [12000, 0, undefined]) {
+      const s = status('due', new Date(2026, 11, 10), { EGP: amounts({ owed: 12000, due: 12000, minimum }) });
+      const titles = planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts }).map((p) => p.title);
+      expect(titles).toEqual(['C visa EGP12000', 'C visa EGP12000']);
+    }
+  });
+
+  it('gives the minimum in every currency once one of them is below what’s due', () => {
+    const s = status('due', new Date(2026, 11, 10), {
+      EGP: amounts({ owed: 30, due: 30, minimum: 30 }),
+      USD: amounts({ owed: 100, due: 100, minimum: 5 }),
+    });
+    const titles = planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts }).map((p) => p.title);
+    expect(titles).toEqual(['C visa EGP30+USD100 min EGP30+USD5', 'C visa EGP30+USD100 min EGP30+USD5']);
+  });
+
+  it('never mentions the minimum for the next statement', () => {
+    const s = status('due', new Date(2026, 11, 10), { EGP: amounts({ owed: 2800, due: 800, later: 1500, minimum: 100 }) });
+    const next = planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts }).filter((p) => p.at.getFullYear() === 2027);
+    expect(next.map((p) => p.title)).toEqual(['C visa EGP500', 'C visa EGP500']);
   });
 
   it('has nothing for the next statement when nothing will be on it', () => {

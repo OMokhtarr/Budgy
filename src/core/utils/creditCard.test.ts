@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cardStatus, cardTransactions, cycleOf, dueAfterTooMany, fixedDueDay, instalmentPlans, interestFree, needsReminder, nextSoFar, parseDueAfter,
+  cardStatus, cardTransactions, cashFeeFor, cycleOf, dueAfterTooMany, isCashWithdrawal, fixedDueDay, hasMinimum, instalmentPlans, interestFree, minimumLine, needsReminder, nextSoFar,
+  parseDueAfter, parsePercent, percentInvalid,
   payFromAccount, statementFor, upcomingStatements,
 } from './creditCard';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
@@ -404,5 +405,114 @@ describe('upcomingStatements', () => {
     const usd = tx({ type: 'expense', amount: 50, currency: 'USD', date: day(2027, 1, 26).toISOString(), instalment: { planId: 'u', n: 2, of: 2 } });
     const list = upcoming(card({ currency2: 'USD' }), [usd]);
     expect(list.map((s) => s.byCurrency)).toEqual([{ EGP: 0, USD: 0 }, { EGP: 0, USD: 0 }, { EGP: 0, USD: 50 }]);
+  });
+});
+
+describe('minimum payment', () => {
+  const today = day(2026, 12, 1);
+  const rule = (c: Partial<CreditCard>) => card({ credit: credit(c) });
+  const status = (c: Partial<CreditCard>, txs: Transaction[], on = today) => cardStatus(rule(c), txs, on);
+  const minimum = (c: Partial<CreditCard>, txs: Transaction[]) => status(c, txs).byCurrency.EGP.minimum;
+
+  it('is 5% of the statement', () => {
+    expect(minimum({ minPercent: 5 }, [spend(12000, day(2026, 11, 10))])).toBe(600);
+  });
+
+  it('is at least the floor', () => {
+    expect(minimum({ minPercent: 5, minAmount: 1000 }, [spend(12000, day(2026, 11, 10))])).toBe(1000);
+  });
+
+  it('is never more than the statement', () => {
+    expect(minimum({ minAmount: 50 }, [spend(30, day(2026, 11, 10))])).toBe(30);
+  });
+
+  it('takes the statement’s instalments whole', () => {
+    const inst = tx({ type: 'expense', amount: 1000, date: day(2026, 11, 10).toISOString(), instalment: { planId: 'p', n: 2, of: 12 } });
+    expect(minimum({ minPercent: 5 }, [inst, spend(2000, day(2026, 11, 10))])).toBe(1100);
+  });
+
+  it('counts payments since the statement', () => {
+    const buy = spend(12000, day(2026, 11, 10));
+    expect(minimum({ minPercent: 5 }, [buy, pay(400, day(2026, 11, 28))])).toBe(200);
+    expect(minimum({ minPercent: 5 }, [buy, pay(700, day(2026, 11, 28))])).toBe(0);
+  });
+
+  it('is 0 when nothing was owed at the statement', () => {
+    expect(minimum({ minPercent: 5 }, [])).toBe(0);
+  });
+
+  it('uses the floor in the main currency only', () => {
+    const usd = tx({ type: 'expense', amount: 100, currency: 'USD', date: day(2026, 11, 10).toISOString() });
+    const s = cardStatus(card({ currency2: 'USD', credit: credit({ minPercent: 5, minAmount: 1000 }) }), [spend(12000, day(2026, 11, 10)), usd], today);
+    expect(s.byCurrency.EGP.minimum).toBe(1000);
+    expect(s.byCurrency.USD.minimum).toBe(5);
+  });
+
+  it('is undefined without a rule', () => {
+    expect(hasMinimum(credit())).toBe(false);
+    expect(minimum({}, [spend(12000, day(2026, 11, 10))])).toBeUndefined();
+  });
+
+  it('reads a typed percent from above 0 up to 100, in any digits', () => {
+    expect(parsePercent('5')).toBe(5);
+    expect(parsePercent('٥')).toBe(5);
+    expect(parsePercent('2.5')).toBe(2.5);
+    for (const bad of ['', '0', '101', 'x']) expect(parsePercent(bad)).toBeUndefined();
+  });
+
+  it('flags a typed percent it can’t take, but not an empty one or 0 (no rule)', () => {
+    for (const bad of ['150', '101', 'x']) expect(percentInvalid(bad)).toBe(true);
+    for (const ok of ['', '0', '5', '٥']) expect(percentInvalid(ok)).toBe(false);
+  });
+
+  it('shows a row while some of the minimum is left, and that it is paid once it is', () => {
+    const buy = spend(12000, day(2026, 11, 10));
+    expect(minimumLine(status({ minPercent: 5 }, [buy]))).toBe('row');
+    expect(minimumLine(status({ minPercent: 5 }, [buy, pay(700, day(2026, 11, 28))]))).toBe('paid');
+  });
+
+  it('shows nothing once the card is overdue, or without a rule', () => {
+    const buy = spend(12000, day(2026, 11, 10));
+    expect(minimumLine(status({ minPercent: 5 }, [buy], day(2026, 12, 22)))).toBeUndefined();
+    expect(minimumLine(status({}, [buy]))).toBeUndefined();
+  });
+});
+
+describe('cash withdrawals', () => {
+  const plain = (id: string, type: Account['type']): Account => ({ ...card({ id, type }), credit: undefined });
+  const cash = plain('cash', 'cash');
+  const bank = plain('bank', 'bank');
+  const debit = plain('debit', 'card');
+  const other = card({ id: 'other' });
+
+  it('counts a transfer from a credit card to an account that isn’t one', () => {
+    expect(isCashWithdrawal(card(), cash)).toBe(true);
+    expect(isCashWithdrawal(card(), bank)).toBe(true);
+    expect(isCashWithdrawal(card(), debit)).toBe(true);
+  });
+
+  it('doesn’t count other transfers', () => {
+    expect(isCashWithdrawal(card(), other)).toBe(false);
+    expect(isCashWithdrawal(card(), card())).toBe(false);
+    expect(isCashWithdrawal(debit, cash)).toBe(false);
+    expect(isCashWithdrawal(bank, card())).toBe(false);
+    expect(isCashWithdrawal(card(), undefined)).toBe(false);
+    expect(isCashWithdrawal(undefined, cash)).toBe(false);
+  });
+
+  it('doesn’t count a card purchase given to a person', () => {
+    expect(isCashWithdrawal(card(), { ...plain('ahmed', 'cash'), group: 'debt' })).toBe(false);
+  });
+
+  it('works out the fee from the card’s rule, floor included', () => {
+    expect(cashFeeFor(card({ credit: credit({ cashFeePercent: 2 }) }), 1000, 'EGP')).toBe(20);
+    const floored = card({ currency2: 'USD', credit: credit({ cashFeePercent: 2, cashFeeAmount: 20 }) });
+    expect(cashFeeFor(floored, 300, 'EGP')).toBe(20);
+    expect(cashFeeFor(floored, 300, 'USD')).toBe(6);
+  });
+
+  it('has no fee without a rule or an amount', () => {
+    expect(cashFeeFor(card(), 1000, 'EGP')).toBeUndefined();
+    expect(cashFeeFor(card({ credit: credit({ cashFeePercent: 2 }) }), 0, 'EGP')).toBeUndefined();
   });
 });

@@ -64,6 +64,14 @@ export interface CreditCard {
   dueDay: number;
   /** Payment is due this many days after the statement (1–30); when set, `dueDay` is ignored. */
   dueAfter?: number;
+  /** Minimum payment, % of the statement balance not counting its instalments. Undefined = no minimum shown. */
+  minPercent?: number;
+  /** The minimum is at least this much, in the main currency. */
+  minAmount?: number;
+  /** Cash withdrawal fee, % of the amount withdrawn. */
+  cashFeePercent?: number;
+  /** The cash withdrawal fee is at least this much, in the main currency. */
+  cashFeeAmount?: number;
 }
 
 /** A part of a category that people add themselves. Stored inside its category, so it syncs with it. */

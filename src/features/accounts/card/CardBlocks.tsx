@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { currenciesOf } from '@/core/utils/currency';
-import { nextSoFar, REMIND_DAYS, type CardAmounts, type CardStatus } from '@/core/utils/creditCard';
+import { minimumLine, nextSoFar, REMIND_DAYS, type CardAmounts, type CardStatus } from '@/core/utils/creditCard';
 import MoneyText from '@/shared/components/MoneyText';
 import type { Account } from '@/shared/models';
 
@@ -93,15 +93,21 @@ export function OwedBlock({ account, status }: CardProps) {
   );
 }
 
-/** The last statement: its balance, what's been paid since, what's left and when it's due. */
+/** The last statement: its balance, what's been paid since, what's left, about how much the minimum is, and when it's due. */
 export function StatementRows({ account, status }: CardProps) {
   const { t } = useTranslation();
+  const dayMonth = useDayMonth();
   const lines = (pick: (x: CardAmounts) => number | undefined) => <AmountLines account={account} status={status} pick={pick} />;
+  const minimum = minimumLine(status);
   return (
     <>
       <CcRow label={t('cards.statementBalance')}>{lines((x) => x.statement)}</CcRow>
       <CcRow label={t('cards.paidSince')}>{lines((x) => x.paid)}</CcRow>
       <CcRow label={t('cards.leftToPay')} strong>{lines((x) => x.due)}</CcRow>
+      {minimum === 'row' && <CcRow label={t('cards.minimumAbout')}>{lines((x) => x.minimum)}</CcRow>}
+      {minimum === 'paid' && (
+        <div className="b-muted b-cc__next">{t('cards.minimumPaid', { date: dayMonth(status.cycle.dueOn) })}</div>
+      )}
       <DueLine status={status} />
     </>
   );

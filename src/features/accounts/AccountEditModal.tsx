@@ -12,7 +12,7 @@ import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { countsInExpenses, countsInTotal, switchesOnByDefault } from '@/core/utils/accountFilter';
 import { currenciesOf, openingOf, roundTo } from '@/core/utils/currency';
 import { debtSideOf, signedFor, unsigned, type DebtSide } from '@/core/utils/debtSide';
-import { dueAfterTooMany, fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter } from '@/core/utils/creditCard';
+import { dueAfterTooMany, fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter, parsePercent, percentInvalid } from '@/core/utils/creditCard';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
@@ -46,6 +46,9 @@ const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const NEW_CREDIT: CreditCard = { statementDay: 25, dueDay: 20 };
 /** "Days after the statement" starts here, about what banks give. */
 const NEW_DUE_AFTER = '25';
+/** A new credit card's minimum payment starts here (CIB), and its cash withdrawal fee here (NBE). */
+const NEW_MIN_PERCENT = '5';
+const NEW_CASH_FEE_PERCENT = '2';
 /** When a card's payment is due: a day of the month, or a number of days after the statement. */
 type DueMode = 'day' | 'after';
 /** A typed amount, or undefined when it's empty or zero. */
@@ -89,6 +92,10 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
   const [dueDay, setDueDay] = useState(NEW_CREDIT.dueDay);
   const [dueMode, setDueMode] = useState<DueMode>('day');
   const [dueAfter, setDueAfter] = useState(NEW_DUE_AFTER);
+  const [minPercent, setMinPercent] = useState(NEW_MIN_PERCENT);
+  const [minAmount, setMinAmount] = useState('');
+  const [cashFeePercent, setCashFeePercent] = useState(NEW_CASH_FEE_PERCENT);
+  const [cashFeeAmount, setCashFeeAmount] = useState('');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -120,6 +127,12 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     setDueDay(credit?.dueDay ?? NEW_CREDIT.dueDay);
     setDueMode(credit?.dueAfter ? 'after' : 'day');
     setDueAfter(credit?.dueAfter ? String(credit.dueAfter) : NEW_DUE_AFTER);
+    // A card set up as a credit card now starts with the usual rules; one set up before keeps what it has.
+    const typed = (n: number | undefined) => (n ? String(n) : '');
+    setMinPercent(credit ? typed(credit.minPercent) : NEW_MIN_PERCENT);
+    setMinAmount(typed(credit?.minAmount));
+    setCashFeePercent(credit ? typed(credit.cashFeePercent) : NEW_CASH_FEE_PERCENT);
+    setCashFeeAmount(typed(credit?.cashFeeAmount));
     setLoaded(true);
   }, [isOpen, account, newGroup, accountName, balances, loaded, base]);
 
@@ -141,7 +154,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     dueMode === 'day' ? { statementDay, dueDay } : daysAfter ? { statementDay, dueDay, dueAfter: daysAfter } : undefined;
   // A number above the limit is most likely the bank's total from the day you buy (e.g. 55).
   const tooManyDays = dueMode === 'after' && dueAfterTooMany(dueAfter);
-  const creditInvalid = credit && !cycleDraft;
+  // A percent it can't take (above 100) would be dropped on save, so it holds the card back like the cycle does.
+  const creditInvalid = credit && (!cycleDraft || percentInvalid(minPercent) || percentInvalid(cashFeePercent));
   const plainSide: DebtSide | undefined = plainAmounts ? side : owedOnCard ? 'owe' : undefined;
   const pickSide = (s: DebtSide) => {
     setSideChoice(s);
@@ -222,6 +236,10 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
               // Kept with "days after" too, so an older version of the app still shows a close date.
               dueDay: cycleDraft.dueAfter ? fixedDueDay(cycleDraft, new Date()) : dueDay,
               dueAfter: cycleDraft.dueAfter,
+              minPercent: parsePercent(minPercent),
+              minAmount: optional(minAmount),
+              cashFeePercent: parsePercent(cashFeePercent),
+              cashFeeAmount: optional(cashFeeAmount),
             }
           : undefined,
     };
@@ -402,6 +420,22 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
                     ? `${t('cards.upToDays', { count: interestFree(cycleDraft, new Date()).best.days })} ${dueMode === 'day' ? t('cards.daysHint') : ''}`.trim()
                     : t('cards.dueAfterRange', { max: MAX_DUE_AFTER })}
               </div>
+              <RuleFields
+                label={t('cards.minPercent')}
+                atLeast={t('cards.atLeast', { currency })}
+                hint={percentInvalid(minPercent) ? t('cards.percentRange') : t('cards.minHint')}
+                invalid={percentInvalid(minPercent)}
+                percent={[minPercent, setMinPercent]}
+                amount={[minAmount, setMinAmount]}
+              />
+              <RuleFields
+                label={t('cards.cashFeePercent')}
+                atLeast={t('cards.atLeast', { currency })}
+                hint={percentInvalid(cashFeePercent) ? t('cards.percentRange') : t('cards.cashFeeHint')}
+                invalid={percentInvalid(cashFeePercent)}
+                percent={[cashFeePercent, setCashFeePercent]}
+                amount={[cashFeeAmount, setCashFeeAmount]}
+              />
             </>
           )}
           <div className="b-field">
@@ -503,5 +537,28 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
         </div>
       </IonContent>
     </IonModal>
+  );
+}
+
+type Typed = [string, (typed: string) => void];
+
+/** A card rule typed as a percent with a lowest amount, both optional, and a hint under them (red when `invalid`). */
+function RuleFields({
+  label, atLeast, hint, invalid, percent, amount,
+}: { label: string; atLeast: string; hint: string; invalid: boolean; percent: Typed; amount: Typed }) {
+  const field = (text: string, [value, set]: Typed) => (
+    <label className="b-field">
+      <span>{text}</span>
+      <input className="b-input b-num" inputMode="decimal" placeholder="0" value={value} onChange={(e) => set(cleanNumberInput(e.target.value))} />
+    </label>
+  );
+  return (
+    <>
+      <div className="b-field-row b-field-row--even">
+        {field(label, percent)}
+        {field(atLeast, amount)}
+      </div>
+      <div className={`b-field-hint ${invalid ? 'b-expense' : ''}`}>{hint}</div>
+    </>
   );
 }

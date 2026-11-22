@@ -24,8 +24,11 @@ export interface PlannedReminder {
 export interface ReminderTexts {
   recurringTitle: (r: Recurring) => string;
   recurringBody: (r: Recurring) => string;
-  /** The card and what's due on it, per currency (only amounts above zero). */
-  cardTitle: (card: Account, amounts: Record<string, number>) => string;
+  /**
+   * The card and what's due on it, per currency (only amounts above zero), with what's left of the minimum payment
+   * when it's below that.
+   */
+  cardTitle: (card: Account, amounts: Record<string, number>, minimum?: Record<string, number>) => string;
   /** Days until the due date: CARD_DAYS_BEFORE, or 0 on the day. */
   cardBody: (days: number) => string;
 }
@@ -69,7 +72,7 @@ export function planReminders({ recurring, cards, now, time, texts }: PlanInput)
   }
 
   for (const { account, status } of cards) {
-    const remind = (dueOn: Date, amounts: Record<string, number>) => {
+    const remind = (dueOn: Date, amounts: Record<string, number>, minimum?: Record<string, number>) => {
       for (const days of [CARD_DAYS_BEFORE, 0]) {
         const day = addDays(dueOn, -days);
         const when = at(day);
@@ -78,7 +81,7 @@ export function planReminders({ recurring, cards, now, time, texts }: PlanInput)
           out.push({
             id: reminderId(`c:${account.id}:${dayKey(day)}`),
             at: when,
-            title: texts.cardTitle(account, amounts),
+            title: texts.cardTitle(account, amounts, minimum),
             body: texts.cardBody(days),
             to: `/cards/${account.id}`,
           });
@@ -88,7 +91,12 @@ export function planReminders({ recurring, cards, now, time, texts }: PlanInput)
     const pick = (f: (x: CardAmounts, currency: string) => number) =>
       Object.fromEntries(Object.entries(status.byCurrency).map(([c, x]) => [c, f(x, c)] as const).filter(([, n]) => n > 0));
     // The last statement: only while some of it is left to pay and its due date hasn't passed.
-    if (status.state === 'due') remind(status.cycle.dueOn, pick((x) => x.due));
+    // The minimum goes with it once, in some currency, it's less than the whole of what's due; then in every currency,
+    // since paying only one of them would still leave the other's minimum unpaid.
+    if (status.state === 'due') {
+      const below = Object.values(status.byCurrency).some((x) => x.minimum != null && x.minimum > 0 && x.minimum < x.due);
+      remind(status.cycle.dueOn, pick((x) => x.due), below ? pick((x) => x.minimum ?? 0) : undefined);
+    }
     // The next one, set ahead so it comes even if the app isn't opened after the statement: what's owed, less the last
     // statement's part (paid by its own date) and instalments for later statements.
     const next = pick((x, c) => roundTo(x.owed - x.due - x.later, c));
