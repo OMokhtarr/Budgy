@@ -293,14 +293,14 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     let saved: Transaction | undefined;
     try {
       if (fromBankText) {
-        const choice = await askDuplicate({ type, amount, currency, accountId, date: iso });
+        const { choice, match } = await askDuplicate({ type, amount, currency, accountId, date: iso });
         if (choice === 'cancel') {
           saving.current = false;
           return;
         }
         if (choice === 'skip') {
           onClose();
-          init.onSkipped?.();
+          init.onSkipped?.(match);
           return;
         }
       }

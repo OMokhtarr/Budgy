@@ -21,7 +21,7 @@ import { actionsFor, duplicatesOf, importMany } from './batch';
 import { useLearned, usePendingSms } from './hooks';
 import CombineSheet from './CombineSheet';
 import { combineFlow, combineTexts, defaultNote, takeOff, type TextPart } from './grouping';
-import { flowOf, resolveSkipped, suggestFor } from './learning';
+import { flowOf, skipDuplicate, suggestFor } from './learning';
 import PickerSheet, { type PickerItem, type PickerSection } from './PickerSheet';
 import PurchasePickerSheet from './PurchasePickerSheet';
 import { addPerson, cardDraft, choiceOf, isPerson, usablePick, type CardChoice, type CardPick } from './review';
@@ -207,7 +207,7 @@ export default function SmsReviewPage() {
         const answer = await askDuplicates(dupes.size);
         if (answer === 'cancel') return;
         if (answer === 'skip') {
-          await Promise.all(complete.filter(({ item }) => dupes.has(item.fingerprint)).map(({ item }) => resolveSkipped(item, 'duplicate')));
+          await Promise.all(complete.filter(({ item }) => dupes.has(item.fingerprint)).map(({ item }) => skipDuplicate(item, dupes.get(item.fingerprint))));
           toSave = complete.filter(({ item }) => !dupes.has(item.fingerprint));
         }
       }

@@ -940,7 +940,11 @@
     "ignoreRemoved_two": "حُذفت رسالتان تنتظران المراجعة تحتويان على هذه الكلمة",
     "ignoreRemoved_few": "حُذفت {{count}} رسائل تنتظر المراجعة تحتوي على هذه الكلمة",
     "ignoreRemoved_many": "حُذفت {{count}} رسالة تنتظر المراجعة تحتوي على هذه الكلمة",
-    "ignoreRemoved_other": "حُذفت {{count}} رسالة تنتظر المراجعة تحتوي على هذه الكلمة"
+    "ignoreRemoved_other": "حُذفت {{count}} رسالة تنتظر المراجعة تحتوي على هذه الكلمة",
+    "instalmentMatchTitle": "مسجّل بالفعل؟",
+    "instalmentMatchBody": "يبدو أنه {{name}}، القسط {{n}} من {{of}}، المسجّل بالفعل على هذه البطاقة.",
+    "alreadyRecorded": "مسجّل بالفعل",
+    "addAnyway": "أضفه على أي حال"
   },
   "pro": {
     "unavailable": "Budgy Pro غير متاح الآن. تحقّق من اتصالك وحاول مرة أخرى.",

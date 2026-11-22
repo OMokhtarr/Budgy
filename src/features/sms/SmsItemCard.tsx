@@ -12,7 +12,7 @@ import { buildTxRecord } from '@/features/transactions/txRecord';
 import { useLongPress } from '@/shared/hooks/useLongPress';
 import { iconFor } from '@/shared/icons';
 import type { Account, Category, SmsPending } from '@/shared/models';
-import { flowOf, importText, resolveImported, resolveSkipped } from './learning';
+import { flowOf, importText, resolveImported, resolveSkipped, skipDuplicate } from './learning';
 import { cardDraft, type CardChoice } from './review';
 import { useDuplicatePrompt } from './useDuplicatePrompt';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
@@ -80,9 +80,9 @@ export default function SmsItemCard({ item, choice, account, category, person, o
 
   const confirm = run(async () => {
     if (!draft) return;
-    const answer = await askDuplicate(draft);
+    const { choice: answer, match } = await askDuplicate(draft);
     if (answer === 'cancel') return;
-    if (answer === 'skip') return resolveSkipped(item, 'duplicate');
+    if (answer === 'skip') return skipDuplicate(item, match);
     await importText(item, buildTxRecord(draft));
   });
 
@@ -115,7 +115,7 @@ export default function SmsItemCard({ item, choice, account, category, person, o
       ),
       // The transaction is saved by then; trying again from the card won't save it twice.
       onSaved: (tx) => void resolveImported(item, tx).catch(failed),
-      onSkipped: () => void resolveSkipped(item, 'duplicate').catch(failed),
+      onSkipped: (match) => void skipDuplicate(item, match).catch(failed),
     });
   };
 
