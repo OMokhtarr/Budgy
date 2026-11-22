@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cardStatus, cardTransactions, cycleOf, dueAfterTooMany, fixedDueDay, hasMinimum, instalmentPlans, interestFree, minimumLine, needsReminder, nextSoFar,
+  cardStatus, cardTransactions, cashFeeFor, cycleOf, dueAfterTooMany, isCashWithdrawal, fixedDueDay, hasMinimum, instalmentPlans, interestFree, minimumLine, needsReminder, nextSoFar,
   parseDueAfter, parsePercent,
   payFromAccount, statementFor, upcomingStatements,
 } from './creditCard';
@@ -470,5 +470,40 @@ describe('minimum payment', () => {
     const buy = spend(12000, day(2026, 11, 10));
     expect(minimumLine(status({ minPercent: 5 }, [buy], day(2026, 12, 22)))).toBeUndefined();
     expect(minimumLine(status({}, [buy]))).toBeUndefined();
+  });
+});
+
+describe('cash withdrawals', () => {
+  const plain = (id: string, type: Account['type']): Account => ({ ...card({ id, type }), credit: undefined });
+  const cash = plain('cash', 'cash');
+  const bank = plain('bank', 'bank');
+  const debit = plain('debit', 'card');
+  const other = card({ id: 'other' });
+
+  it('counts a transfer from a credit card to an account that isn’t one', () => {
+    expect(isCashWithdrawal(card(), cash)).toBe(true);
+    expect(isCashWithdrawal(card(), bank)).toBe(true);
+    expect(isCashWithdrawal(card(), debit)).toBe(true);
+  });
+
+  it('doesn’t count other transfers', () => {
+    expect(isCashWithdrawal(card(), other)).toBe(false);
+    expect(isCashWithdrawal(card(), card())).toBe(false);
+    expect(isCashWithdrawal(debit, cash)).toBe(false);
+    expect(isCashWithdrawal(bank, card())).toBe(false);
+    expect(isCashWithdrawal(card(), undefined)).toBe(false);
+    expect(isCashWithdrawal(undefined, cash)).toBe(false);
+  });
+
+  it('works out the fee from the card’s rule, floor included', () => {
+    expect(cashFeeFor(card({ credit: credit({ cashFeePercent: 2 }) }), 1000, 'EGP')).toBe(20);
+    const floored = card({ currency2: 'USD', credit: credit({ cashFeePercent: 2, cashFeeAmount: 20 }) });
+    expect(cashFeeFor(floored, 300, 'EGP')).toBe(20);
+    expect(cashFeeFor(floored, 300, 'USD')).toBe(6);
+  });
+
+  it('has no fee without a rule or an amount', () => {
+    expect(cashFeeFor(card(), 1000, 'EGP')).toBeUndefined();
+    expect(cashFeeFor(card({ credit: credit({ cashFeePercent: 2 }) }), 0, 'EGP')).toBeUndefined();
   });
 });

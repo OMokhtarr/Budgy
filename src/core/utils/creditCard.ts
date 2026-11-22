@@ -242,6 +242,22 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
   return { cycle, byCurrency, state, daysLeft };
 }
 
+/** Whether a transfer from `from` to `to` takes cash out on a credit card: to an account that isn't a credit card. */
+export function isCashWithdrawal(from: Account | undefined, to: Account | undefined): boolean {
+  return !!from && !!to && isCreditCard(from) && !isCreditCard(to) && to.id !== from.id;
+}
+
+/**
+ * The bank's fee for taking `amount` out on the card, from its rule: the percent, at least the floor (which is in
+ * the main currency only). Undefined without a rule or an amount.
+ */
+export function cashFeeFor(card: Account & { credit: CreditCard }, amount: number, currency: string): number | undefined {
+  const { cashFeePercent, cashFeeAmount } = card.credit;
+  if ((!cashFeePercent && !cashFeeAmount) || !(amount > 0)) return undefined;
+  const floor = currency === card.currency ? cashFeeAmount ?? 0 : 0;
+  return Math.max(roundTo((amount * (cashFeePercent ?? 0)) / 100, currency), floor);
+}
+
 /** Whether a card has a minimum payment rule. */
 export const hasMinimum = (credit: CreditCard): boolean => !!credit.minPercent || !!credit.minAmount;
 
