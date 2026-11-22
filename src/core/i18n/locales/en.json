@@ -437,6 +437,8 @@
     "statementBalance": "Statement balance",
     "paidSince": "Paid since",
     "leftToPay": "Left to pay",
+    "minimumAbout": "Minimum (about)",
+    "minimumPaid": "Minimum paid · pay the rest by {{date}} to avoid interest.",
     "dueIn_one": "Due {{date}} · in {{count}} day",
     "dueIn_other": "Due {{date}} · in {{count}} days",
     "dueToday": "Due today",

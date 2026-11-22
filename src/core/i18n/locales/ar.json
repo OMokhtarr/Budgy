@@ -509,6 +509,8 @@
     "statementBalance": "رصيد الكشف",
     "paidSince": "المدفوع منذ الكشف",
     "leftToPay": "المتبقي للسداد",
+    "minimumAbout": "الحد الأدنى (تقريبًا)",
+    "minimumPaid": "تم سداد الحد الأدنى · سدّد الباقي قبل {{date}} لتجنّب الفوائد.",
     "dueIn_zero": "يستحق {{date}} · اليوم",
     "dueIn_one": "يستحق {{date}} · بعد يوم واحد",
     "dueIn_two": "يستحق {{date}} · بعد يومين",
