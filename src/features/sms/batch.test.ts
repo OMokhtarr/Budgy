@@ -91,6 +91,21 @@ describe('duplicatesOf', () => {
     const b = item({ fingerprint: 'b', amount: 90 });
     await database.transactions.add({ type: 'expense', amount: 450, currency: 'EGP', accountId: 'a1', categoryId: 'c1', date: '2026-11-06T15:00:00.000Z', createdAt: 'x' });
     const found = await duplicatesOf([{ fingerprint: 'a', draft: draft(a) }, { fingerprint: 'b', draft: draft(b) }], database);
-    expect(found).toEqual(new Set(['a']));
+    expect([...found.keys()]).toEqual(['a']);
+    expect(found.get('a')?.kind).toBe('manual');
+  });
+
+  it('includes texts that match an instalment already recorded', async () => {
+    await database.accounts.put({
+      id: 'card', name: 'Card', type: 'card', icon: 'card', color: '#000', currency: 'EGP', initialBalance: 0, order: 0,
+      credit: { statementDay: 25, dueDay: 20 }, createdAt: 'x',
+    });
+    await database.transactions.add({
+      type: 'expense', amount: 450, currency: 'EGP', accountId: 'card', categoryId: 'c1', date: '2026-10-30T10:00:00.000Z',
+      instalment: { planId: 'p', n: 2, of: 6 }, createdAt: 'x',
+    });
+    const a = item();
+    const found = await duplicatesOf([{ fingerprint: 'a', draft: draft(a, { accountId: 'card' }) }], database);
+    expect(found.get('a')?.kind).toBe('instalment');
   });
 });

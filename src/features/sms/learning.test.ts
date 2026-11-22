@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
 import { buildTxRecord, saveTx } from '@/features/transactions/txRecord';
 import type { Account, Category, MerchantRule, SmsLink, SmsPending, Transaction } from '@/shared/models';
-import { addressKey, importText, linkIdOf, merchantKey, resolveImported, resolveSkipped, ruleIdOf, suggestFor } from './learning';
+import { addressKey, importText, linkIdOf, merchantKey, resolveImported, resolveSkipped, ruleIdOf, skipDuplicate, suggestFor } from './learning';
+import { findInstalmentMatch } from './duplicate';
 
 const database = new BudgyDB('t-learning');
 
@@ -56,6 +57,34 @@ describe('suggestFor', () => {
 
 const tx = (over: Partial<Transaction> = {}): Transaction =>
   ({ type: 'expense', amount: 50, currency: 'EGP', accountId: 'a1', categoryId: 'c1', subcategoryId: 's1', date: '2026-11-01T10:00:00.000Z', createdAt: 'x', ...over }) as Transaction;
+
+describe('skipDuplicate', () => {
+  const card = account('card', { type: 'card', credit: { statementDay: 25, dueDay: 20 } });
+  const text = item({ fingerprint: 'fp-i4', amount: 1000, date: new Date(2026, 10, 25, 12).toISOString() });
+  const charge = { type: 'expense' as const, amount: 1000, currency: 'EGP', accountId: 'card', date: text.date };
+
+  it('links the text to the instalment it matches', async () => {
+    await database.accounts.put(card);
+    await database.smsPending.put(text);
+    const i4 = await saveTx(
+      { ...charge, categoryId: 'c1', date: new Date(2026, 10, 3, 12).toISOString(), instalment: { planId: 'p', n: 4, of: 12 }, createdAt: 'x' },
+      undefined,
+      database,
+    );
+    await skipDuplicate(text, { kind: 'instalment', tx: i4 }, database);
+    expect((await database.transactions.get(i4.id!))?.smsFingerprint).toBe('fp-i4');
+    expect(await database.smsPending.get('fp-i4')).toBeUndefined();
+    expect(await findInstalmentMatch(charge, database)).toBeUndefined();
+  });
+
+  it('records a hand-entered match, or none, as a duplicate', async () => {
+    const other = item({ fingerprint: 'fp-dup' });
+    await database.smsPending.put(other);
+    await skipDuplicate(other, undefined, database);
+    expect(await database.smsSeen.get('fp-dup')).toMatchObject({ outcome: 'duplicate' });
+    expect(await database.smsPending.get('fp-dup')).toBeUndefined();
+  });
+});
 
 describe('resolve', () => {
   it('learns a link and a rule, then removes the pending item', async () => {

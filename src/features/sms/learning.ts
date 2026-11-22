@@ -4,6 +4,7 @@ import { idFromKey } from '@/core/utils/id';
 import { stampAfter } from '@/core/utils/stamp';
 import { saveTx } from '@/features/transactions/txRecord';
 import type { Account, Category, Flow, MerchantRule, SmsLink, SmsPending, SmsSeen, Transaction } from '@/shared/models';
+import type { Duplicate } from './duplicate';
 
 /** Case-folded sender address; links and lookups use it. */
 export function addressKey(address: string): string {
@@ -123,6 +124,21 @@ export async function importText(item: SmsPending, record: Omit<Transaction, 'id
     const tx = await saveTx(record, undefined, database);
     await learn(database, item, tx, ids);
     return tx;
+  });
+}
+
+/**
+ * Skipped because it's already saved. A text that matches a planned instalment becomes that instalment's text: it takes
+ * the text's fingerprint (so no later text matches it again) and is learned from like any import. Anything else is
+ * remembered as a duplicate.
+ */
+export async function skipDuplicate(item: SmsPending, match: Duplicate | undefined, database: BudgyDB = db): Promise<void> {
+  if (match?.kind !== 'instalment') return resolveSkipped(item, 'duplicate', database);
+  const tx: Transaction = { ...match.tx, smsFingerprint: item.fingerprint };
+  const ids = await lessonIdsOf(item, tx);
+  await database.transaction('rw', database.transactions, database.smsLinks, database.merchantRules, database.smsPending, async () => {
+    await database.transactions.update(tx.id!, { smsFingerprint: item.fingerprint });
+    await learn(database, item, tx, ids);
   });
 }
 

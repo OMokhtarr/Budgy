@@ -1,7 +1,7 @@
 import { db, type BudgyDB } from '@/core/db/db';
 import { buildTxRecord, type TxDraft } from '@/features/transactions/txRecord';
 import type { SmsPending } from '@/shared/models';
-import { findManualDuplicate } from './duplicate';
+import { findDuplicate, type Duplicate } from './duplicate';
 import { importText } from './learning';
 
 /** Which of the selection bar's actions fit the selected texts. */
@@ -24,11 +24,12 @@ export function actionsFor(items: SmsPending[]): BatchActions {
   return { sameCategory: allIn || allOut, combine: items.length > 1, takeOff: allIn };
 }
 
-/** The fingerprints of the drafts that look like a transaction already added by hand. */
-export async function duplicatesOf(drafts: { fingerprint: string; draft: TxDraft }[], database: BudgyDB = db): Promise<Set<string>> {
-  const found = new Set<string>();
+/** The drafts that look already saved (added by hand, or a planned instalment), by fingerprint, with what they match. */
+export async function duplicatesOf(drafts: { fingerprint: string; draft: TxDraft }[], database: BudgyDB = db): Promise<Map<string, Duplicate>> {
+  const found = new Map<string, Duplicate>();
   for (const { fingerprint, draft } of drafts) {
-    if (await findManualDuplicate(draft, database)) found.add(fingerprint);
+    const match = await findDuplicate(draft, database);
+    if (match) found.set(fingerprint, match);
   }
   return found;
 }
