@@ -2,13 +2,12 @@
 
 ## Backlog
 
-- [ ] **SMS import** (Android only; `docs/superpowers/specs/2026-11-03-sms-import-design.md`). Works in debug
+- [x] **SMS import** (Android only; `docs/superpowers/specs/2026-11-03-sms-import-design.md`). Works in debug
       builds and was checked on a device (2026-11-20), including several texts at once, money back and combining.
-      Build 6 (`READ_SMS`, Closed testing), the new store descriptions, the Permissions Declaration Form and the
-      trader status were sent for review on 2026-11-21. Form answers, Data safety reasoning and the video script
-      are in `docs/play-store.md`; the demo video is on Google Drive (link in the declaration form).
-  - [ ] Wait for Google's review. If the SMS use is rejected, Play Console says why: change the declaration,
-        the video or the app, and send it again.
+      Build 6 (`READ_SMS`), the new store descriptions, the Permissions Declaration Form and the trader status
+      were sent for review on 2026-11-21 and approved: build 6 is live in Closed testing (2026-11-22). Form
+      answers, Data safety reasoning and the video script are in `docs/play-store.md`; the demo video is on
+      Google Drive (link in the declaration form).
 
 ---
 

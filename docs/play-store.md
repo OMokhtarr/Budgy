@@ -13,9 +13,9 @@
 | 2 | Google sign-in for Play builds: Android OAuth clients for the **app signing** and **upload** key SHA-1s | Done |
 | 3 | Signed release bundle (`npm run android:aab:release`) | Done |
 | 4 | Keystore and passwords backed up off this machine | Done |
-| 5 | Store listing: text and graphics | Both full descriptions as below (with bank texts, without the Budgy Pro lines) sent for review 2026-11-21 with build 6. The AI asset declaration labels the assets as made or edited with AI |
-| 6 | App content forms: Data safety and declarations | Data safety and App access done; `READ_SMS` Permissions Declaration Form and app-level trader status (Terms of Service in [Links](#links)) sent for review 2026-11-21 |
-| 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | Build 4 out to the testers group 2026-11-21; build 6 in review for the same track |
+| 5 | Store listing: text and graphics | Both full descriptions as below (with bank texts, without the Budgy Pro lines) sent with build 6 on 2026-11-21, live since 2026-11-22. The AI asset declaration labels the assets as made or edited with AI |
+| 6 | App content forms: Data safety and declarations | Data safety and App access done; `READ_SMS` Permissions Declaration Form and app-level trader status (Terms of Service in [Links](#links)) sent 2026-11-21, approved with build 6 (2026-11-22) |
+| 7 | Internal test → closed test (12+ testers, 14 days in a row) → apply for production | Build 4 out to the testers group 2026-11-21; build 6 (bank texts) live in Closed testing 2026-11-22 |
 
 Before every upload:
 - Raise `versionCode` in `android/app/build.gradle`, because Play refuses a number it has already seen.
@@ -196,7 +196,7 @@ request that data be deleted.
 | Health apps | No |
 | Government apps | No |
 | News apps | No |
-| Sensitive permissions | `READ_SMS` (bank texts), in `android/app/src/main/AndroidManifest.xml` since 2026-11-21. Needs the Permissions Declaration Form approved before a release with it is rolled out |
+| Sensitive permissions | `READ_SMS` (bank texts), in `android/app/src/main/AndroidManifest.xml` since 2026-11-21. Permissions Declaration Form approved; build 6, the first release with it, live in Closed testing 2026-11-22 |
 
 ### Permissions Declaration Form: READ_SMS
 
