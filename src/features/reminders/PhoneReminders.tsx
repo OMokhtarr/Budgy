@@ -89,7 +89,11 @@ export default function PhoneReminders() {
         r.planId
           ? t('reminders.instalmentBody', { from: accountName(byId.get(r.tx.accountId)) })
           : t(r.auto ? 'reminders.recurringAuto' : 'reminders.recurringAsk'),
-      cardTitle: (a, amounts) => `${accountName(a)} · ${Object.entries(amounts).map(([c, n]) => money.format(n, c)).join(' + ')}`,
+      cardTitle: (a, amounts, minimum) => {
+        const join = (x: Record<string, number>) => Object.entries(x).map(([c, n]) => money.format(n, c)).join(' + ');
+        const min = minimum ? ` (${t('reminders.minimumAbout', { amount: join(minimum) })})` : '';
+        return `${accountName(a)} · ${join(amounts)}${min}`;
+      },
       cardBody: (days) => (days ? t('reminders.cardSoon', { count: days }) : t('reminders.cardToday')),
     };
   }, [t, money, accountName, accounts]);

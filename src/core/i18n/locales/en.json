@@ -927,6 +927,7 @@
     "cardSoon_one": "Due in {{count}} day",
     "cardSoon_other": "Due in {{count}} days",
     "cardToday": "Due today",
+    "minimumAbout": "minimum about {{amount}}",
     "deniedTitle": "Notifications are off",
     "deniedMessage": "Allow notifications for Budgy in your phone's settings, then turn this on again."
   }

@@ -1065,6 +1065,7 @@
     "instalmentTitle": "{{name}} · دفعة قسط {{amount}}",
     "instalmentBody": "مستحقة اليوم. يضيف Budgy الدفعة من {{from}} عندما تفتح التطبيق.",
     "cardToday": "مستحق اليوم",
+    "minimumAbout": "الحد الأدنى حوالي {{amount}}",
     "deniedTitle": "الإشعارات متوقفة",
     "deniedMessage": "اسمح بإشعارات Budgy من إعدادات الهاتف، ثم فعّل هذا الخيار مرة أخرى.",
     "cardSoon_zero": "مستحق اليوم",
