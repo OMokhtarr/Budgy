@@ -91,10 +91,11 @@ export function planReminders({ recurring, cards, now, time, texts }: PlanInput)
     const pick = (f: (x: CardAmounts, currency: string) => number) =>
       Object.fromEntries(Object.entries(status.byCurrency).map(([c, x]) => [c, f(x, c)] as const).filter(([, n]) => n > 0));
     // The last statement: only while some of it is left to pay and its due date hasn't passed.
-    // The minimum goes with it while some of it is left and it's less than the whole of what's due.
+    // The minimum goes with it once, in some currency, it's less than the whole of what's due; then in every currency,
+    // since paying only one of them would still leave the other's minimum unpaid.
     if (status.state === 'due') {
-      const minimum = pick((x) => (x.minimum != null && x.minimum < x.due ? x.minimum : 0));
-      remind(status.cycle.dueOn, pick((x) => x.due), Object.keys(minimum).length ? minimum : undefined);
+      const below = Object.values(status.byCurrency).some((x) => x.minimum != null && x.minimum > 0 && x.minimum < x.due);
+      remind(status.cycle.dueOn, pick((x) => x.due), below ? pick((x) => x.minimum ?? 0) : undefined);
     }
     // The next one, set ahead so it comes even if the app isn't opened after the statement: what's owed, less the last
     // statement's part (paid by its own date) and instalments for later statements.

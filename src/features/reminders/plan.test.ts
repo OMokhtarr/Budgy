@@ -87,6 +87,15 @@ describe('planReminders', () => {
     }
   });
 
+  it('gives the minimum in every currency once one of them is below what’s due', () => {
+    const s = status('due', new Date(2026, 11, 10), {
+      EGP: amounts({ owed: 30, due: 30, minimum: 30 }),
+      USD: amounts({ owed: 100, due: 100, minimum: 5 }),
+    });
+    const titles = planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts }).map((p) => p.title);
+    expect(titles).toEqual(['C visa EGP30+USD100 min EGP30+USD5', 'C visa EGP30+USD100 min EGP30+USD5']);
+  });
+
   it('never mentions the minimum for the next statement', () => {
     const s = status('due', new Date(2026, 11, 10), { EGP: amounts({ owed: 2800, due: 800, later: 1500, minimum: 100 }) });
     const next = planReminders({ recurring: [], cards: [{ account: visa, status: s }], now, time, texts }).filter((p) => p.at.getFullYear() === 2027);

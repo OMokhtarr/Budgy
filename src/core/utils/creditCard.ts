@@ -242,9 +242,12 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
   return { cycle, byCurrency, state, daysLeft };
 }
 
-/** Whether a transfer from `from` to `to` takes cash out on a credit card: to an account that isn't a credit card. */
+/**
+ * Whether a transfer from `from` to `to` takes cash out on a credit card: to an account that isn't a credit card, and
+ * isn't a person's debt (a card purchase given to someone, which the bank charges as a purchase).
+ */
 export function isCashWithdrawal(from: Account | undefined, to: Account | undefined): boolean {
-  return !!from && !!to && isCreditCard(from) && !isCreditCard(to) && to.id !== from.id;
+  return !!from && !!to && isCreditCard(from) && !isCreditCard(to) && groupOf(to) !== 'debt' && to.id !== from.id;
 }
 
 /**

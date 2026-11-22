@@ -495,6 +495,10 @@ describe('cash withdrawals', () => {
     expect(isCashWithdrawal(undefined, cash)).toBe(false);
   });
 
+  it('doesn’t count a card purchase given to a person', () => {
+    expect(isCashWithdrawal(card(), { ...plain('ahmed', 'cash'), group: 'debt' })).toBe(false);
+  });
+
   it('works out the fee from the card’s rule, floor included', () => {
     expect(cashFeeFor(card({ credit: credit({ cashFeePercent: 2 }) }), 1000, 'EGP')).toBe(20);
     const floored = card({ currency2: 'USD', credit: credit({ cashFeePercent: 2, cashFeeAmount: 20 }) });
