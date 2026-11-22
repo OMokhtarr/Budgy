@@ -148,6 +148,8 @@ export interface CardAmounts {
   toCome: number;
   /** What's left to pay of the statement. */
   due: number;
+  /** What's left to pay of the minimum payment; undefined when the card has no minimum rule. */
+  minimum?: number;
 }
 
 export type CardState = 'clear' | 'paid' | 'due' | 'overdue';
@@ -176,6 +178,9 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
   const atStatement: Amounts = { ...balance };
   const endOfToday = nextDay(startOfDay(today)).getTime();
   const nextEnd = nextDay(cycle.nextStatementOn).getTime();
+  const lastStart = nextDay(cycle.previousStatementOn).getTime();
+  /** Instalments billed on the last statement: the minimum payment takes them whole. */
+  const billedInstalments: Amounts = {};
   const paid: Amounts = {};
   const spent: Amounts = {};
   const later: Amounts = {};
@@ -187,8 +192,10 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     const exchange = t.type === 'transfer' && t.accountId === id && t.toAccountId === id;
     for (const [delta, cur] of changeOn(t, id)) {
       add(balance, cur, delta);
-      if (!after) add(atStatement, cur, delta);
-      else if (exchange) continue;
+      if (!after) {
+        add(atStatement, cur, delta);
+        if (t.instalment && delta < 0 && at >= lastStart) add(billedInstalments, cur, -delta);
+      } else if (exchange) continue;
       else if (delta > 0) add(paid, cur, delta);
       else {
         if (at < endOfToday) add(spent, cur, -delta);
@@ -198,6 +205,8 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     }
   }
 
+  const { minPercent, minAmount } = card.credit;
+  const withMinimum = hasMinimum(card.credit);
   const byCurrency: Record<string, CardAmounts> = {};
   for (const cur of currenciesOf(card)) {
     const owed = Math.max(0, -(balance[cur] ?? 0));
@@ -213,6 +222,15 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
       toCome: toCome[cur] ?? 0,
       due,
     };
+    if (withMinimum) {
+      const floor = cur === card.currency ? minAmount ?? 0 : 0;
+      // Instalments billed on the statement are due in full; the minimum % applies to the rest.
+      const inst = Math.min(statement, billedInstalments[cur] ?? 0);
+      const rest = statement - inst;
+      const ofRest = rest > 0 ? Math.max(roundTo((rest * (minPercent ?? 0)) / 100, cur), floor) : 0;
+      const full = statement ? Math.min(statement, roundTo(inst + ofRest, cur)) : 0;
+      amounts.minimum = roundTo(Math.min(due, Math.max(0, full - p)), cur);
+    }
     byCurrency[cur] = amounts;
   }
 
@@ -222,6 +240,25 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     ? daysLeft < 0 ? 'overdue' : 'due'
     : all.some((x) => x.statement > 0) ? 'paid' : 'clear';
   return { cycle, byCurrency, state, daysLeft };
+}
+
+/** Whether a card has a minimum payment rule. */
+export const hasMinimum = (credit: CreditCard): boolean => !!credit.minPercent || !!credit.minAmount;
+
+/** A typed percent above 0 and up to 100, in any of the digits the keyboard types; otherwise undefined. */
+export function parsePercent(typed: string): number | undefined {
+  const n = parseNumber(typed);
+  return n > 0 && n <= 100 ? n : undefined;
+}
+
+/**
+ * What the card page shows of the minimum: 'row' while some of it is left, 'paid' once it's paid but the
+ * statement isn't. Nothing without a rule, or unless the statement is due (overdue, the late fee is charged).
+ */
+export function minimumLine(status: CardStatus): 'row' | 'paid' | undefined {
+  const all = Object.values(status.byCurrency);
+  if (status.state !== 'due' || all.some((x) => x.minimum == null)) return undefined;
+  return all.some((x) => (x.minimum ?? 0) > 0) ? 'row' : 'paid';
 }
 
 /** What the next statement would show if nothing else happens: what's owed, less instalments for later ones. */
