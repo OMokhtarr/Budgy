@@ -136,7 +136,11 @@ export async function skipDuplicate(item: SmsPending, match: Duplicate | undefin
   if (match?.kind !== 'instalment') return resolveSkipped(item, 'duplicate', database);
   const tx: Transaction = { ...match.tx, smsFingerprint: item.fingerprint };
   const ids = await lessonIdsOf(item, tx);
-  await database.transaction('rw', database.transactions, database.smsLinks, database.merchantRules, database.smsPending, async () => {
+  const tables = [database.transactions, database.smsLinks, database.merchantRules, database.smsPending, database.smsSeen];
+  await database.transaction('rw', tables, async () => {
+    // Another text may have claimed it since the match was found (or it was deleted): then this one is just a duplicate.
+    const now = await database.transactions.get(tx.id!);
+    if (!now || !alive(now) || now.smsFingerprint) return resolveSkipped(item, 'duplicate', database);
     await database.transactions.update(tx.id!, { smsFingerprint: item.fingerprint });
     await learn(database, item, tx, ids);
   });

@@ -77,6 +77,20 @@ describe('skipDuplicate', () => {
     expect(await findInstalmentMatch(charge, database)).toBeUndefined();
   });
 
+  it('falls back to a duplicate when the instalment was linked meanwhile', async () => {
+    await database.accounts.put(card);
+    const late = item({ fingerprint: 'fp-late', amount: 1000, date: text.date });
+    await database.smsPending.put(late);
+    const i5 = await saveTx(
+      { ...charge, categoryId: 'c1', date: new Date(2026, 10, 4, 12).toISOString(), instalment: { planId: 'p', n: 5, of: 12 }, smsFingerprint: 'fp-first', createdAt: 'x' },
+      undefined,
+      database,
+    );
+    await skipDuplicate(late, { kind: 'instalment', tx: { ...i5, smsFingerprint: undefined } }, database);
+    expect((await database.transactions.get(i5.id!))?.smsFingerprint).toBe('fp-first');
+    expect(await database.smsSeen.get('fp-late')).toMatchObject({ outcome: 'duplicate' });
+  });
+
   it('records a hand-entered match, or none, as a duplicate', async () => {
     const other = item({ fingerprint: 'fp-dup' });
     await database.smsPending.put(other);

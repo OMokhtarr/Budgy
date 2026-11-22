@@ -156,83 +156,86 @@ export default function SmsItemCard(props: Props) {
   const incoming = item.direction === 'in';
 
   return (
-    <div className={`b-card b-smscard ${busy ? 'is-busy' : ''} ${selected ? 'is-selected' : ''}`} {...tourAttr('sms.card')} {...press}>
-      {/* The tappable summary; the click reaches the card's handler. */}
-      <button type="button" className="b-smscard__main">
-        <span className="b-smscard__top">
-          <span>
-            {selecting && onSelect && <IonIcon className="b-smscard__check" icon={selected ? checkmarkCircle : ellipseOutline} />}
-            {sender}
+    <>
+      <div className={`b-card b-smscard ${busy ? 'is-busy' : ''} ${selected ? 'is-selected' : ''}`} {...tourAttr('sms.card')} {...press}>
+        {/* The tappable summary; the click reaches the card's handler. */}
+        <button type="button" className="b-smscard__main">
+          <span className="b-smscard__top">
+            <span>
+              {selecting && onSelect && <IonIcon className="b-smscard__check" icon={selected ? checkmarkCircle : ellipseOutline} />}
+              {sender}
+            </span>
+            <span>{when}</span>
           </span>
-          <span>{when}</span>
-        </span>
-        {understood && item.amount != null && item.currency && (
-          <span className={`b-smscard__amt b-num ${incoming ? 'b-income' : 'b-expense'}`} dir="ltr">
-            {incoming ? '+' : '−'} {money.plain(item.amount, item.currency)} {item.currency}
-          </span>
-        )}
-        {understood && item.merchant && <span className="b-smscard__merchant">{item.merchant}</span>}
-      </button>
+          {understood && item.amount != null && item.currency && (
+            <span className={`b-smscard__amt b-num ${incoming ? 'b-income' : 'b-expense'}`} dir="ltr">
+              {incoming ? '+' : '−'} {money.plain(item.amount, item.currency)} {item.currency}
+            </span>
+          )}
+          {understood && item.merchant && <span className="b-smscard__merchant">{item.merchant}</span>}
+        </button>
 
-      {selecting ? null : understood ? (
-        <>
-          <div className="b-smscard__chips">
-            {chip(t('sms.pickAccount'), account && { name: accountName(account), icon: account.icon, color: account.color }, onPickAccount)}
-            {person
-              ? chip(t('sms.pickCategory'), { name: accountName(person), icon: person.icon, color: person.color }, onPickCategory)
-              : chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
-            {canInstal && (
-              <button
-                className={`b-smschip ${instal ? 'is-set' : 'is-empty'}`}
-                style={instal ? ({ '--c': 'var(--ion-color-primary)' } as CSSProperties) : undefined}
-                onClick={only(() => setPlanOpen(true))}
-                disabled={busy}
-              >
-                <IonIcon icon={albumsOutline} />
-                {instal ? instalmentChipLabel(t, instal) : t('instalments.chip')}
+        {selecting ? null : understood ? (
+          <>
+            <div className="b-smscard__chips">
+              {chip(t('sms.pickAccount'), account && { name: accountName(account), icon: account.icon, color: account.color }, onPickAccount)}
+              {person
+                ? chip(t('sms.pickCategory'), { name: accountName(person), icon: person.icon, color: person.color }, onPickCategory)
+                : chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
+              {canInstal && (
+                <button
+                  className={`b-smschip ${instal ? 'is-set' : 'is-empty'}`}
+                  style={instal ? ({ '--c': 'var(--ion-color-primary)' } as CSSProperties) : undefined}
+                  onClick={only(() => setPlanOpen(true))}
+                  disabled={busy}
+                >
+                  <IonIcon icon={albumsOutline} />
+                  {instal ? instalmentChipLabel(t, instal) : t('instalments.chip')}
+                </button>
+              )}
+            </div>
+            {choice.moneyBack && category && !person && (
+              <p className="b-smscard__note">{t('sms.moneyBackNote', { category: categoryName(category) })}</p>
+            )}
+            {person && (
+              <p className="b-smscard__note">
+                {personNotHeld
+                  ? t('sms.personCurrency', { name: accountName(person), currency: item.currency, held: personHeld.join(' / ') })
+                  : t(lent ? 'sms.lentNote' : 'sms.paidBackNote', { name: accountName(person) })}
+              </p>
+            )}
+            {notHeld && (
+              <p className="b-smscard__note">
+                {t('sms.savedInCurrency', { currency: item.currency, account: accountName(account), held: held.join(' / ') })}
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="b-smscard__warn">{t('sms.couldntRead')}</div>
+            <p className="b-smscard__raw" dir="auto">{item.body}</p>
+          </>
+        )}
+
+        {!selecting && (
+          <div className="b-smscard__btns">
+            <button className="b-btn b-btn--muted" onClick={only(() => void dismiss())} disabled={busy}>
+              {t('sms.dismiss')}
+            </button>
+            {understood ? (
+              <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(confirm))} disabled={busy || !draft}>
+                {t('sms.confirm')}
+              </button>
+            ) : (
+              <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(edit))} disabled={busy}>
+                {t('sms.fillIn')}
               </button>
             )}
           </div>
-          {choice.moneyBack && category && !person && (
-            <p className="b-smscard__note">{t('sms.moneyBackNote', { category: categoryName(category) })}</p>
-          )}
-          {person && (
-            <p className="b-smscard__note">
-              {personNotHeld
-                ? t('sms.personCurrency', { name: accountName(person), currency: item.currency, held: personHeld.join(' / ') })
-                : t(lent ? 'sms.lentNote' : 'sms.paidBackNote', { name: accountName(person) })}
-            </p>
-          )}
-          {notHeld && (
-            <p className="b-smscard__note">
-              {t('sms.savedInCurrency', { currency: item.currency, account: accountName(account), held: held.join(' / ') })}
-            </p>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="b-smscard__warn">{t('sms.couldntRead')}</div>
-          <p className="b-smscard__raw" dir="auto">{item.body}</p>
-        </>
-      )}
+        )}
+      </div>
 
-      {!selecting && (
-        <div className="b-smscard__btns">
-          <button className="b-btn b-btn--muted" onClick={only(() => void dismiss())} disabled={busy}>
-            {t('sms.dismiss')}
-          </button>
-          {understood ? (
-            <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(confirm))} disabled={busy || !draft}>
-              {t('sms.confirm')}
-            </button>
-          ) : (
-            <button className="b-btn b-btn--primary" onClick={only(() => void requirePro(edit))} disabled={busy}>
-              {t('sms.fillIn')}
-            </button>
-          )}
-        </div>
-      )}
-
+      {/* Outside the card: the sheet is portalled, but React still bubbles its taps to the card's press handler. */}
       {canInstal && account && item.amount != null && item.currency && (
         <InstalmentSheet
           isOpen={planOpen}
@@ -248,6 +251,6 @@ export default function SmsItemCard(props: Props) {
           onClose={() => setPlanOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -88,6 +88,11 @@ describe('findInstalmentMatch', () => {
     expect((await findInstalmentMatch(charge, database))?.id).toBe('near');
   });
 
+  it('an instalment dated the same day as the text is still an instalment match', async () => {
+    await instalment('same-day', nov(25));
+    expect(await findDuplicate(charge, database)).toMatchObject({ kind: 'instalment', tx: { id: 'same-day' } });
+  });
+
   it('a hand-entered same-day match comes first', async () => {
     await instalment('i4', nov(3));
     await database.transactions.add({ ...charge, id: 'manual', categoryId: 'c', createdAt: 'x' } as Transaction);

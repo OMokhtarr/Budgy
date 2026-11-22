@@ -27,9 +27,13 @@ export function actionsFor(items: SmsPending[]): BatchActions {
 /** The drafts that look already saved (added by hand, or a planned instalment), by fingerprint, with what they match. */
 export async function duplicatesOf(drafts: { fingerprint: string; draft: TxDraft }[], database: BudgyDB = db): Promise<Map<string, Duplicate>> {
   const found = new Map<string, Duplicate>();
+  // One instalment is one month's charge: once a text claims it, the next text can't.
+  const taken = new Set<string>();
   for (const { fingerprint, draft } of drafts) {
-    const match = await findDuplicate(draft, database);
-    if (match) found.set(fingerprint, match);
+    const match = await findDuplicate(draft, database, taken);
+    if (!match) continue;
+    found.set(fingerprint, match);
+    if (match.kind === 'instalment') taken.add(match.tx.id!);
   }
   return found;
 }
