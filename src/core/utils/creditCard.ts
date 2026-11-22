@@ -291,14 +291,14 @@ export function statementFor(credit: CreditCard, date: Date): { statementOn: Dat
 /** One instalment plan on a card, as far as it has got. */
 export interface InstalmentPlan {
   planId: string;
-  /** Instalment 1, for the plan's name, category and date. */
+  /** The plan's earliest entry (instalment 1, or a later one for a plan started before Budgy): its name, category and date. */
   first: Transaction;
   /** How many instalments in all. */
   of: number;
-  /** The usual monthly amount (instalment 1's). */
+  /** The usual monthly amount (the earliest entry's). */
   monthly: number;
   currency: string;
-  /** How many are dated up to today. */
+  /** How many are charged: the ones before the earliest entry, plus those dated up to today. */
   charged: number;
   /** What the ones dated after today add up to. */
   toCome: number;
@@ -326,7 +326,7 @@ export function instalmentPlans(cardId: string, txs: Transaction[], today: Date)
       of: first.instalment!.of,
       monthly: first.amount,
       currency: first.currency,
-      charged: list.length - future.length,
+      charged: first.instalment!.n - 1 + list.length - future.length,
       toCome: roundTo(future.reduce((s, t) => s + t.amount, 0), first.currency),
     });
   }
