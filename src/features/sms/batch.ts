@@ -2,7 +2,8 @@ import { db, type BudgyDB } from '@/core/db/db';
 import { buildTxRecord, type TxDraft } from '@/features/transactions/txRecord';
 import type { SmsPending } from '@/shared/models';
 import { findDuplicate, type Duplicate } from './duplicate';
-import { importText } from './learning';
+import { createPlan, type PlanOptions } from '@/features/accounts/card/instalments';
+import { importText, resolveImported } from './learning';
 
 /** Which of the selection bar's actions fit the selected texts. */
 export interface BatchActions {
@@ -38,13 +39,20 @@ export async function duplicatesOf(drafts: { fingerprint: string; draft: TxDraft
   return found;
 }
 
-/** Saves each text's transaction on its own (as its card's Confirm would); one that fails doesn't stop the rest. */
-export async function importMany(entries: { item: SmsPending; draft: TxDraft }[], database: BudgyDB = db): Promise<{ saved: number; failed: number }> {
+/**
+ * Saves each text's transaction on its own (as its card's Confirm would), as instalments when it has a plan; one that
+ * fails doesn't stop the rest.
+ */
+export async function importMany(
+  entries: { item: SmsPending; draft: TxDraft; plan?: PlanOptions }[],
+  database: BudgyDB = db,
+): Promise<{ saved: number; failed: number }> {
   let saved = 0;
   let failed = 0;
-  for (const { item, draft } of entries) {
+  for (const { item, draft, plan } of entries) {
     try {
-      await importText(item, buildTxRecord(draft), database);
+      if (plan) await resolveImported(item, await createPlan(buildTxRecord(draft), plan, database), database);
+      else await importText(item, buildTxRecord(draft), database);
       saved++;
     } catch {
       failed++;

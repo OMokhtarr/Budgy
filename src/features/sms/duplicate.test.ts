@@ -2,7 +2,7 @@ import '@/test/setup-db';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
 import type { Account, Transaction } from '@/shared/models';
-import { findDuplicate, findInstalmentMatch, findManualDuplicate } from './duplicate';
+import { findDuplicate, findInstalmentMatch, findManualDuplicate, instalmentMatchMessage } from './duplicate';
 
 const database = new BudgyDB('t-duplicate');
 
@@ -69,10 +69,15 @@ describe('findInstalmentMatch', () => {
     expect(await findInstalmentMatch(charge, database)).toBeUndefined();
   });
 
-  it('not instalment 1 of a bank-text plan, nor one already linked, nor a deleted one', async () => {
-    await instalment('linked', nov(3), { smsFingerprint: 'fp' });
+  it('not one already linked to a text, nor a deleted one', async () => {
+    await instalment('linked', nov(3), { smsFingerprint: 'fp', instalment: { planId: 'p', n: 4, of: 12, sms: 'fp' } });
     await instalment('deleted', nov(4), { deletedAt: 'x' });
     expect(await findInstalmentMatch(charge, database)).toBeUndefined();
+  });
+
+  it('instalment 1 of a full-price plan from a purchase text can still get its monthly text', async () => {
+    await instalment('first', nov(3), { smsFingerprint: 'fp-buy', instalment: { planId: 'p', n: 1, of: 12 } });
+    expect((await findInstalmentMatch(charge, database))?.id).toBe('first');
   });
 
   it('not a different amount, currency or account', async () => {
@@ -102,5 +107,20 @@ describe('findInstalmentMatch', () => {
   it('income is never matched to an instalment', async () => {
     await instalment('i4', nov(3));
     expect(await findInstalmentMatch({ ...charge, type: 'income' }, database)).toBeUndefined();
+  });
+});
+
+describe('instalmentMatchMessage', () => {
+  const t = (key: string, v?: Record<string, unknown>) => `${key}:${JSON.stringify(v ?? {})}`;
+  const row = (note?: string) => ({ note, instalment: { planId: 'p', n: 4, of: 12 } }) as Transaction;
+
+  it('names the plan by its note, else its category', () => {
+    expect(instalmentMatchMessage(t, row(' Phone '), 'Shopping')).toBe('sms.instalmentMatchBody:{"name":"Phone","n":4,"of":12}');
+    expect(instalmentMatchMessage(t, row(), 'Shopping')).toBe('sms.instalmentMatchBody:{"name":"Shopping","n":4,"of":12}');
+  });
+
+  it('leaves the name out when there is none', () => {
+    expect(instalmentMatchMessage(t, row(''), undefined)).toBe('sms.instalmentMatchBodyNoName:{"n":4,"of":12}');
+    expect(instalmentMatchMessage(t, row(), '')).toBe('sms.instalmentMatchBodyNoName:{"n":4,"of":12}');
   });
 });

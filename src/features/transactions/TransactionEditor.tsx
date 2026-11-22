@@ -122,7 +122,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const [auto, setAuto] = useState(!!editingRule?.auto);
 
   // ── instalments ──
-  const [plan, setPlan] = useState<InstalmentChoice>();
+  const [plan, setPlan] = useState<InstalmentChoice | undefined>(init.instalments);
   const [planOpen, setPlanOpen] = useState(false);
 
   const account = allAccounts?.find((a) => a.id === accountId);

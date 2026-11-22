@@ -46,7 +46,7 @@
   - `planParts repeats the amount from instalment n`: `planParts(1000, 12, 'EGP', 3)` has length 10 and every element is 1000. `planParts(1000, 3, 'EGP')` equals `[333.33, 333.33, 333.34]`.
   - `parseFirst takes 1..months`: `parseFirst('3', 12)` is 3, `parseFirst('٣', 12)` is 3, and `parseFirst` returns undefined for `['', '0', '13', '2.5']` with 12, and for `'3'` with undefined.
   - `createPlan from instalment 3 of 12 adds 3..12 at the amount`: `createPlan(purchase, { months: 12, first: 3, feeNote: '', credit }, database)`. There are 10 live rows, every amount is 1000, the `n` values are `[3..12]`, every `of` is 12, the first date is the purchase date, and the second date falls in the next month.
-  - `createPlan on the last instalment saves just that one`: `first: 12` gives 1 row with n 12 and no recurring rows.
+  - `createPlan on the last instalment saves just that one`: `first: 12` with `autoPayFrom` gives 1 row with n 12 and one recurring rule.
   - `automatic payment covers only the instalments added`: with `first: 3, months: 12, autoPayFrom: 'bank'`, the recurring rules cover 10 payments. Sum the months from `start` to `until` per rule.
   - `convertToPlan from instalment 3 keeps its amount`: a saved 1000 purchase converted with `first: 3` keeps its id and amount 1000, gets `n: 3`, and there are 10 rows in all.
   - `toPlanOptions picks Bills and the card's settings`: with categories `[{ id: 'b', key: 'bills', kind: 'expense' }, …]` it returns `feeCategoryId: 'b'` and `credit` equal to the card's.

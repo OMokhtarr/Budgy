@@ -30,6 +30,8 @@ interface Props {
   /** Every account (the instalments sheet offers the ones that can pay the card) and category (the fee goes to Bills). */
   accounts: Account[];
   categories: Category[];
+  /** The instalments chosen in the sheet, or undefined for "Pay in full". */
+  onPlan(plan: InstalmentChoice | undefined): void;
   onPickAccount(): void;
   onPickCategory(): void;
   /** While several texts are being picked, a tap toggles the card instead of opening the editor. */
@@ -47,7 +49,7 @@ const only = (fn: () => void) => (e: MouseEvent) => {
 
 /** One bank text on the review screen: confirm or dismiss it here, or tap it to open the editor pre-filled. */
 export default function SmsItemCard(props: Props) {
-  const { item, choice, account, category, person, accounts, categories, onPickAccount, onPickCategory, selecting, selected, onSelect } = props;
+  const { item, choice, account, category, person, accounts, categories, onPlan, onPickAccount, onPickCategory, selecting, selected, onSelect } = props;
   const { t } = useTranslation();
   const locale = useLocale();
   const money = useMoney();
@@ -56,11 +58,10 @@ export default function SmsItemCard(props: Props) {
   const askDuplicate = useDuplicatePrompt();
   const { accountName, categoryName } = useNames();
   const [busy, setBusy] = useState(false);
-  // Instalments, offered while the text is money out on a credit card; picking another account drops the choice.
-  const [plan, setPlan] = useState<InstalmentChoice>();
+  // Instalments, offered while the text is money out on a credit card; the page drops them when another account is picked.
   const [planOpen, setPlanOpen] = useState(false);
   const canInstal = canInstalText(item, choice, account);
-  const instal = canInstal ? plan : undefined;
+  const instal = canInstal ? choice.instalments : undefined;
   const [presentToast] = useIonToast();
   const failed = () => void presentToast({ message: t('sms.actionFailed'), duration: 3000, position: 'top', color: 'danger' });
 
@@ -121,6 +122,7 @@ export default function SmsItemCard(props: Props) {
       date: item.date,
       note: item.merchant,
       smsFingerprint: item.fingerprint,
+      instalments: person ? undefined : instal,
       header: (
         <div className="b-smshead">
           <div className="b-smscard__top">
@@ -243,9 +245,9 @@ export default function SmsItemCard(props: Props) {
           currency={item.currency}
           card={account}
           accounts={accounts}
-          value={plan}
+          value={choice.instalments}
           onDone={(v) => {
-            setPlan(v);
+            onPlan(v);
             setPlanOpen(false);
           }}
           onClose={() => setPlanOpen(false)}

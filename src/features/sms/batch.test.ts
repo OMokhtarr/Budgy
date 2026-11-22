@@ -85,6 +85,23 @@ describe('importMany', () => {
   });
 });
 
+describe('importMany with a plan', () => {
+  it('saves a text that has a plan as its instalments, the others as they are', async () => {
+    const a = item();
+    const b = item({ fingerprint: 'b', amount: 90 });
+    const credit = { statementDay: 25, dueDay: 20 };
+    const r = await importMany(
+      [{ item: a, draft: draft(a), plan: { months: 3, feeNote: '', credit } }, { item: b, draft: draft(b) }],
+      database,
+    );
+    expect(r).toEqual({ saved: 2, failed: 0 });
+    const txs = (await database.transactions.toArray()).filter(alive);
+    expect(txs.filter((t) => t.instalment).map((t) => t.amount)).toEqual([150, 150, 150]);
+    expect(txs.filter((t) => !t.instalment).map((t) => t.amount)).toEqual([90]);
+    expect(await database.smsPending.count()).toBe(0);
+  });
+});
+
 describe('duplicatesOf', () => {
   it('returns the texts that match a hand-entered transaction on the same day', async () => {
     const a = item();

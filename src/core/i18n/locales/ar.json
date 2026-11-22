@@ -471,7 +471,8 @@
     "which": "أي قسط هذا؟",
     "ofSep": "من",
     "totalLeft": "= {{total}} إجمالاً · متبقٍ {{left}}",
-    "chipFrom": "{{n}} من {{of}}"
+    "chipFrom": "{{n}} من {{of}}",
+    "whichRange": "عدد صحيح من 1 إلى {{max}}."
   },
   "cards": {
     "kind": "نوع البطاقة",
@@ -944,7 +945,8 @@
     "instalmentMatchTitle": "مسجّل بالفعل؟",
     "instalmentMatchBody": "يبدو أنه {{name}}، القسط {{n}} من {{of}}، المسجّل بالفعل على هذه البطاقة.",
     "alreadyRecorded": "مسجّل بالفعل",
-    "addAnyway": "أضفه على أي حال"
+    "addAnyway": "أضفه على أي حال",
+    "instalmentMatchBodyNoName": "يبدو أنه القسط {{n}} من {{of}} لخطة مسجّلة بالفعل على هذه البطاقة."
   },
   "pro": {
     "unavailable": "Budgy Pro غير متاح الآن. تحقّق من اتصالك وحاول مرة أخرى.",

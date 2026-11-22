@@ -80,20 +80,24 @@ stands for, and have the rest of the months recorded until the plan is done.
 - Confirm with a plan: the same duplicate check, then `createPlan` with the draft and options (Bills fee category,
   fee note, card's credit settings, as the editor does), then `resolveImported` with instalment 1's entry.
 - Pro gate as today for Confirm. Tapping the card still opens the editor, which already offers the chip.
-- Batch confirm (several selected texts) stays as single purchases. *My call: a plan is a choice per text.*
+- The plan is one of the card's picks (`CardPick.instalments`): picking another account or a person drops it, the
+  editor opens with it, and batch confirm ("Same category") saves a text that has one as its plan.
 
 ### Matching an instalment already recorded (`duplicate.ts`, `useDuplicatePrompt.ts`, `batch.ts`)
 
-- The duplicate lookup also returns an **instalment match**: a live expense with `instalment` set, no
-  `smsFingerprint`, on the same account, same amount and currency, dated in the same statement cycle as the text
+- The duplicate lookup also returns an **instalment match**: a live expense with `instalment` set and no linked
+  month's text yet (`instalment.sms`), not claimed by another text being confirmed with it, on the same account, same amount and currency, dated in the same statement cycle as the text
   (`statementFor` on the card). If several match, the one dated nearest the text. *My call: the bank posts on
   statement day, which can be weeks from the purchase day, so "same day" isn't enough.*
-- The hand-entered same-day match stays as it is and is checked first.
+- The hand-entered same-day match stays as it is (instalments left out) and is checked first.
 - For an instalment match the alert says: "Looks like *Phone*, instalment 4 of 12, already on this card." Buttons
   **Already recorded** / **Add anyway**.
-- **Already recorded** links the text to that instalment: the instalment takes the text's `smsFingerprint` and the
-  text is resolved as imported (so it isn't matched again and the text shows where it went). *My call over a plain
-  skip.* Builder to confirm `resolveImported` fits; otherwise stamp and skip as `duplicate`.
+- **Already recorded** links the text to that instalment: `instalment.sms` is set to the text's fingerprint (so no
+  other text matches it), and the instalment takes it as `smsFingerprint` too, unless it already holds its purchase
+  text's (instalment 1 of a full-price plan), when the text is recorded as seen. The sender's card is learned, not a
+  merchant rule. A plan made from a one-instalment text has that text linked from the start. If the instalment was
+  claimed meanwhile, the text is just a duplicate.
+- With no note and no category name, the alert leaves the name out.
 - Batch confirm: `duplicatesOf` includes instalment matches, handled the way it already handles duplicates, with
   linking for instalment matches.
 

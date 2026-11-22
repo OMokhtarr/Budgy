@@ -71,10 +71,30 @@ describe('skipDuplicate', () => {
       undefined,
       database,
     );
+    await database.merchantRules.clear();
     await skipDuplicate(text, { kind: 'instalment', tx: i4 }, database);
     expect((await database.transactions.get(i4.id!))?.smsFingerprint).toBe('fp-i4');
+    expect((await database.transactions.get(i4.id!))?.instalment?.sms).toBe('fp-i4');
+    // The bank's instalment wording ("INSTALMENT") would teach every later text this one plan's category.
+    expect(await database.merchantRules.count()).toBe(0);
     expect(await database.smsPending.get('fp-i4')).toBeUndefined();
     expect(await findInstalmentMatch(charge, database)).toBeUndefined();
+  });
+
+  it('links instalment 1 of a plan from a purchase text, keeping the purchase’s text', async () => {
+    await database.accounts.put(card);
+    const monthly = item({ fingerprint: 'fp-m1', amount: 1000, date: text.date });
+    await database.smsPending.put(monthly);
+    const i1 = await saveTx(
+      { ...charge, categoryId: 'c1', date: new Date(2026, 10, 4, 12).toISOString(), instalment: { planId: 'q', n: 1, of: 12 }, smsFingerprint: 'fp-buy', createdAt: 'x' },
+      undefined,
+      database,
+    );
+    await skipDuplicate(monthly, { kind: 'instalment', tx: i1 }, database);
+    const after = await database.transactions.get(i1.id!);
+    expect(after).toMatchObject({ smsFingerprint: 'fp-buy', instalment: { sms: 'fp-m1' } });
+    expect(await database.smsSeen.get('fp-m1')).toMatchObject({ outcome: 'duplicate' });
+    expect(await database.smsPending.get('fp-m1')).toBeUndefined();
   });
 
   it('falls back to a duplicate when the instalment was linked meanwhile', async () => {
@@ -82,11 +102,11 @@ describe('skipDuplicate', () => {
     const late = item({ fingerprint: 'fp-late', amount: 1000, date: text.date });
     await database.smsPending.put(late);
     const i5 = await saveTx(
-      { ...charge, categoryId: 'c1', date: new Date(2026, 10, 4, 12).toISOString(), instalment: { planId: 'p', n: 5, of: 12 }, smsFingerprint: 'fp-first', createdAt: 'x' },
+      { ...charge, categoryId: 'c1', date: new Date(2026, 10, 4, 12).toISOString(), instalment: { planId: 'p', n: 5, of: 12, sms: 'fp-first' }, smsFingerprint: 'fp-first', createdAt: 'x' },
       undefined,
       database,
     );
-    await skipDuplicate(late, { kind: 'instalment', tx: { ...i5, smsFingerprint: undefined } }, database);
+    await skipDuplicate(late, { kind: 'instalment', tx: { ...i5, smsFingerprint: undefined, instalment: { planId: 'p', n: 5, of: 12 } } }, database);
     expect((await database.transactions.get(i5.id!))?.smsFingerprint).toBe('fp-first');
     expect(await database.smsSeen.get('fp-late')).toMatchObject({ outcome: 'duplicate' });
   });

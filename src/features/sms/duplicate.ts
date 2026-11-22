@@ -36,9 +36,8 @@ export async function findManualDuplicate(d: DupeQuery, database: BudgyDB = db):
 /**
  * A planned instalment a text on a credit card may be the bank's monthly charge for: a live expense of a plan, on the
  * same card, with the same amount and currency, on the same statement as the text (the bank posts it on statement day,
- * which can be weeks from the day the plan dates it). One a text was already matched to, or that came from a text
- * (a plan's first entry), has a fingerprint and is left out, as are the ids in `taken` (claimed by other texts being
- * confirmed together). Of several, the one dated nearest the text.
+ * which can be weeks from the day the plan dates it). One already linked to its month's text is left out, as are the
+ * ids in `taken` (claimed by other texts being confirmed together). Of several, the one dated nearest the text.
  */
 export async function findInstalmentMatch(
   d: DupeQuery,
@@ -59,7 +58,7 @@ export async function findInstalmentMatch(
         alive(x) &&
         x.type === 'expense' &&
         !!x.instalment &&
-        !x.smsFingerprint &&
+        !x.instalment.sms &&
         !taken.has(x.id!) &&
         x.amount === d.amount &&
         x.currency === d.currency &&
@@ -76,4 +75,15 @@ export async function findDuplicate(d: DupeQuery, database: BudgyDB = db, taken?
   if (manual) return { kind: 'manual', tx: manual };
   const instalment = await findInstalmentMatch(d, database, taken);
   return instalment ? { kind: 'instalment', tx: instalment } : undefined;
+}
+
+/** The alert's question for an instalment match, naming the plan by its note or else its category, when it has one. */
+export function instalmentMatchMessage(
+  t: (key: string, values?: Record<string, unknown>) => string,
+  tx: Transaction,
+  categoryLabel: string | undefined,
+): string {
+  const { n, of } = tx.instalment!;
+  const name = tx.note?.trim() || categoryLabel?.trim();
+  return name ? t('sms.instalmentMatchBody', { name, n, of }) : t('sms.instalmentMatchBodyNoName', { n, of });
 }

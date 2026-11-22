@@ -4,6 +4,7 @@ import type { Recurring, Transaction, TxType } from '@/shared/models';
 import type { RepeatName } from '@/core/utils/recurring';
 import TransactionEditor from '@/features/transactions/TransactionEditor';
 import type { Duplicate } from '@/features/sms/duplicate';
+import type { InstalmentChoice } from '@/features/accounts/card/instalments';
 
 export interface EditorInit {
   type?: TxType;
@@ -38,6 +39,8 @@ export interface EditorInit {
   smsFingerprint?: string;
   /** Called with the stored transaction (including its id) after a successful save. */
   onSaved?: (tx: Transaction) => void;
+  /** Instalments already chosen (on a bank text's card), offered while the editor stays on a credit card purchase. */
+  instalments?: InstalmentChoice;
   /** The duplicate check's "Skip", with what the text matched. */
   onSkipped?: (match?: Duplicate) => void;
 }

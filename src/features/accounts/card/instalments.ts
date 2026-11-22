@@ -6,6 +6,15 @@ import { parseNumber } from '@/core/utils/number';
 import { dayKey } from '@/core/utils/period';
 import type { Account, Category, CreditCard, Recurring, Transaction } from '@/shared/models';
 
+/** What the sheet chose: how many months, which instalment the amount is (if one), a fee, and who pays each month. */
+export interface InstalmentChoice {
+  months: number;
+  /** Set when the amount is one monthly instalment: which one it is (1..months). Unset: the amount is the full price. */
+  first?: number;
+  fee?: number;
+  autoPayFrom?: string;
+}
+
 /** How a purchase is split, as chosen in the editor. */
 export interface PlanOptions {
   months: number;
@@ -48,9 +57,40 @@ export function planParts(amount: number, months: number, currency: string, firs
   return first == null ? splitAmount(amount, months, currency) : Array.from({ length: months - first + 1 }, () => amount);
 }
 
+/** What the sheet's fields come to: the numbers once they're valid, whether the fee applies, and the hint to show. */
+export interface InstalmentForm {
+  months?: number;
+  first?: number;
+  valid: boolean;
+  /** Show the fee field: not for a plan that started before instalment 1 (kept while n is being retyped). */
+  withFee: boolean;
+  /** Save the typed fee: only for the full price or instalment 1. */
+  sendFee: boolean;
+  hint: { key: 'monthsRange' | 'whichRange' | 'perMonth' | 'totalLeft'; values: Record<string, number> };
+}
+
+export function instalmentForm(i: { oneInstalment: boolean; months: string; first: string; amount: number; currency: string }): InstalmentForm {
+  const months = parseMonths(i.months);
+  const first = i.oneInstalment ? parseFirst(i.first, months) : undefined;
+  const typedFirst = parseNumber(i.first);
+  const withFee = !i.oneInstalment || i.first.trim() === '' || typedFirst === 1;
+  const sendFee = !i.oneInstalment || first === 1;
+  const range = { key: 'monthsRange' as const, values: { min: MIN_MONTHS, max: MAX_MONTHS } };
+  if (!months) return { valid: false, withFee, sendFee, hint: range };
+  if (i.oneInstalment) {
+    const valid = first != null;
+    if (!valid || !(i.amount > 0)) return { months, first, valid, withFee, sendFee, hint: { key: 'whichRange', values: { max: months } } };
+    const total = roundTo(i.amount * months, i.currency);
+    const left = roundTo(i.amount * (months - first), i.currency);
+    return { months, first, valid, withFee, sendFee, hint: { key: 'totalLeft', values: { total, left } } };
+  }
+  if (!(i.amount > 0)) return { months, valid: true, withFee, sendFee, hint: range };
+  return { months, valid: true, withFee, sendFee, hint: { key: 'perMonth', values: { amount: planParts(i.amount, months, i.currency)[0] } } };
+}
+
 /** The editor's or a bank text's choice as the options a plan is saved with: the fee goes to Bills. */
 export function toPlanOptions(
-  choice: Pick<PlanOptions, 'months' | 'first' | 'fee' | 'autoPayFrom'>,
+  choice: InstalmentChoice,
   card: Account,
   categories: Category[],
   feeNote: string,
@@ -169,6 +209,18 @@ function paymentRules(
 }
 
 /**
+ * A plan's first entry. When the purchase is one monthly instalment from a bank text, that text is this month's charge,
+ * so it's linked (no other text matches it). A full-price purchase text isn't a monthly one: its instalment 1 stays
+ * open for the bank's monthly text.
+ */
+const firstInstalment = (planId: string, o: PlanOptions, fingerprint: string | undefined): Transaction['instalment'] => ({
+  planId,
+  n: o.first ?? 1,
+  of: o.months,
+  ...(o.first != null && fingerprint ? { sms: fingerprint } : {}),
+});
+
+/**
  * Saves a new purchase on a credit card as a plan of monthly instalments; returns instalment 1. A purchase from a bank
  * text is saved once, like `saveTx`: if one with its fingerprint exists (even deleted), that one is returned instead.
  */
@@ -183,7 +235,7 @@ export async function createPlan(purchase: Omit<Transaction, 'id'>, o: PlanOptio
     const first: Omit<Transaction, 'id'> = {
       ...purchase,
       amount: parts[0],
-      instalment: { planId, n: o.first ?? 1, of: o.months },
+      instalment: firstInstalment(planId, o, purchase.smsFingerprint),
       createdAt: purchase.createdAt ?? now,
       updatedAt: now,
     };
@@ -198,7 +250,7 @@ export async function convertToPlan(tx: Transaction, o: PlanOptions, database: B
   const planId = newId();
   const parts = planParts(tx.amount, o.months, tx.currency, o.first);
   return database.transaction('rw', database.transactions, database.recurring, async () => {
-    const first: Transaction = { ...tx, amount: parts[0], instalment: { planId, n: o.first ?? 1, of: o.months }, updatedAt: stamp() };
+    const first: Transaction = { ...tx, amount: parts[0], instalment: firstInstalment(planId, o, tx.smsFingerprint), updatedAt: stamp() };
     await database.transactions.put(first);
     await addRest(first, planId, parts, o, database);
     return planId;

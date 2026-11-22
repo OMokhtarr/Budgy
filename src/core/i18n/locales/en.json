@@ -403,7 +403,8 @@
     "which": "Which instalment is this?",
     "ofSep": "of",
     "totalLeft": "= {{total}} total · {{left}} still to come",
-    "chipFrom": "{{n}} of {{of}}"
+    "chipFrom": "{{n}} of {{of}}",
+    "whichRange": "A whole number from 1 to {{max}}."
   },
   "cards": {
     "kind": "Card type",
@@ -816,7 +817,8 @@
     "instalmentMatchTitle": "Already recorded?",
     "instalmentMatchBody": "Looks like {{name}}, instalment {{n}} of {{of}}, already on this card.",
     "alreadyRecorded": "Already recorded",
-    "addAnyway": "Add anyway"
+    "addAnyway": "Add anyway",
+    "instalmentMatchBodyNoName": "Looks like instalment {{n}} of {{of}} of a plan already on this card."
   },
   "pro": {
     "unavailable": "Budgy Pro isn't available right now. Check your connection and try again.",

@@ -2,7 +2,7 @@ import '@/test/setup-db';
 import { describe, expect, it } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
 import type { Account, Category, SmsPending } from '@/shared/models';
-import { addPerson, canInstalText, cardDraft, choiceOf, isPerson, usablePick } from './review';
+import { addPerson, canInstalText, cardDraft, choiceOf, isPerson, usablePick, withPick } from './review';
 
 const conv = { base: 'EGP', rate: (c: string) => (c === 'EGP' ? 1 : c === 'USD' ? 50 : undefined) };
 
@@ -197,5 +197,27 @@ describe('canInstalText', () => {
     expect(canInstalText(item(), { accountId: 'a1', categoryId: 'c1' }, account('a1'))).toBe(false);
     expect(canInstalText(item(), choice, undefined)).toBe(false);
     expect(canInstalText(item({ status: 'unreadable' } as Partial<SmsPending>), choice, card)).toBe(false);
+  });
+});
+
+describe('instalments as a pick', () => {
+  const plan = { months: 12 };
+
+  it('withPick keeps the plan while the account stays, and drops it when the account or a person is picked', () => {
+    const old = { accountId: 'card', categoryId: 'c1', instalments: plan };
+    expect(withPick(old, { categoryId: 'c2' }).instalments).toBe(plan);
+    expect(withPick(old, { accountId: 'card' }).instalments).toBe(plan);
+    expect(withPick(old, { accountId: 'bank' }).instalments).toBeUndefined();
+    expect(withPick(old, { personId: 'p1' }).instalments).toBeUndefined();
+    expect(withPick({ instalments: plan }, { accountId: 'bank' }).instalments).toBeUndefined();
+    expect(withPick(undefined, { instalments: plan })).toEqual({ instalments: plan });
+  });
+
+  it('usablePick and choiceOf carry it, but not to a person', () => {
+    const accounts = [account('card')];
+    const kept = usablePick({ accountId: 'card', instalments: plan }, 'expense', accounts, []);
+    expect(kept.instalments).toBe(plan);
+    expect(choiceOf({ accountId: 'card', categoryId: 'c1' }, kept).instalments).toBe(plan);
+    expect(choiceOf({ accountId: 'card' }, { personId: 'p1', instalments: plan }).instalments).toBeUndefined();
   });
 });

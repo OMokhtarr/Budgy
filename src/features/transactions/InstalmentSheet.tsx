@@ -5,20 +5,13 @@ import type { TFunction } from 'i18next';
 import { useMoney } from '@/core/contexts/SettingsContext';
 import { useNames } from '@/core/db/hooks';
 import { isCreditCard, payFromAccount } from '@/core/utils/creditCard';
-import { currenciesOf, groupOf, roundTo } from '@/core/utils/currency';
+import { currenciesOf, groupOf } from '@/core/utils/currency';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
-import { MAX_MONTHS, MIN_MONTHS, parseFirst, parseMonths, planParts } from '@/features/accounts/card/instalments';
+import { instalmentForm, type InstalmentChoice } from '@/features/accounts/card/instalments';
 import type { Account } from '@/shared/models';
 import { lastAccount } from './TransactionEditor';
 
-/** What the user chose: how many months, a one-time fee, and the account that pays each instalment by itself. */
-export interface InstalmentChoice {
-  months: number;
-  /** Set when the amount is one monthly instalment: which one it is (1..months). Unset: the amount is the full price. */
-  first?: number;
-  fee?: number;
-  autoPayFrom?: string;
-}
+export type { InstalmentChoice };
 
 const DEFAULT_MONTHS = '12';
 const DEFAULT_FIRST = '1';
@@ -70,25 +63,23 @@ export default function InstalmentSheet({ isOpen, amount, currency, card, accoun
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  const n = parseMonths(months);
-  const k = oneInstalment ? parseFirst(first, n) : undefined;
-  const valid = !!n && (!oneInstalment || k != null);
-  // A plan that started before instalment 1 had its fee charged back then.
-  const withFee = !oneInstalment || k === 1;
-  let hint: string | undefined;
-  if (!n) hint = t('instalments.monthsRange', { min: MIN_MONTHS, max: MAX_MONTHS });
-  else if (!(amount > 0)) hint = undefined;
-  else if (!oneInstalment) hint = t('instalments.perMonth', { amount: money.format(planParts(amount, n, currency)[0], currency) });
-  else if (k != null) {
-    hint = t('instalments.totalLeft', {
-      total: money.format(roundTo(amount * n, currency), currency),
-      left: money.format(roundTo(amount * (n - k), currency), currency),
-    });
-  }
+  const form = instalmentForm({ oneInstalment, months, first, amount, currency });
+  const { withFee, valid } = form;
+  // Amounts in the hint are money; the ranges are plain numbers.
+  const asMoney = (v: number) => money.format(v, currency);
+  const values = Object.fromEntries(
+    Object.entries(form.hint.values).map(([key, v]) => [key, ['amount', 'total', 'left'].includes(key) ? asMoney(v) : v]),
+  );
+  const hint = t(`instalments.${form.hint.key}`, values);
   const done = () => {
-    if (!n || !valid) return;
+    if (!form.months || !valid) return;
     const f = parseNumber(fee);
-    onDone({ months: n, first: k, fee: withFee && f > 0 ? f : undefined, autoPayFrom: autoPay && payFrom ? payFrom : undefined });
+    onDone({
+      months: form.months,
+      first: form.first,
+      fee: form.sendFee && f > 0 ? f : undefined,
+      autoPayFrom: autoPay && payFrom ? payFrom : undefined,
+    });
   };
 
   return (
@@ -141,7 +132,7 @@ export default function InstalmentSheet({ isOpen, amount, currency, card, accoun
               <input className="b-input b-num" inputMode="numeric" value={months} onChange={(e) => setMonths(cleanNumberInput(e.target.value))} />
             </label>
           )}
-          {hint && <div className="b-field-hint">{hint}</div>}
+          <div className="b-field-hint">{hint}</div>
           {withFee && (
             <label className="b-field">
               <span>{t('instalments.fee', { currency })}</span>

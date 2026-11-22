@@ -3,7 +3,7 @@ import { useIonAlert } from '@ionic/react';
 import { useTranslation } from 'react-i18next';
 import { db } from '@/core/db/db';
 import { useNames } from '@/core/db/hooks';
-import { findDuplicate, type DupeQuery, type Duplicate } from './duplicate';
+import { findDuplicate, instalmentMatchMessage, type DupeQuery, type Duplicate } from './duplicate';
 
 /** "Keep both", "Skip", or the alert closed without a choice (save nothing, change nothing). */
 export type DuplicateChoice = 'keep' | 'skip' | 'cancel';
@@ -28,13 +28,13 @@ export function useDuplicatePrompt(): (d: DupeQuery) => Promise<DuplicateAnswer>
       const match = await findDuplicate(d);
       if (!match) return { choice: 'keep' };
       const instalment = match.kind === 'instalment' ? match.tx.instalment : undefined;
-      const name = instalment
-        ? match.tx.note?.trim() || categoryName(match.tx.categoryId ? await db.categories.get(match.tx.categoryId) : undefined)
-        : '';
+      // A category that's gone names nothing (rather than "Uncategorized"): the message then leaves the name out.
+      const category = instalment && match.tx.categoryId ? await db.categories.get(match.tx.categoryId) : undefined;
+      const message = instalment ? instalmentMatchMessage(t, match.tx, category && categoryName(category)) : t('sms.duplicateBody');
       return new Promise<DuplicateAnswer>((resolve) => {
         presentAlert({
           header: t(instalment ? 'sms.instalmentMatchTitle' : 'sms.duplicateTitle'),
-          message: instalment ? t('sms.instalmentMatchBody', { name, n: instalment.n, of: instalment.of }) : t('sms.duplicateBody'),
+          message,
           buttons: [
             { text: t(instalment ? 'sms.alreadyRecorded' : 'sms.skip'), role: 'skip' },
             { text: t(instalment ? 'sms.addAnyway' : 'sms.keepBoth'), role: 'keep' },
