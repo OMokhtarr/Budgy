@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   cardStatus, cardTransactions, cashFeeFor, cycleOf, dueAfterTooMany, isCashWithdrawal, fixedDueDay, hasMinimum, instalmentPlans, interestFree, minimumLine, needsReminder, nextSoFar,
-  parseDueAfter, parsePercent,
+  parseDueAfter, parsePercent, percentInvalid,
   payFromAccount, statementFor, upcomingStatements,
 } from './creditCard';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
@@ -458,6 +458,11 @@ describe('minimum payment', () => {
     expect(parsePercent('٥')).toBe(5);
     expect(parsePercent('2.5')).toBe(2.5);
     for (const bad of ['', '0', '101', 'x']) expect(parsePercent(bad)).toBeUndefined();
+  });
+
+  it('flags a typed percent it can’t take, but not an empty one or 0 (no rule)', () => {
+    for (const bad of ['150', '101', 'x']) expect(percentInvalid(bad)).toBe(true);
+    for (const ok of ['', '0', '5', '٥']) expect(percentInvalid(ok)).toBe(false);
   });
 
   it('shows a row while some of the minimum is left, and that it is paid once it is', () => {

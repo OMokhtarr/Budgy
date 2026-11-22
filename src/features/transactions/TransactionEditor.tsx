@@ -31,7 +31,7 @@ import { addOccurrence, makeRecurring, saveRecurring, skipOccurrence, stopRecurr
 import { useRateFor } from '@/features/recurring/hooks';
 import { useOpenRecurring } from '@/features/recurring/useOpenRecurring';
 import { cashFeeFor, isCashWithdrawal, isCreditCard } from '@/core/utils/creditCard';
-import { addCashFee, cashFeeToSave } from '@/features/accounts/card/cashFee';
+import { cashFeeToSave, saveWithCashFee } from '@/features/accounts/card/cashFee';
 import { convertToPlan, createPlan, toPlanOptions } from '@/features/accounts/card/instalments';
 import InstalmentSheet, { instalmentChipLabel, type InstalmentChoice } from './InstalmentSheet';
 
@@ -134,8 +134,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const instalPlan = canInstal ? plan : undefined;
 
   // ── cash withdrawal fee ──
-  // Typed by the user: wins over the card's rule, so it stays when the amount changes.
-  const [feeTyped, setFeeTyped] = useState<string | undefined>();
+  // Typed by the user, for the currency it was typed in: wins over the card's rule while that currency is picked.
+  const [feeTyped, setFeeTyped] = useState<{ text: string; currency: string } | undefined>();
   const [feeRemoved, setFeeRemoved] = useState(false);
 
   // Follows the transaction type until an account is chosen on purpose.
@@ -229,7 +229,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
         {
           text: t('common.done'),
           handler: (data: { fee?: string }) => {
-            setFeeTyped(cleanNumberInput(data.fee ?? ''));
+            setFeeTyped({ text: cleanNumberInput(data.fee ?? ''), currency });
             setFeeRemoved(false);
           },
         },
@@ -365,13 +365,12 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
           saved = await saveTx(record, tx.id);
           await convertToPlan(saved, options);
         } else saved = await createPlan(record, options);
+      } else if (withdrawal) {
+        const bills = expenseCats?.find((c) => c.key === 'bills')?.id;
+        saved = await saveWithCashFee(record, fee, { categoryId: bills, note: t('cards.cashFeeNote') });
       } else {
         saved = await saveTx(record, tx?.id);
         if (repeat && !linkedRule) await makeRecurring(saved, REPEATS[repeat], auto);
-        if (fee != null) {
-          const bills = expenseCats?.find((c) => c.key === 'bills')?.id;
-          await addCashFee(saved, fee, { categoryId: bills, note: t('cards.cashFeeNote') });
-        }
       }
     } catch (err) {
       saving.current = false;

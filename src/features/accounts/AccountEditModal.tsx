@@ -12,7 +12,7 @@ import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { countsInExpenses, countsInTotal, switchesOnByDefault } from '@/core/utils/accountFilter';
 import { currenciesOf, openingOf, roundTo } from '@/core/utils/currency';
 import { debtSideOf, signedFor, unsigned, type DebtSide } from '@/core/utils/debtSide';
-import { dueAfterTooMany, fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter, parsePercent } from '@/core/utils/creditCard';
+import { dueAfterTooMany, fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter, parsePercent, percentInvalid } from '@/core/utils/creditCard';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
 import IconColorPicker from '@/shared/components/IconColorPicker';
 import Avatar from '@/shared/components/Avatar';
@@ -154,7 +154,8 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
     dueMode === 'day' ? { statementDay, dueDay } : daysAfter ? { statementDay, dueDay, dueAfter: daysAfter } : undefined;
   // A number above the limit is most likely the bank's total from the day you buy (e.g. 55).
   const tooManyDays = dueMode === 'after' && dueAfterTooMany(dueAfter);
-  const creditInvalid = credit && !cycleDraft;
+  // A percent it can't take (above 100) would be dropped on save, so it holds the card back like the cycle does.
+  const creditInvalid = credit && (!cycleDraft || percentInvalid(minPercent) || percentInvalid(cashFeePercent));
   const plainSide: DebtSide | undefined = plainAmounts ? side : owedOnCard ? 'owe' : undefined;
   const pickSide = (s: DebtSide) => {
     setSideChoice(s);
@@ -422,14 +423,16 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
               <RuleFields
                 label={t('cards.minPercent')}
                 atLeast={t('cards.atLeast', { currency })}
-                hint={t('cards.minHint')}
+                hint={percentInvalid(minPercent) ? t('cards.percentRange') : t('cards.minHint')}
+                invalid={percentInvalid(minPercent)}
                 percent={[minPercent, setMinPercent]}
                 amount={[minAmount, setMinAmount]}
               />
               <RuleFields
                 label={t('cards.cashFeePercent')}
                 atLeast={t('cards.atLeast', { currency })}
-                hint={t('cards.cashFeeHint')}
+                hint={percentInvalid(cashFeePercent) ? t('cards.percentRange') : t('cards.cashFeeHint')}
+                invalid={percentInvalid(cashFeePercent)}
                 percent={[cashFeePercent, setCashFeePercent]}
                 amount={[cashFeeAmount, setCashFeeAmount]}
               />
@@ -539,8 +542,10 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
 
 type Typed = [string, (typed: string) => void];
 
-/** A card rule typed as a percent with a lowest amount, both optional, and a hint under them. */
-function RuleFields({ label, atLeast, hint, percent, amount }: { label: string; atLeast: string; hint: string; percent: Typed; amount: Typed }) {
+/** A card rule typed as a percent with a lowest amount, both optional, and a hint under them (red when `invalid`). */
+function RuleFields({
+  label, atLeast, hint, invalid, percent, amount,
+}: { label: string; atLeast: string; hint: string; invalid: boolean; percent: Typed; amount: Typed }) {
   const field = (text: string, [value, set]: Typed) => (
     <label className="b-field">
       <span>{text}</span>
@@ -553,7 +558,7 @@ function RuleFields({ label, atLeast, hint, percent, amount }: { label: string; 
         {field(label, percent)}
         {field(atLeast, amount)}
       </div>
-      <div className="b-field-hint">{hint}</div>
+      <div className={`b-field-hint ${invalid ? 'b-expense' : ''}`}>{hint}</div>
     </>
   );
 }

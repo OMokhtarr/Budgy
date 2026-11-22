@@ -270,6 +270,11 @@ export function parsePercent(typed: string): number | undefined {
   return n > 0 && n <= 100 ? n : undefined;
 }
 
+/** Whether a typed percent is one the card can't take (above 100, or not a number). Empty or 0 means no rule. */
+export function percentInvalid(typed: string): boolean {
+  return typed.trim() !== '' && parseNumber(typed) !== 0 && parsePercent(typed) === undefined;
+}
+
 /**
  * What the card page shows of the minimum: 'row' while some of it is left, 'paid' once it's paid but the
  * statement isn't. Nothing without a rule, or unless the statement is due (overdue, the late fee is charged).
