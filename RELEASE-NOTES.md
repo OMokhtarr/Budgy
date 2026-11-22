@@ -15,21 +15,16 @@ Before adding a section, raise `versionCode` (and `versionName` if it's a new ve
 **Release name:** `7 (1.0)`
 
 Instalments from bank texts, and the credit card minimum payment and cash withdrawal fee. Built with the same
-`.env.local` as build 6 (`VITE_PRO_GATE=test`), so the notes don't mention Budgy Pro. Still has `READ_SMS`, so it
-can only roll out once Play approves the Permissions Declaration Form.
-
-Build 6 was still in review when this was written, so the testers on build 4 may go straight to build 7. That's
-why these notes introduce bank texts again, more briefly, before the new parts.
+`.env.local` as build 6 (`VITE_PRO_GATE=test`), so the notes don't mention Budgy Pro. `READ_SMS` was approved
+with build 6, which is live in Closed testing (2026-11-22), so the notes only cover what's new since.
 
 ```
 <en-US>
-• Bank texts: Budgy can turn your bank's texts into transactions for you to review. Open the menu, then Bank texts. Only the senders you choose are read, and the texts never leave your phone
 • Confirm a credit card text as instalments, or start a plan at the instalment you're on
 • Card minimum payment: the card page shows about how much it is, and reminders mention it
 • Taking cash out on a credit card? Budgy offers to add the bank's fee
 </en-US>
 <ar>
-• رسائل البنك: يستطيع Budgy تحويل رسائل البنك إلى معاملات تراجعها بنفسك. افتح القائمة ثم رسائل البنك. لا تُقرأ إلا رسائل الأرقام التي تختارها، والرسائل لا تغادر هاتفك
 • أكّد رسالة بطاقة الائتمان كأقساط، أو ابدأ الخطة من القسط الذي وصلت إليه
 • الحد الأدنى للسداد: تعرض صفحة البطاقة قيمته التقريبية، وتذكره التذكيرات
 • سحبت نقودًا ببطاقة الائتمان؟ يعرض Budgy إضافة رسوم البنك
