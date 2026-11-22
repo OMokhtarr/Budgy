@@ -396,7 +396,14 @@
     "deleteConfirm_one": "Delete the {{count}} instalment of this plan? Use this for a plan entered by mistake; a cancelled purchase is a refund.",
     "deleteConfirm_other": "Delete all {{count}} instalments of this plan? Use this for a plan entered by mistake; a cancelled purchase is a refund.",
     "tag": "{{n}}/{{of}}",
-    "done": "Done"
+    "done": "Done",
+    "amountIs": "This amount is",
+    "fullPrice": "The full price",
+    "oneInstalment": "One monthly instalment",
+    "which": "Which instalment is this?",
+    "ofSep": "of",
+    "totalLeft": "= {{total}} total · {{left}} still to come",
+    "chipFrom": "{{n}} of {{of}}"
   },
   "cards": {
     "kind": "Card type",

@@ -31,8 +31,8 @@ import { addOccurrence, makeRecurring, saveRecurring, skipOccurrence, stopRecurr
 import { useRateFor } from '@/features/recurring/hooks';
 import { useOpenRecurring } from '@/features/recurring/useOpenRecurring';
 import { isCreditCard } from '@/core/utils/creditCard';
-import { convertToPlan, createPlan, type PlanOptions } from '@/features/accounts/card/instalments';
-import InstalmentSheet, { type InstalmentChoice } from './InstalmentSheet';
+import { convertToPlan, createPlan, toPlanOptions } from '@/features/accounts/card/instalments';
+import InstalmentSheet, { instalmentChipLabel, type InstalmentChoice } from './InstalmentSheet';
 
 const LAST_ACCOUNT_KEY = 'budgy-last-account';
 
@@ -332,12 +332,8 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
       } else if (due) {
         saved = await addOccurrence(due.r, due.day, record, rateFor);
       } else if (instalPlan && account && isCreditCard(account)) {
-        const options: PlanOptions = {
-          ...instalPlan,
-          feeCategoryId: expenseCats?.find((c) => c.key === 'bills')?.id,
-          feeNote: t('instalments.feeNote', { name: note.trim() || categoryName(category) }),
-          credit: account.credit,
-        };
+        const feeNote = t('instalments.feeNote', { name: note.trim() || categoryName(category) });
+        const options = toPlanOptions(instalPlan, account, expenseCats ?? [], feeNote);
         if (tx?.id) {
           saved = await saveTx(record, tx.id);
           await convertToPlan(saved, options);
@@ -696,7 +692,7 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
           {canInstal && !repeat && (
             <button className={`b-editor__chip ${instalPlan ? 'is-on' : ''}`} onClick={() => setPlanOpen(true)}>
               <IonIcon icon={albumsOutline} />
-              {instalPlan ? t('instalments.chipOn', { count: instalPlan.months }) : t('instalments.chip')}
+              {instalPlan ? instalmentChipLabel(t, instalPlan) : t('instalments.chip')}
             </button>
           )}
           {!due && !instalPlan && !tx?.instalment && (

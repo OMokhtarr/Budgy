@@ -1463,6 +1463,10 @@ ion-searchbar.b-search {
 .b-tabs button ion-icon { font-size: 20px; }
 .b-tabs button.is-active { color: var(--b-text); border-bottom-color: var(--ion-color-primary); }
 
+/* "Instalment [n] of [N]" in the instalments sheet. */
+.b-instal-which { display: flex; align-items: center; gap: 10px; }
+.b-instal-which .b-input { flex: 1; min-width: 0; text-align: center; }
+
 .b-actions {
   display: flex;
   align-items: center;
