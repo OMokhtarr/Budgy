@@ -1,6 +1,7 @@
 import type { Converter } from '@/core/contexts/SettingsContext';
 import { alive, db, type BudgyDB } from '@/core/db/db';
 import { categoryFits } from '@/core/db/hooks';
+import { isCreditCard } from '@/core/utils/creditCard';
 import { currenciesOf, groupOf } from '@/core/utils/currency';
 import { rateToSave } from '@/core/utils/txRate';
 import type { TxDraft } from '@/features/transactions/txRecord';
@@ -93,6 +94,19 @@ export function cardDraft(item: SmsPending, choice: CardChoice, conv: Pick<Conve
     subcategoryId: choice.subcategoryId,
     rate: rateToSave({ saved: conv.rate(currency), currency, base: conv.base }),
   };
+}
+
+/** Whether a text's card offers Instalments: money out, in a category (not lent to a person), on a credit card. */
+export function canInstalText(item: SmsPending, choice: CardChoice, account: Account | undefined): boolean {
+  return (
+    item.status === 'understood' &&
+    flowOf(item) === 'expense' &&
+    !choice.personId &&
+    !!choice.categoryId &&
+    !!account &&
+    account.id === choice.accountId &&
+    isCreditCard(account)
+  );
 }
 
 /** "+ New person" on a card: a debt account with just a name, in the text's currency, nothing owed yet. Returns its id. */

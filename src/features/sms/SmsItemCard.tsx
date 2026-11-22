@@ -1,6 +1,6 @@
 import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { IonIcon, useIonToast } from '@ionic/react';
-import { checkmarkCircle, ellipseOutline } from 'ionicons/icons';
+import { albumsOutline, checkmarkCircle, ellipseOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useConverter, useLocale, useMoney } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
@@ -9,11 +9,13 @@ import { useNames } from '@/core/db/hooks';
 import { currenciesOf } from '@/core/utils/currency';
 import { dayTimeLabel } from '@/core/utils/period';
 import { buildTxRecord } from '@/features/transactions/txRecord';
+import { createPlan, toPlanOptions } from '@/features/accounts/card/instalments';
+import InstalmentSheet, { instalmentChipLabel, type InstalmentChoice } from '@/features/transactions/InstalmentSheet';
 import { useLongPress } from '@/shared/hooks/useLongPress';
 import { iconFor } from '@/shared/icons';
 import type { Account, Category, SmsPending } from '@/shared/models';
 import { flowOf, importText, resolveImported, resolveSkipped, skipDuplicate } from './learning';
-import { cardDraft, type CardChoice } from './review';
+import { canInstalText, cardDraft, type CardChoice } from './review';
 import { useDuplicatePrompt } from './useDuplicatePrompt';
 import { tourAttr } from '@/features/onboarding/tourCatalog';
 
@@ -25,6 +27,9 @@ interface Props {
   category?: Category;
   /** The debt account picked in the category's place: the text is money lent to them, or paid back by them. */
   person?: Account;
+  /** Every account (the instalments sheet offers the ones that can pay the card) and category (the fee goes to Bills). */
+  accounts: Account[];
+  categories: Category[];
   onPickAccount(): void;
   onPickCategory(): void;
   /** While several texts are being picked, a tap toggles the card instead of opening the editor. */
@@ -41,7 +46,8 @@ const only = (fn: () => void) => (e: MouseEvent) => {
 };
 
 /** One bank text on the review screen: confirm or dismiss it here, or tap it to open the editor pre-filled. */
-export default function SmsItemCard({ item, choice, account, category, person, onPickAccount, onPickCategory, selecting, selected, onSelect }: Props) {
+export default function SmsItemCard(props: Props) {
+  const { item, choice, account, category, person, accounts, categories, onPickAccount, onPickCategory, selecting, selected, onSelect } = props;
   const { t } = useTranslation();
   const locale = useLocale();
   const money = useMoney();
@@ -50,6 +56,11 @@ export default function SmsItemCard({ item, choice, account, category, person, o
   const askDuplicate = useDuplicatePrompt();
   const { accountName, categoryName } = useNames();
   const [busy, setBusy] = useState(false);
+  // Instalments, offered while the text is money out on a credit card; picking another account drops the choice.
+  const [plan, setPlan] = useState<InstalmentChoice>();
+  const [planOpen, setPlanOpen] = useState(false);
+  const canInstal = canInstalText(item, choice, account);
+  const instal = canInstal ? plan : undefined;
   const [presentToast] = useIonToast();
   const failed = () => void presentToast({ message: t('sms.actionFailed'), duration: 3000, position: 'top', color: 'danger' });
 
@@ -83,6 +94,12 @@ export default function SmsItemCard({ item, choice, account, category, person, o
     const { choice: answer, match } = await askDuplicate(draft);
     if (answer === 'cancel') return;
     if (answer === 'skip') return skipDuplicate(item, match);
+    if (instal && account) {
+      const feeNote = t('instalments.feeNote', { name: item.merchant || categoryName(category) });
+      // Saved once even if learning fails and Confirm is tapped again: the plan keeps the text's fingerprint.
+      const saved = await createPlan(buildTxRecord(draft), toPlanOptions(instal, account, categories, feeNote));
+      return resolveImported(item, saved);
+    }
     await importText(item, buildTxRecord(draft));
   });
 
@@ -164,6 +181,17 @@ export default function SmsItemCard({ item, choice, account, category, person, o
             {person
               ? chip(t('sms.pickCategory'), { name: accountName(person), icon: person.icon, color: person.color }, onPickCategory)
               : chip(t('sms.pickCategory'), category && { name: categoryName(category), icon: category.icon, color: category.color }, onPickCategory)}
+            {canInstal && (
+              <button
+                className={`b-smschip ${instal ? 'is-set' : 'is-empty'}`}
+                style={instal ? ({ '--c': 'var(--ion-color-primary)' } as CSSProperties) : undefined}
+                onClick={only(() => setPlanOpen(true))}
+                disabled={busy}
+              >
+                <IonIcon icon={albumsOutline} />
+                {instal ? instalmentChipLabel(t, instal) : t('instalments.chip')}
+              </button>
+            )}
           </div>
           {choice.moneyBack && category && !person && (
             <p className="b-smscard__note">{t('sms.moneyBackNote', { category: categoryName(category) })}</p>
@@ -203,6 +231,22 @@ export default function SmsItemCard({ item, choice, account, category, person, o
             </button>
           )}
         </div>
+      )}
+
+      {canInstal && account && item.amount != null && item.currency && (
+        <InstalmentSheet
+          isOpen={planOpen}
+          amount={item.amount}
+          currency={item.currency}
+          card={account}
+          accounts={accounts}
+          value={plan}
+          onDone={(v) => {
+            setPlan(v);
+            setPlanOpen(false);
+          }}
+          onClose={() => setPlanOpen(false)}
+        />
       )}
     </div>
   );

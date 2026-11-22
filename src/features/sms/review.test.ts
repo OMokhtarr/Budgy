@@ -2,7 +2,7 @@ import '@/test/setup-db';
 import { describe, expect, it } from 'vitest';
 import { BudgyDB } from '@/core/db/db';
 import type { Account, Category, SmsPending } from '@/shared/models';
-import { addPerson, cardDraft, choiceOf, isPerson, usablePick } from './review';
+import { addPerson, canInstalText, cardDraft, choiceOf, isPerson, usablePick } from './review';
 
 const conv = { base: 'EGP', rate: (c: string) => (c === 'EGP' ? 1 : c === 'USD' ? 50 : undefined) };
 
@@ -182,5 +182,20 @@ describe('money back from a card', () => {
     const d = cardDraft(item(), { accountId: 'a1', categoryId: 'food', moneyBack: true }, conv);
     expect(d?.type).toBe('expense');
     expect(d?.moneyBack).toBeUndefined();
+  });
+});
+
+describe('canInstalText', () => {
+  const card = account('card', { type: 'card', credit: { statementDay: 25, dueDay: 20 } });
+  const choice = { accountId: 'card', categoryId: 'c1' };
+
+  it('only for money out on a credit card with a category', () => {
+    expect(canInstalText(item(), choice, card)).toBe(true);
+    expect(canInstalText(item({ direction: 'in' }), choice, card)).toBe(false);
+    expect(canInstalText(item(), { accountId: 'card', personId: 'p1' }, card)).toBe(false);
+    expect(canInstalText(item(), { accountId: 'card' }, card)).toBe(false);
+    expect(canInstalText(item(), { accountId: 'a1', categoryId: 'c1' }, account('a1'))).toBe(false);
+    expect(canInstalText(item(), choice, undefined)).toBe(false);
+    expect(canInstalText(item({ status: 'unreadable' } as Partial<SmsPending>), choice, card)).toBe(false);
   });
 });

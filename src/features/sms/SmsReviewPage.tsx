@@ -466,6 +466,8 @@ export default function SmsReviewPage() {
                     account={accounts?.find((a) => a.id === choice.accountId)}
                     category={categories?.find((c) => c.id === choice.categoryId)}
                     person={choice.personId ? accounts?.find((a) => a.id === choice.personId) : undefined}
+                    accounts={accounts ?? []}
+                    categories={categories ?? []}
                     onPickAccount={() => openPicker(item, 'account')}
                     onPickCategory={() => openPicker(item, 'category')}
                     selecting={selecting}
