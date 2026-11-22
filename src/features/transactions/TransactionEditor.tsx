@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { IonDatetime, IonIcon, IonModal, useIonActionSheet, useIonAlert, useIonToast } from '@ionic/react';
 import {
-  albumsOutline, arrowForwardOutline, backspaceOutline, calendarOutline, checkmarkOutline, flashOutline, playSkipForwardOutline, repeatOutline,
-  trashOutline,
+  albumsOutline, arrowForwardOutline, backspaceOutline, calendarOutline, checkmarkOutline, flashOutline, playSkipForwardOutline, receiptOutline,
+  repeatOutline, trashOutline,
 } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -30,7 +30,8 @@ import { REPEATS, repeatOf, type RepeatName } from '@/core/utils/recurring';
 import { addOccurrence, makeRecurring, saveRecurring, skipOccurrence, stopRecurring } from '@/features/recurring/actions';
 import { useRateFor } from '@/features/recurring/hooks';
 import { useOpenRecurring } from '@/features/recurring/useOpenRecurring';
-import { isCreditCard } from '@/core/utils/creditCard';
+import { cashFeeFor, isCashWithdrawal, isCreditCard } from '@/core/utils/creditCard';
+import { addCashFee, cashFeeToSave } from '@/features/accounts/card/cashFee';
 import { convertToPlan, createPlan, toPlanOptions } from '@/features/accounts/card/instalments';
 import InstalmentSheet, { instalmentChipLabel, type InstalmentChoice } from './InstalmentSheet';
 
@@ -132,6 +133,11 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
     type === 'expense' && !!account && isCreditCard(account) && !ruleMode && !due && !tx?.instalment && !tx?.groupId && !tx?.recurringId;
   const instalPlan = canInstal ? plan : undefined;
 
+  // ── cash withdrawal fee ──
+  // Typed by the user: wins over the card's rule, so it stays when the amount changes.
+  const [feeTyped, setFeeTyped] = useState<string | undefined>();
+  const [feeRemoved, setFeeRemoved] = useState(false);
+
   // Follows the transaction type until an account is chosen on purpose.
   const accountChosen = useRef(tx?.accountId != null || init.accountId != null);
   useEffect(() => {
@@ -208,6 +214,27 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
   const toDecimals = decimalsOf(toCurrency);
   const amount = useMemo(() => evaluate(expr, decimals), [expr, decimals]);
   const typedTo = useMemo(() => evaluate(expr2, toDecimals), [expr2, toDecimals]);
+
+  // A new transfer taking cash out on a credit card: the bank charges a fee, and interest from that day.
+  const withdrawal = type === 'transfer' && tx?.id == null && !ruleMode && !due && !repeat && isCashWithdrawal(account, toAccount);
+  const feeFromRule = withdrawal && account && isCreditCard(account) ? cashFeeFor(account, amount, currency) : undefined;
+  const fee = cashFeeToSave({ withdrawal, removed: feeRemoved, typed: feeTyped, fromRule: feeFromRule, currency });
+  const editFee = () =>
+    presentAlert({
+      header: t('cards.cashFeeNote'),
+      inputs: [{ name: 'fee', type: 'text', value: fee != null ? String(fee) : '', attributes: { inputmode: 'decimal' } }],
+      buttons: [
+        { text: t('cards.cashFeeNone'), role: 'destructive', handler: () => setFeeRemoved(true) },
+        { text: t('common.cancel'), role: 'cancel' },
+        {
+          text: t('common.done'),
+          handler: (data: { fee?: string }) => {
+            setFeeTyped(cleanNumberInput(data.fee ?? ''));
+            setFeeRemoved(false);
+          },
+        },
+      ],
+    });
   const toTouched = cross && touchedPair === pair;
 
   // ── exchange rate: each transaction's own, starting from the saved one ──
@@ -341,6 +368,10 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
       } else {
         saved = await saveTx(record, tx?.id);
         if (repeat && !linkedRule) await makeRecurring(saved, REPEATS[repeat], auto);
+        if (fee != null) {
+          const bills = expenseCats?.find((c) => c.key === 'bills')?.id;
+          await addCashFee(saved, fee, { categoryId: bills, note: t('cards.cashFeeNote') });
+        }
       }
     } catch (err) {
       saving.current = false;
@@ -707,7 +738,14 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
               {t('recurring.auto')}
             </button>
           )}
+          {withdrawal && (
+            <button className={`b-editor__chip ${fee != null ? 'is-on' : ''}`} onClick={editFee}>
+              <IonIcon icon={receiptOutline} />
+              {fee != null ? t('cards.cashFeeChip', { amount: money.format(fee, currency) }) : t('cards.cashFeeAdd')}
+            </button>
+          )}
         </div>
+        {withdrawal && <p className="b-editor__hint">{t('cards.cashInterestNote')}</p>}
       </div>
 
       {account && canInstal && (
