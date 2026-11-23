@@ -126,6 +126,36 @@ describe('cardStatus', () => {
     const s = cardStatus(c, [spend(1000, day(2026, 11, 10)), exchange], today);
     expect(s.byCurrency.USD.paid).toBe(0);
   });
+
+  it('waits for a payment dated ahead', () => {
+    const txs = [spend(500, day(2026, 11, 20)), pay(500, day(2026, 12, 3))];
+    const s = cardStatus(card(), txs, today);
+    expect(s.byCurrency.EGP).toMatchObject({ owed: 500, paid: 0, due: 500 });
+    expect(s.state).toBe('due');
+    const later = cardStatus(card(), txs, day(2026, 12, 3));
+    expect(later.byCurrency.EGP).toMatchObject({ owed: 0, paid: 500, due: 0 });
+    expect(later.state).toBe('paid');
+  });
+
+  it('waits for a refund dated ahead', () => {
+    const refund = tx({ type: 'income', amount: 100, date: day(2026, 12, 3).toISOString() });
+    const s = cardStatus(card(), [spend(500, day(2026, 11, 20)), refund], today);
+    expect(s.byCurrency.EGP.owed).toBe(500);
+  });
+
+  it('still owes future instalments at once', () => {
+    const s = cardStatus(card(), [inst(1000, day(2027, 1, 26), 3, 12)], today);
+    expect(s.byCurrency.EGP).toMatchObject({ owed: 1000, toCome: 1000 });
+  });
+
+  it('counts a future exchange inside the card whole', () => {
+    const c = card({ currency2: 'USD' });
+    const usd = tx({ type: 'expense', amount: 5, currency: 'USD', date: day(2026, 11, 10).toISOString() });
+    const exchange = tx({ type: 'transfer', amount: 250, toAccountId: 'card', toAmount: 5, toCurrency: 'USD', date: day(2026, 12, 3).toISOString() });
+    const s = cardStatus(c, [usd, exchange], today);
+    expect(s.byCurrency.USD.owed).toBe(0);
+    expect(s.byCurrency.EGP.owed).toBe(250);
+  });
 });
 
 describe('needsReminder', () => {

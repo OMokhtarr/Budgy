@@ -191,6 +191,8 @@ export function cardStatus(card: Account & { credit: CreditCard }, txs: Transact
     const after = at >= cutoff;
     const exchange = t.type === 'transfer' && t.accountId === id && t.toAccountId === id;
     for (const [delta, cur] of changeOn(t, id)) {
+      // Money reaching the card counts on its day; charges count at once, as the bank takes them off the limit.
+      if (delta > 0 && !exchange && at >= endOfToday) continue;
       add(balance, cur, delta);
       if (!after) {
         add(atStatement, cur, delta);
