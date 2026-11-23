@@ -459,6 +459,18 @@ describe('upcomingStatements', () => {
     expect(list[0].carried).toBeUndefined();
   });
 
+  it('shows what was paid beyond the last statement, so the sheet adds up to the row', () => {
+    const later = spend(80, day(2026, 11, 27));
+    const list = upcoming(card(), [spend(500, day(2026, 11, 10)), pay(550, day(2026, 11, 26)), later]);
+    expect(list[0].credit).toEqual({ EGP: 50 });
+    expect(list[0].byCurrency.EGP).toBe(80 - 50);
+  });
+
+  it('has no credit while the last statement is unpaid or paid exactly', () => {
+    expect(upcoming(card(), [spend(500, day(2026, 11, 10))])[0].credit).toBeUndefined();
+    expect(upcoming(card(), [spend(500, day(2026, 11, 10)), pay(500, day(2026, 11, 26))])[0].credit).toBeUndefined();
+  });
+
   it('carries nothing once the last statement is paid or overpaid', () => {
     const later = spend(80, day(2026, 11, 27));
     const list = upcoming(card(), [spend(500, day(2026, 11, 10)), pay(600, day(2026, 11, 26)), later]);

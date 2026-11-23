@@ -1,6 +1,6 @@
 import '@/test/setup-db';
 import { describe, expect, it } from 'vitest';
-import { balancesOf, budgetSpent, subcategoryBreakdown, totalsOf } from './hooks';
+import { balancesOf, budgetSpent, movementsOn, subcategoryBreakdown, totalsOf } from './hooks';
 import type { Account, Category, Transaction } from '@/shared/models';
 
 const GROCERIES = { id: 'groceries', name: 'Groceries', icon: 'cart' };
@@ -224,5 +224,20 @@ describe('balancesOf with future entries', () => {
   it('counts an entry dated late today', () => {
     const late = entry({ type: 'expense', amount: 40, accountId: 'bank', date: on(2026, 11, 23, 23, 59) });
     expect(balances([late]).get('bank')).toEqual({ EGP: 9960 });
+  });
+});
+
+describe('movementsOn', () => {
+  const on = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12).toISOString();
+  const TODAY = new Date(2026, 10, 23, 12);
+  const spend = (amount: number, date: string): Transaction => ({ type: 'expense', amount, currency: 'EGP', accountId: 'card', date, createdAt: 'x' });
+  const txs = [spend(100, on(2026, 11, 20)), spend(1000, on(2026, 12, 21))];
+
+  it('counts a future charge when the account is a credit card', () => {
+    expect(movementsOn('card', true, txs, TODAY)).toEqual({ EGP: -1100 });
+  });
+
+  it('leaves a future charge out when the account is not a credit card', () => {
+    expect(movementsOn('card', false, txs, TODAY)).toEqual({ EGP: -100 });
   });
 });

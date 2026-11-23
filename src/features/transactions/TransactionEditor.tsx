@@ -31,6 +31,7 @@ import { addOccurrence, makeRecurring, saveRecurring, skipOccurrence, stopRecurr
 import { useRateFor } from '@/features/recurring/hooks';
 import { useOpenRecurring } from '@/features/recurring/useOpenRecurring';
 import { cashFeeFor, isCashWithdrawal, isCreditCard } from '@/core/utils/creditCard';
+import { hiddenUntilItsDay } from '@/core/utils/future';
 import { cashFeeToSave, saveWithCashFee } from '@/features/accounts/card/cashFee';
 import { convertToPlan, createPlan, toPlanOptions } from '@/features/accounts/card/instalments';
 import InstalmentSheet, { instalmentChipLabel, type InstalmentChoice } from './InstalmentSheet';
@@ -383,6 +384,10 @@ export default function TransactionEditor({ init, onClose }: { init: EditorInit;
       /* ignore */
     }
     Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
+    // A card charge dated ahead leaves the list until its day, so say where it went rather than let it vanish.
+    if (saved && account && isCreditCard(account) && hiddenUntilItsDay(saved, new Set([account.id!]), new Date())) {
+      void presentToast({ message: t('editor.cardLater', { date: dateLabel }), duration: 3200, position: 'top', color: 'medium' });
+    }
     onClose();
     if (saved) init.onSaved?.(saved);
   };
