@@ -295,6 +295,10 @@ export interface UpcomingStatement {
   statementOn: Date;
   dueOn: Date;
   byCurrency: Amounts;
+  /** Money off the card dated in this statement's cycle, oldest first. Exchanges and money in are left out. */
+  charges: Transaction[];
+  /** The next statement only: what's left of the last statement after payments, per currency (only those above 0). */
+  carried?: Amounts;
 }
 
 /** The fewest upcoming statements listed, even with nothing charged on them yet. */
@@ -321,14 +325,18 @@ export function upcomingStatements(card: Account & { credit: CreditCard }, txs: 
     while (nextDay(statementAt(k)).getTime() <= at) k++;
     return k;
   };
+  const startOfNext = nextDay(status.cycle.statementOn).getTime();
   const charges: Amounts[] = [];
+  /** The transactions behind `charges`, by statement index; index 0 holds this cycle's. */
+  const chargeTxs: Transaction[][] = [];
   for (const t of txs) {
     const at = new Date(t.date).getTime();
-    if (at < startOfLater) continue;
+    if (at < startOfNext) continue;
     if (t.type === 'transfer' && t.accountId === id && t.toAccountId === id) continue;
+    const k = at < startOfLater ? 0 : statementIndex(at);
     for (const [delta, cur] of changeOn(t, id)) {
       if (delta >= 0) continue;
-      const k = statementIndex(at);
+      (chargeTxs[k] ??= []).push(t);
       const into = (charges[k] ??= {});
       into[cur] = roundTo((into[cur] ?? 0) - delta, cur);
     }
@@ -341,7 +349,18 @@ export function upcomingStatements(card: Account & { credit: CreditCard }, txs: 
     for (const cur of currencies) {
       byCurrency[cur] = k === 0 ? nextSoFar(status.byCurrency[cur]) : charges[k]?.[cur] ?? 0;
     }
-    return { statementOn, dueOn: dueOf(statementOn, credit), byCurrency };
+    const list = (chargeTxs[k] ?? []).sort((a, b) => a.date.localeCompare(b.date));
+    const statement: UpcomingStatement = { statementOn, dueOn: dueOf(statementOn, credit), byCurrency, charges: list };
+    if (k === 0) {
+      // What the next statement holds beyond this cycle's charges: the last statement's unpaid rest.
+      const carried: Amounts = {};
+      for (const cur of currencies) {
+        const rest = roundTo(byCurrency[cur] - (charges[0]?.[cur] ?? 0), cur);
+        if (rest > 0) carried[cur] = rest;
+      }
+      if (Object.keys(carried).length) statement.carried = carried;
+    }
+    return statement;
   });
 }
 

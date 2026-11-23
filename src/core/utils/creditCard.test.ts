@@ -436,6 +436,38 @@ describe('upcomingStatements', () => {
     const list = upcoming(card({ currency2: 'USD' }), [usd]);
     expect(list.map((s) => s.byCurrency)).toEqual([{ EGP: 0, USD: 0 }, { EGP: 0, USD: 0 }, { EGP: 0, USD: 50 }]);
   });
+
+  it('lists the charges on each later statement, adding up to its amount', () => {
+    const plan = [1, 2, 3].map((n) => inst(1000, day(2026, 10 + n, 26), n, 3));
+    const list = upcoming(card(), [spend(200, day(2026, 11, 27)), ...plan]);
+    expect(list[1].charges).toEqual([plan[1]]);
+    for (const s of list.slice(1)) expect(s.charges.reduce((t, x) => t + x.amount, 0)).toBe(s.byCurrency.EGP);
+  });
+
+  it("lists this cycle's charges on the next statement and carries the unpaid rest", () => {
+    const later = spend(80, day(2026, 11, 27));
+    const first = inst(300, day(2026, 12, 3), 1, 2);
+    const list = upcoming(card(), [first, spend(500, day(2026, 11, 10)), later]);
+    expect(list[0].charges).toEqual([later, first]);
+    expect(list[0].carried).toEqual({ EGP: 500 });
+  });
+
+  it('carries nothing once the last statement is paid or overpaid', () => {
+    const later = spend(80, day(2026, 11, 27));
+    const list = upcoming(card(), [spend(500, day(2026, 11, 10)), pay(600, day(2026, 11, 26)), later]);
+    expect(list[0].carried ?? {}).toEqual({});
+    expect(list[0].charges).toEqual([later]);
+  });
+
+  it('leaves payments and exchanges out of the charges', () => {
+    const bought = spend(40, day(2027, 1, 10));
+    const txs = [
+      bought,
+      pay(15, day(2027, 1, 11)),
+      tx({ type: 'transfer', amount: 10, toAccountId: 'card', toCurrency: 'USD', toAmount: 0.2, date: day(2027, 1, 12).toISOString() }),
+    ];
+    expect(upcoming(card({ currency2: 'USD' }), txs)[1].charges).toEqual([bought]);
+  });
 });
 
 describe('minimum payment', () => {
