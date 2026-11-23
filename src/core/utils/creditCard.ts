@@ -355,7 +355,7 @@ export function upcomingStatements(card: Account & { credit: CreditCard }, txs: 
       // What the next statement holds beyond this cycle's charges: the last statement's unpaid rest.
       const carried: Amounts = {};
       for (const cur of currencies) {
-        const rest = roundTo(byCurrency[cur] - (charges[0]?.[cur] ?? 0), cur);
+        const rest = status.byCurrency[cur]?.due ?? 0;
         if (rest > 0) carried[cur] = rest;
       }
       if (Object.keys(carried).length) statement.carried = carried;

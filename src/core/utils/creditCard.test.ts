@@ -452,6 +452,13 @@ describe('upcomingStatements', () => {
     expect(list[0].carried).toEqual({ EGP: 500 });
   });
 
+  it("doesn't take an exchange inside the card for money left from the last statement", () => {
+    const usd = tx({ type: 'expense', amount: 5, currency: 'USD', date: day(2026, 11, 26).toISOString() });
+    const exchange = tx({ type: 'transfer', amount: 250, toAccountId: 'card', toAmount: 5, toCurrency: 'USD', date: day(2026, 11, 27).toISOString() });
+    const list = upcoming(card({ currency2: 'USD' }), [usd, exchange]);
+    expect(list[0].carried).toBeUndefined();
+  });
+
   it('carries nothing once the last statement is paid or overpaid', () => {
     const later = spend(80, day(2026, 11, 27));
     const list = upcoming(card(), [spend(500, day(2026, 11, 10)), pay(600, day(2026, 11, 26)), later]);

@@ -32,22 +32,27 @@ export function useCategories(flow?: Flow, includeArchived = false): Category[] 
 }
 
 /**
- * The period's transactions, newest first. A credit card entry dated after today is left out until its day: it
- * isn't paid yet, so the Transactions list, Categories, Overview and budgets don't count it. The card page reads
- * its own transactions and still shows it.
+ * The live transactions dated from `s` (included) to `e` (not included), as every period screen reads them. A credit
+ * card charge dated after today is left out until its day: it isn't paid yet, so the Transactions list,
+ * Categories, Overview (its trend included) and budgets don't count it. The card page reads its own transactions
+ * and still shows it.
  */
+export async function readTransactionsBetween(s: string, e: string, today = new Date()): Promise<Transaction[]> {
+  const [found, accounts] = await Promise.all([
+    db.transactions.where('date').between(s, e, true, false).filter(alive).toArray(),
+    db.accounts.filter(alive).toArray(),
+  ]);
+  const cardIds = new Set(accounts.filter(isCreditCard).map((a) => a.id!));
+  return found.filter((t) => !hiddenUntilItsDay(t, cardIds, today));
+}
+
+/** The period's transactions (see `readTransactionsBetween`), newest first. */
 export function useTransactionsInRange(range: DateRange): Transaction[] | undefined {
   const s = range.start.toISOString();
   const e = range.end.toISOString();
   return useLiveQuery(
     async () => {
-      const [found, accounts] = await Promise.all([
-        db.transactions.where('date').between(s, e, true, false).filter(alive).toArray(),
-        db.accounts.filter(alive).toArray(),
-      ]);
-      const cardIds = new Set(accounts.filter(isCreditCard).map((a) => a.id!));
-      const today = new Date();
-      const rows = found.filter((t) => !hiddenUntilItsDay(t, cardIds, today));
+      const rows = await readTransactionsBetween(s, e);
       // newest first; ties broken by creation time
       return rows.sort((a, b) => (b.date === a.date ? b.createdAt.localeCompare(a.createdAt) : b.date.localeCompare(a.date)));
     },

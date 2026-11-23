@@ -36,3 +36,13 @@ describe('hiddenUntilItsDay', () => {
     expect(hidden(entry('bank', at(2026, 12, 1), { type: 'transfer', toAccountId: 'card' }))).toBe(false);
   });
 });
+
+describe('hiddenUntilItsDay for money reaching the card', () => {
+  const cards = new Set(['card']);
+  const base = { amount: 100, currency: 'EGP', accountId: 'card', date: at(2027, 3, 1), createdAt: 'x' };
+
+  it('keeps a future refund or an exchange inside the card in sight', () => {
+    expect(hiddenUntilItsDay({ ...base, type: 'income' }, cards, today)).toBe(false);
+    expect(hiddenUntilItsDay({ ...base, type: 'transfer', toAccountId: 'card', toCurrency: 'USD', toAmount: 2 }, cards, today)).toBe(false);
+  });
+});

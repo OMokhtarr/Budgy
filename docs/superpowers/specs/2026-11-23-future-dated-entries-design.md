@@ -70,9 +70,12 @@ Showing them on the card page:
 
 ### The period's transactions (`useTransactionsInRange`, `hooks.ts`)
 
-Drops every alive transaction whose `accountId` is a credit card and that's dated after today. That covers future
-instalments, a future-dated purchase or cash withdrawal, and a card fee dated ahead. A transfer **from** the bank
-**to** a card dated ahead stays (its `accountId` is the bank).
+Drops every alive **charge** on a credit card (an expense, or a transfer out of it, `accountId` the card) that's
+dated after today. That covers future instalments, a future-dated purchase or cash withdrawal, and a card fee dated
+ahead. A transfer **from** the bank **to** a card dated ahead stays (its `accountId` is the bank). A refund to the
+card or an exchange inside it dated ahead stays too: the card page doesn't list those ahead, so hiding them would
+leave them out of reach *(changed after the final review)*. The Overview trend reads through the same filter
+(`readTransactionsBetween`).
 
 The card page reads its own transactions (`useCardTransactions`), so its This cycle list, Instalments and Upcoming
 blocks still see the future charges.
