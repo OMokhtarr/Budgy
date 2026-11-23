@@ -10,6 +10,28 @@ Before adding a section, raise `versionCode` (and `versionName` if it's a new ve
 
 ---
 
+## 1.0 (versionCode 8) — 2026-11-23
+
+**Release name:** `8 (1.0)`
+
+Entries dated ahead wait for their day, and upcoming card statements list their charges. Built with the same
+`.env.local` as build 7 (`VITE_PRO_GATE=test`), so the notes don't mention Budgy Pro.
+
+```
+<en-US>
+• Entries dated ahead, like a subscription starting next month, no longer change your balance before their day
+• Credit card charges dated ahead stay out of Transactions and categories until their day; the card still counts them
+• Tap an upcoming statement on the card page to see what's on it
+</en-US>
+<ar>
+• المعاملات المؤرخة لاحقًا، مثل اشتراك يبدأ الشهر القادم، لم تعد تغيّر رصيدك قبل موعدها
+• مشتريات بطاقة الائتمان المؤرخة لاحقًا لا تظهر في المعاملات والفئات حتى يومها، وتظل محسوبة على البطاقة
+• اضغط على كشف قادم في صفحة البطاقة لترى ما عليه
+</ar>
+```
+
+---
+
 ## 1.0 (versionCode 7) — 2026-11-22
 
 **Release name:** `7 (1.0)`
