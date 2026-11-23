@@ -1,7 +1,7 @@
 import '@/test/setup-db';
 import { describe, expect, it } from 'vitest';
-import { budgetSpent, subcategoryBreakdown, totalsOf } from './hooks';
-import type { Category, Transaction } from '@/shared/models';
+import { balancesOf, budgetSpent, subcategoryBreakdown, totalsOf } from './hooks';
+import type { Account, Category, Transaction } from '@/shared/models';
 
 const GROCERIES = { id: 'groceries', name: 'Groceries', icon: 'cart' };
 const AKL = { id: 'akl', name: 'Akl', icon: 'restaurant' };
@@ -164,5 +164,65 @@ describe('budgetSpent', () => {
       { ...tx(500, undefined, 'income'), categoryId: 'fun', moneyBack: true },
     ], CONV);
     expect(budgetSpent(t, ['food', 'fun'])).toBe(300);
+  });
+});
+
+describe('balancesOf with future entries', () => {
+  const account = (id: string, type: Account['type'], initialBalance = 0, over: Partial<Account> = {}): Account => ({
+    id, name: id, type, icon: 'x', color: '#000', currency: 'EGP', initialBalance, order: 0, createdAt: 'x', ...over,
+  });
+  const ACCOUNTS = [
+    account('bank', 'bank', 10000),
+    account('cash', 'cash'),
+    account('card', 'card', 0, { currency2: 'USD', credit: { statementDay: 25, dueDay: 20 } }),
+  ];
+  const on = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m - 1, d, h, min).toISOString();
+  const TODAY = new Date(2026, 10, 23, 12);
+  const entry = (fields: Partial<Transaction> & Pick<Transaction, 'type' | 'amount' | 'accountId' | 'date'>): Transaction => ({
+    currency: 'EGP', createdAt: 'x', ...fields,
+  });
+  const balances = (txs: Transaction[], today = TODAY) => balancesOf(ACCOUNTS, txs, today);
+
+  it('leaves a future bank expense out until its day', () => {
+    const sub = entry({ type: 'expense', amount: 250, accountId: 'bank', date: on(2026, 12, 1) });
+    expect(balances([sub]).get('bank')).toEqual({ EGP: 10000 });
+    expect(balances([sub], new Date(2026, 11, 1, 12)).get('bank')).toEqual({ EGP: 9750 });
+  });
+
+  it('leaves future income and both sides of a future transfer between own accounts out', () => {
+    const pay = entry({ type: 'income', amount: 500, accountId: 'bank', date: on(2026, 12, 1) });
+    const move = entry({ type: 'transfer', amount: 1000, accountId: 'bank', toAccountId: 'cash', date: on(2026, 12, 1) });
+    const b = balances([pay, move]);
+    expect(b.get('bank')).toEqual({ EGP: 10000 });
+    expect(b.get('cash')).toEqual({ EGP: 0 });
+  });
+
+  it('counts a future card charge at once', () => {
+    const inst = entry({ type: 'expense', amount: 1000, accountId: 'card', date: on(2027, 1, 21), instalment: { planId: 'p', n: 3, of: 12 } });
+    expect(balances([inst]).get('card')?.EGP).toBe(-1000);
+  });
+
+  it('waits on both sides for a future payment to the card', () => {
+    const pay = entry({ type: 'transfer', amount: 500, accountId: 'bank', toAccountId: 'card', date: on(2026, 12, 1) });
+    const b = balances([pay]);
+    expect(b.get('bank')).toEqual({ EGP: 10000 });
+    expect(b.get('card')?.EGP).toBe(0);
+  });
+
+  it('takes cash out on the card at once and adds it to the bank on its day', () => {
+    const cashOut = entry({ type: 'transfer', amount: 300, accountId: 'card', toAccountId: 'bank', date: on(2026, 12, 1) });
+    const b = balances([cashOut]);
+    expect(b.get('card')?.EGP).toBe(-300);
+    expect(b.get('bank')).toEqual({ EGP: 10000 });
+  });
+
+  it('counts a future exchange inside the card whole', () => {
+    const swap = entry({ type: 'transfer', amount: 100, accountId: 'card', toAccountId: 'card', toCurrency: 'USD', toAmount: 2, date: on(2026, 12, 1) });
+    expect(balances([swap]).get('card')).toEqual({ EGP: -100, USD: 2 });
+  });
+
+  it('counts an entry dated late today', () => {
+    const late = entry({ type: 'expense', amount: 40, accountId: 'bank', date: on(2026, 11, 23, 23, 59) });
+    expect(balances([late]).get('bank')).toEqual({ EGP: 9960 });
   });
 });
