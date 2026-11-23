@@ -5,12 +5,12 @@ import {
 import { cashOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { alive, db, keepOneDefault, softDelete } from '@/core/db/db';
-import { useBalances, useNames } from '@/core/db/hooks';
+import { movementsOn, useBalances, useNames } from '@/core/db/hooks';
 import { useAccountFilter } from '@/core/contexts/AccountFilterContext';
 import { CURRENCIES, useSettings } from '@/core/contexts/SettingsContext';
 import { useTxEditor } from '@/core/contexts/TxEditorContext';
 import { countsInExpenses, countsInTotal, switchesOnByDefault } from '@/core/utils/accountFilter';
-import { currenciesOf, openingOf, roundTo } from '@/core/utils/currency';
+import { currenciesOf, roundTo } from '@/core/utils/currency';
 import { debtSideOf, signedFor, unsigned, type DebtSide } from '@/core/utils/debtSide';
 import { dueAfterTooMany, fixedDueDay, interestFree, MAX_DUE_AFTER, parseDueAfter, parsePercent, percentInvalid } from '@/core/utils/creditCard';
 import { cleanNumberInput, parseNumber } from '@/core/utils/number';
@@ -208,12 +208,18 @@ export default function AccountEditModal({ isOpen, account, newGroup, onClose }:
 
   const commit = async () => {
     const trimmed = name.trim();
-    // The user edits the *current* balance per currency; we store the opening balance that produces it.
-    const opening = account ? openingOf(account) : {};
-    const openingFor = (cur: string, typed: string) => {
-      const movements = (current[cur] ?? 0) - (opening[cur] ?? 0);
-      return roundTo((parseNumber(typed) || 0) - movements, cur);
-    };
+    // The user edits the *current* balance per currency; we store the opening balance that produces it. What counts
+    // today depends on whether the account is saved as a credit card (its future charges count at once), so a card
+    // switched between debit and credit keeps the balance typed.
+    const editingId = account?.id;
+    const moved = editingId
+      ? movementsOn(
+          editingId,
+          type === 'card' && !!(credit && cycleDraft),
+          await db.transactions.where('accountId').equals(editingId).or('toAccountId').equals(editingId).filter(alive).toArray(),
+        )
+      : {};
+    const openingFor = (cur: string, typed: string) => roundTo((parseNumber(typed) || 0) - (moved[cur] ?? 0), cur);
     const patch = {
       name: account && !account.name && trimmed === accountName(account) ? '' : trimmed,
       type,

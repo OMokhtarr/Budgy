@@ -83,22 +83,46 @@ export function balancesOf(accounts: Account[], txs: Transaction[], today = new 
     map.set(a.id!, openingOf(a));
     if (isCreditCard(a)) cardIds.add(a.id!);
   });
-  const add = (id: string | undefined, cur: string, v: number, waits: boolean) => {
-    const m = id == null ? undefined : map.get(id);
-    if (!m || (waits && !(v < 0 && cardIds.has(id!)))) return;
-    m[cur] = roundTo((m[cur] ?? 0) + v, cur);
-  };
   for (const t of txs) {
-    const exchange = t.type === 'transfer' && t.accountId === t.toAccountId && cardIds.has(t.accountId);
-    const waits = !exchange && isAfterToday(t.date, today);
-    if (t.type === 'expense') add(t.accountId, t.currency, -t.amount, waits);
-    else if (t.type === 'income') add(t.accountId, t.currency, t.amount, waits);
-    else {
-      add(t.accountId, t.currency, -t.amount, waits);
-      add(t.toAccountId, t.toCurrency ?? t.currency, t.toAmount ?? t.amount, waits);
+    for (const [id, cur, v] of countedMoves(t, cardIds, today)) {
+      const m = map.get(id);
+      if (m) m[cur] = roundTo((m[cur] ?? 0) + v, cur);
     }
   }
   return map;
+}
+
+/**
+ * What a transaction moves on one account per currency, as `balancesOf` counts it, with the account taken as a
+ * credit card or not (`creditCard`). An account switched between debit and credit card keeps its balance with it.
+ */
+export function movementsOn(id: string, creditCard: boolean, txs: Transaction[], today = new Date()): Amounts {
+  const out: Amounts = {};
+  const cardIds = new Set(creditCard ? [id] : []);
+  for (const t of txs) {
+    for (const [on, cur, v] of countedMoves(t, cardIds, today)) {
+      if (on === id) out[cur] = roundTo((out[cur] ?? 0) + v, cur);
+    }
+  }
+  return out;
+}
+
+/** The movements of a transaction that count today: [account, currency, signed amount]. See `balancesOf`. */
+function countedMoves(t: Transaction, cardIds: Set<string>, today: Date): [string, string, number][] {
+  const exchange = t.type === 'transfer' && t.accountId === t.toAccountId && cardIds.has(t.accountId);
+  const waits = !exchange && isAfterToday(t.date, today);
+  const moves: [string, string, number][] = [];
+  const add = (id: string | undefined, cur: string, v: number) => {
+    if (id == null || (waits && !(v < 0 && cardIds.has(id)))) return;
+    moves.push([id, cur, v]);
+  };
+  if (t.type === 'expense') add(t.accountId, t.currency, -t.amount);
+  else if (t.type === 'income') add(t.accountId, t.currency, t.amount);
+  else {
+    add(t.accountId, t.currency, -t.amount);
+    add(t.toAccountId, t.toCurrency ?? t.currency, t.toAmount ?? t.amount);
+  }
+  return moves;
 }
 
 /** How much of each transfer to or from a debt was lending, over each debt's whole history. */

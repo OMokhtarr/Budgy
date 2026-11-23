@@ -299,6 +299,8 @@ export interface UpcomingStatement {
   charges: Transaction[];
   /** The next statement only: what's left of the last statement after payments, per currency (only those above 0). */
   carried?: Amounts;
+  /** The next statement only: what was paid or refunded beyond the last statement, per currency (only those above 0). */
+  credit?: Amounts;
 }
 
 /** The fewest upcoming statements listed, even with nothing charged on them yet. */
@@ -354,11 +356,17 @@ export function upcomingStatements(card: Account & { credit: CreditCard }, txs: 
     if (k === 0) {
       // What the next statement holds beyond this cycle's charges: the last statement's unpaid rest.
       const carried: Amounts = {};
+      // Or what was paid (or refunded) beyond it, which the next statement takes off this cycle's charges.
+      const credit: Amounts = {};
       for (const cur of currencies) {
-        const rest = status.byCurrency[cur]?.due ?? 0;
-        if (rest > 0) carried[cur] = rest;
+        const x = status.byCurrency[cur];
+        if (!x) continue;
+        if (x.due > 0) carried[cur] = x.due;
+        const over = roundTo(x.paid - x.statement, cur);
+        if (over > 0) credit[cur] = over;
       }
       if (Object.keys(carried).length) statement.carried = carried;
+      if (Object.keys(credit).length) statement.credit = credit;
     }
     return statement;
   });
