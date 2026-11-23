@@ -3,15 +3,16 @@ import { IonIcon } from '@ionic/react';
 import { chevronDownOutline, chevronForwardOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useMoney } from '@/core/contexts/SettingsContext';
-import { upcomingStatements, type CardStatus } from '@/core/utils/creditCard';
+import { upcomingStatements, type CardStatus, type UpcomingStatement } from '@/core/utils/creditCard';
 import MoneyText from '@/shared/components/MoneyText';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
 import { useDayMonth } from './CardBlocks';
+import StatementSheet from './StatementSheet';
 
 /** Statements listed before the rest fold away behind "Show all". */
 const SHOWN = 4;
 
-/** The statements to come: when each is made and due, and what's on it so far. */
+/** The statements to come: when each is made and due, and what's on it so far. Tapping one lists its charges. */
 export default function UpcomingBlock({ account, status, txs }: {
   account: Account & { credit: CreditCard };
   status: CardStatus;
@@ -21,6 +22,7 @@ export default function UpcomingBlock({ account, status, txs }: {
   const money = useMoney();
   const dayMonth = useDayMonth();
   const [showAll, setShowAll] = useState(false);
+  const [open, setOpen] = useState<UpcomingStatement | null>(null);
   const list = upcomingStatements(account, txs, status);
   const shown = showAll ? list : list.slice(0, SHOWN);
 
@@ -33,7 +35,7 @@ export default function UpcomingBlock({ account, status, txs }: {
           const lines = Object.entries(s.byCurrency).filter(([c, n]) => c === account.currency || n > 0);
           const due = t('cards.upcomingDue', { due: dayMonth(s.dueOn) });
           return (
-            <div key={s.statementOn.getTime()} className="b-row">
+            <button key={s.statementOn.getTime()} className="b-row" onClick={() => setOpen(s)}>
               <div className="b-row__main">
                 <div className="b-row__title">{dayMonth(s.statementOn)}</div>
                 <div className="b-row__sub">{i === 0 ? `${due} · ${t('cards.upcomingSoFar')}` : due}</div>
@@ -44,7 +46,7 @@ export default function UpcomingBlock({ account, status, txs }: {
                   return j === 0 ? <div key={c}>{text}</div> : <small key={c}>{text}</small>;
                 })}
               </div>
-            </div>
+            </button>
           );
         })}
         {list.length > SHOWN && (
@@ -57,6 +59,7 @@ export default function UpcomingBlock({ account, status, txs }: {
         )}
         <div className="b-muted b-upcoming__note">{t('cards.upcomingNote')}</div>
       </div>
+      <StatementSheet account={account} statement={open} onClose={() => setOpen(null)} />
     </>
   );
 }

@@ -126,6 +126,36 @@ describe('cardStatus', () => {
     const s = cardStatus(c, [spend(1000, day(2026, 11, 10)), exchange], today);
     expect(s.byCurrency.USD.paid).toBe(0);
   });
+
+  it('waits for a payment dated ahead', () => {
+    const txs = [spend(500, day(2026, 11, 20)), pay(500, day(2026, 12, 3))];
+    const s = cardStatus(card(), txs, today);
+    expect(s.byCurrency.EGP).toMatchObject({ owed: 500, paid: 0, due: 500 });
+    expect(s.state).toBe('due');
+    const later = cardStatus(card(), txs, day(2026, 12, 3));
+    expect(later.byCurrency.EGP).toMatchObject({ owed: 0, paid: 500, due: 0 });
+    expect(later.state).toBe('paid');
+  });
+
+  it('waits for a refund dated ahead', () => {
+    const refund = tx({ type: 'income', amount: 100, date: day(2026, 12, 3).toISOString() });
+    const s = cardStatus(card(), [spend(500, day(2026, 11, 20)), refund], today);
+    expect(s.byCurrency.EGP.owed).toBe(500);
+  });
+
+  it('still owes future instalments at once', () => {
+    const s = cardStatus(card(), [inst(1000, day(2027, 1, 26), 3, 12)], today);
+    expect(s.byCurrency.EGP).toMatchObject({ owed: 1000, toCome: 1000 });
+  });
+
+  it('counts a future exchange inside the card whole', () => {
+    const c = card({ currency2: 'USD' });
+    const usd = tx({ type: 'expense', amount: 5, currency: 'USD', date: day(2026, 11, 10).toISOString() });
+    const exchange = tx({ type: 'transfer', amount: 250, toAccountId: 'card', toAmount: 5, toCurrency: 'USD', date: day(2026, 12, 3).toISOString() });
+    const s = cardStatus(c, [usd, exchange], today);
+    expect(s.byCurrency.USD.owed).toBe(0);
+    expect(s.byCurrency.EGP.owed).toBe(250);
+  });
 });
 
 describe('needsReminder', () => {
@@ -405,6 +435,45 @@ describe('upcomingStatements', () => {
     const usd = tx({ type: 'expense', amount: 50, currency: 'USD', date: day(2027, 1, 26).toISOString(), instalment: { planId: 'u', n: 2, of: 2 } });
     const list = upcoming(card({ currency2: 'USD' }), [usd]);
     expect(list.map((s) => s.byCurrency)).toEqual([{ EGP: 0, USD: 0 }, { EGP: 0, USD: 0 }, { EGP: 0, USD: 50 }]);
+  });
+
+  it('lists the charges on each later statement, adding up to its amount', () => {
+    const plan = [1, 2, 3].map((n) => inst(1000, day(2026, 10 + n, 26), n, 3));
+    const list = upcoming(card(), [spend(200, day(2026, 11, 27)), ...plan]);
+    expect(list[1].charges).toEqual([plan[1]]);
+    for (const s of list.slice(1)) expect(s.charges.reduce((t, x) => t + x.amount, 0)).toBe(s.byCurrency.EGP);
+  });
+
+  it("lists this cycle's charges on the next statement and carries the unpaid rest", () => {
+    const later = spend(80, day(2026, 11, 27));
+    const first = inst(300, day(2026, 12, 3), 1, 2);
+    const list = upcoming(card(), [first, spend(500, day(2026, 11, 10)), later]);
+    expect(list[0].charges).toEqual([later, first]);
+    expect(list[0].carried).toEqual({ EGP: 500 });
+  });
+
+  it("doesn't take an exchange inside the card for money left from the last statement", () => {
+    const usd = tx({ type: 'expense', amount: 5, currency: 'USD', date: day(2026, 11, 26).toISOString() });
+    const exchange = tx({ type: 'transfer', amount: 250, toAccountId: 'card', toAmount: 5, toCurrency: 'USD', date: day(2026, 11, 27).toISOString() });
+    const list = upcoming(card({ currency2: 'USD' }), [usd, exchange]);
+    expect(list[0].carried).toBeUndefined();
+  });
+
+  it('carries nothing once the last statement is paid or overpaid', () => {
+    const later = spend(80, day(2026, 11, 27));
+    const list = upcoming(card(), [spend(500, day(2026, 11, 10)), pay(600, day(2026, 11, 26)), later]);
+    expect(list[0].carried ?? {}).toEqual({});
+    expect(list[0].charges).toEqual([later]);
+  });
+
+  it('leaves payments and exchanges out of the charges', () => {
+    const bought = spend(40, day(2027, 1, 10));
+    const txs = [
+      bought,
+      pay(15, day(2027, 1, 11)),
+      tx({ type: 'transfer', amount: 10, toAccountId: 'card', toCurrency: 'USD', toAmount: 0.2, date: day(2027, 1, 12).toISOString() }),
+    ];
+    expect(upcoming(card({ currency2: 'USD' }), txs)[1].charges).toEqual([bought]);
   });
 });
 

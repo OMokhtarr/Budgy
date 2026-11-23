@@ -6,18 +6,15 @@ import { addOutline, chevronDownOutline, chevronForwardOutline, receiptOutline, 
 import { useTranslation } from 'react-i18next';
 import { Redirect, useLocation, useParams } from 'react-router-dom';
 import { useMoney } from '@/core/contexts/SettingsContext';
-import { useTxEditor } from '@/core/contexts/TxEditorContext';
-import { useCardAccount, useCardTransactions, useLookups, useNames } from '@/core/db/hooks';
+import { useCardAccount, useCardTransactions, useNames } from '@/core/db/hooks';
 import { cardStatus, cardTransactions, interestFree, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
-import { changeOn } from '@/core/utils/lending';
-import Avatar from '@/shared/components/Avatar';
 import { useRevealWhen } from '@/shared/splash';
-import MoneyText from '@/shared/components/MoneyText';
 import type { Account, CreditCard, Transaction } from '@/shared/models';
 import { CcRow, CycleRows, OwedBlock, StatementRows, useCycleTitle, useDayMonth } from './card/CardBlocks';
 import { useCardActions } from './card/useCardActions';
 import InstalmentsBlock from './card/InstalmentsBlock';
 import UpcomingBlock from './card/UpcomingBlock';
+import CardTxRow from './card/CardTxRow';
 
 /**
  * Everything about one credit card: what's owed, the last statement, this cycle, the statements to come,
@@ -133,41 +130,5 @@ function CardPage({ account, status, txs }: { account: Account & { credit: Credi
         </div>
       </IonFooter>
     </>
-  );
-}
-
-/** A transaction as the card sees it: what it is, when, and the money in or out of the card. */
-function CardTxRow({ tx, cardId }: { tx: Transaction; cardId: string }) {
-  const { t } = useTranslation();
-  const money = useMoney();
-  const openEditor = useTxEditor();
-  const { accounts, categories } = useLookups();
-  const { accountName, categoryName } = useNames();
-  const dayMonth = useDayMonth();
-  const transfer = tx.type === 'transfer';
-  const cat = transfer ? undefined : categories.get(tx.categoryId!);
-  const title = transfer
-    ? `${accountName(accounts.get(tx.accountId))} → ${accountName(accounts.get(tx.toAccountId!))}`
-    : categoryName(cat);
-  return (
-    <button className="b-row" onClick={() => openEditor({ tx })}>
-      {transfer ? <Avatar icon="transfer" color="var(--b-transfer)" /> : <Avatar icon={cat?.icon ?? 'other'} color={cat?.color ?? '#64748b'} />}
-      <div className="b-row__main">
-        <div className="b-row__title">{title}</div>
-        <div className="b-row__sub">
-          <span>{transfer ? t('type.transfer') : tx.note || ''}</span>
-          <span className="b-row__date">· {dayMonth(new Date(tx.date))}</span>
-        </div>
-      </div>
-      <div className="b-row__amount b-num">
-        {changeOn(tx, cardId).map(([delta, cur], i) => (
-          // Colour tells money out from money in; the plus keeps money in readable without it, as on Transactions.
-          <div key={i} className={delta < 0 ? 'b-expense' : 'b-income'} dir="ltr">
-            {delta > 0 && '+'}
-            <MoneyText currency={cur} text={money.plain(Math.abs(delta), cur)} />
-          </div>
-        ))}
-      </div>
-    </button>
   );
 }

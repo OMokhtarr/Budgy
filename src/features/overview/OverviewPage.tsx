@@ -3,11 +3,10 @@ import { IonContent, IonHeader, IonIcon, IonPage, IonToolbar } from '@ionic/reac
 import { pieChartOutline } from 'ionicons/icons';
 import { useTranslation } from 'react-i18next';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { alive, db } from '@/core/db/db';
 import { usePeriod } from '@/core/contexts/PeriodContext';
 import { useConverter, useLocale, useMoney, useSettings } from '@/core/contexts/SettingsContext';
 import { useAccountFilter, useFilteredTransactionsInRange } from '@/core/contexts/AccountFilterContext';
-import { budgetSpent, subcategoryBreakdown, totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
+import { budgetSpent, readTransactionsBetween, subcategoryBreakdown, totalsOf, useAccounts, useCategories, useNames } from '@/core/db/hooks';
 import { spentOnTile } from '@/core/utils/accountTiles';
 import { isMoneyBack } from '@/core/utils/flow';
 import { txInBase } from '@/core/utils/txRate';
@@ -58,7 +57,7 @@ export default function OverviewPage() {
   const trend = useLiveQuery(async () => {
     const s = buckets[0].start.toISOString();
     const e = buckets[buckets.length - 1].end.toISOString();
-    const rows = await db.transactions.where('date').between(s, e, true, false).filter(alive).toArray();
+    const rows = await readTransactionsBetween(s, e);
     return buckets.map((b) => {
       const bs = b.start.toISOString();
       const be = b.end.toISOString();

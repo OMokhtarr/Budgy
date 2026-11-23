@@ -8,6 +8,7 @@ import { groupOf, openingOf, roundTo } from '@/core/utils/currency';
 import { lendingShares, type LendingShares } from '@/core/utils/lending';
 import { cardStatus, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
 import { flowOfTx, isMoneyBack } from '@/core/utils/flow';
+import { hiddenUntilItsDay, isAfterToday } from '@/core/utils/future';
 import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
 
 export function useAccounts(includeArchived = false): Account[] | undefined {
@@ -30,12 +31,28 @@ export function useCategories(flow?: Flow, includeArchived = false): Category[] 
   }, [flow, includeArchived]);
 }
 
+/**
+ * The live transactions dated from `s` (included) to `e` (not included), as every period screen reads them. A credit
+ * card charge dated after today is left out until its day: it isn't paid yet, so the Transactions list,
+ * Categories, Overview (its trend included) and budgets don't count it. The card page reads its own transactions
+ * and still shows it.
+ */
+export async function readTransactionsBetween(s: string, e: string, today = new Date()): Promise<Transaction[]> {
+  const [found, accounts] = await Promise.all([
+    db.transactions.where('date').between(s, e, true, false).filter(alive).toArray(),
+    db.accounts.filter(alive).toArray(),
+  ]);
+  const cardIds = new Set(accounts.filter(isCreditCard).map((a) => a.id!));
+  return found.filter((t) => !hiddenUntilItsDay(t, cardIds, today));
+}
+
+/** The period's transactions (see `readTransactionsBetween`), newest first. */
 export function useTransactionsInRange(range: DateRange): Transaction[] | undefined {
   const s = range.start.toISOString();
   const e = range.end.toISOString();
   return useLiveQuery(
     async () => {
-      const rows = await db.transactions.where('date').between(s, e, true, false).filter(alive).toArray();
+      const rows = await readTransactionsBetween(s, e);
       // newest first; ties broken by creation time
       return rows.sort((a, b) => (b.date === a.date ? b.createdAt.localeCompare(a.createdAt) : b.date.localeCompare(a.date)));
     },
@@ -54,21 +71,31 @@ export function useBalances(): Map<string, Amounts> | undefined {
   });
 }
 
-/** Each account's balance per currency: its opening balances plus every transaction's movement on it. */
-export function balancesOf(accounts: Account[], txs: Transaction[]): Map<string, Amounts> {
+/**
+ * Each account's balance per currency: its opening balances plus every transaction's movement on it. A movement
+ * dated after `today` waits for its day, except money taken off a credit card (the bank takes it off the limit at
+ * once, as with instalments to come) and an exchange inside one card, which counts whole.
+ */
+export function balancesOf(accounts: Account[], txs: Transaction[], today = new Date()): Map<string, Amounts> {
   const map = new Map<string, Amounts>();
-  accounts.forEach((a) => map.set(a.id!, openingOf(a)));
-  const add = (id: string | undefined, cur: string, v: number) => {
+  const cardIds = new Set<string>();
+  accounts.forEach((a) => {
+    map.set(a.id!, openingOf(a));
+    if (isCreditCard(a)) cardIds.add(a.id!);
+  });
+  const add = (id: string | undefined, cur: string, v: number, waits: boolean) => {
     const m = id == null ? undefined : map.get(id);
-    if (!m) return;
+    if (!m || (waits && !(v < 0 && cardIds.has(id!)))) return;
     m[cur] = roundTo((m[cur] ?? 0) + v, cur);
   };
   for (const t of txs) {
-    if (t.type === 'expense') add(t.accountId, t.currency, -t.amount);
-    else if (t.type === 'income') add(t.accountId, t.currency, t.amount);
+    const exchange = t.type === 'transfer' && t.accountId === t.toAccountId && cardIds.has(t.accountId);
+    const waits = !exchange && isAfterToday(t.date, today);
+    if (t.type === 'expense') add(t.accountId, t.currency, -t.amount, waits);
+    else if (t.type === 'income') add(t.accountId, t.currency, t.amount, waits);
     else {
-      add(t.accountId, t.currency, -t.amount);
-      add(t.toAccountId, t.toCurrency ?? t.currency, t.toAmount ?? t.amount);
+      add(t.accountId, t.currency, -t.amount, waits);
+      add(t.toAccountId, t.toCurrency ?? t.currency, t.toAmount ?? t.amount, waits);
     }
   }
   return map;
