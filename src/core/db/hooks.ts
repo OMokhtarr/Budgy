@@ -8,7 +8,7 @@ import { groupOf, openingOf, roundTo } from '@/core/utils/currency';
 import { lendingShares, type LendingShares } from '@/core/utils/lending';
 import { cardStatus, isCreditCard, type CardStatus } from '@/core/utils/creditCard';
 import { flowOfTx, isMoneyBack } from '@/core/utils/flow';
-import { isAfterToday } from '@/core/utils/future';
+import { hiddenUntilItsDay, isAfterToday } from '@/core/utils/future';
 import type { Account, Amounts, Category, DateRange, Flow, Subcategory, Transaction } from '@/shared/models';
 
 export function useAccounts(includeArchived = false): Account[] | undefined {
@@ -31,12 +31,23 @@ export function useCategories(flow?: Flow, includeArchived = false): Category[] 
   }, [flow, includeArchived]);
 }
 
+/**
+ * The period's transactions, newest first. A credit card entry dated after today is left out until its day: it
+ * isn't paid yet, so the Transactions list, Categories, Overview and budgets don't count it. The card page reads
+ * its own transactions and still shows it.
+ */
 export function useTransactionsInRange(range: DateRange): Transaction[] | undefined {
   const s = range.start.toISOString();
   const e = range.end.toISOString();
   return useLiveQuery(
     async () => {
-      const rows = await db.transactions.where('date').between(s, e, true, false).filter(alive).toArray();
+      const [found, accounts] = await Promise.all([
+        db.transactions.where('date').between(s, e, true, false).filter(alive).toArray(),
+        db.accounts.filter(alive).toArray(),
+      ]);
+      const cardIds = new Set(accounts.filter(isCreditCard).map((a) => a.id!));
+      const today = new Date();
+      const rows = found.filter((t) => !hiddenUntilItsDay(t, cardIds, today));
       // newest first; ties broken by creation time
       return rows.sort((a, b) => (b.date === a.date ? b.createdAt.localeCompare(a.createdAt) : b.date.localeCompare(a.date)));
     },
